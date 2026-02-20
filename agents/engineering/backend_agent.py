@@ -24,7 +24,7 @@ class BackendAgent(BaseAgent):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.code_writer = CodeWriter()
+        self.code_writer = CodeWriter(company_brain=self.company_brain)
 
     def get_subscribed_channels(self) -> list[Channels]:
         return [Channels.CTO_TASKS_BACKEND]

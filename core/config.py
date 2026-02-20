@@ -49,7 +49,7 @@ class Settings(BaseSettings):
 
     # App config
     knowledge_base_dir: str = "./knowledge_base"
-    project_dir: str = "./product"  # Directory where agents build the product (separate from autonomous-ai-company repo)
+    products_base_dir: str = "./products"  # Base dir for product repos; one repo per product_name in company_brain
     log_level: str = "INFO"
     environment: str = "development"
     founder_email: str = ""

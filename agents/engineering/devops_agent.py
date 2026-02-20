@@ -7,6 +7,7 @@ import structlog
 
 from agents.base_agent import BaseAgent, TaskResult
 from core.config import get_settings
+from core.tools.product_resolver import get_product_project_dir
 from core.memory.company_brain import BlockerSchema
 from core.messaging.channels import Channels
 from core.messaging.schemas import QAAlertMessage, TaskMessage
@@ -29,11 +30,10 @@ class DevOpsAgent(BaseAgent):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.code_writer = CodeWriter()
+        self.code_writer = CodeWriter(company_brain=self.company_brain)
         self.railway_deployer = RailwayDeployer()
         self.vercel_deployer = VercelDeployer()
-        self.git_hooks_manager = GitHooksManager()
-        self.github_actions = None  # Will be initialized in run() if repo exists
+        self.github_actions = None  # Initialized in run() or _fix_workflow_failures using product repo
 
     def get_subscribed_channels(self) -> list[Channels]:
         return [Channels.CTO_TASKS_DEVOPS]
@@ -49,16 +49,21 @@ class DevOpsAgent(BaseAgent):
             
             # Check if this is a hook setup task
             if any(kw in desc_lower for kw in ["setup", "configure", "install", "hook", "git hook", "deployment hook"]):
+                product_root = await get_product_project_dir(self.company_brain)
+                if not product_root:
+                    return TaskResult(
+                        task_id=task.task_id,
+                        success=False,
+                        error="Could not resolve product repository from company brain",
+                        time_taken_seconds=int(time.time() - start),
+                    )
+                hooks_manager = GitHooksManager(repo_root=product_root)
+
                 # Check if hooks already exist to prevent duplicate setup
-                hooks_dir = self.git_hooks_manager.repo_root / ".git" / "hooks" if self.git_hooks_manager.repo_root else None
-                github_workflow_exists = False
-                if self.git_hooks_manager.repo_root:
-                    github_workflow_exists = (self.git_hooks_manager.repo_root / ".github" / "workflows" / "auto-deploy.yml").exists()
-                
-                post_push_exists = False
-                if hooks_dir and hooks_dir.exists():
-                    post_push_exists = (hooks_dir / "post-push").exists()
-                
+                hooks_dir = product_root / ".git" / "hooks"
+                github_workflow_exists = (product_root / ".github" / "workflows" / "auto-deploy.yml").exists()
+                post_push_exists = hooks_dir.exists() and (hooks_dir / "post-push").exists()
+
                 if github_workflow_exists or post_push_exists:
                     # Hooks already exist, skip setup
                     return TaskResult(
@@ -68,9 +73,9 @@ class DevOpsAgent(BaseAgent):
                         approach_used="hook_setup_skipped",
                         time_taken_seconds=int(time.time() - start),
                     )
-                
+
                 # Automatically set up git hooks
-                hooks_result = self.git_hooks_manager.setup_all_hooks()
+                hooks_result = hooks_manager.setup_all_hooks()
                 if hooks_result.get("success"):
                     output = "✅ Git hooks and GitHub Actions workflow configured successfully!\n\n"
                     for hook_type, result in hooks_result.get("results", {}).items():
@@ -136,14 +141,15 @@ class DevOpsAgent(BaseAgent):
             try:
                 settings = get_settings()
                 if (settings.railway_deploy_hook_url or settings.vercel_deploy_hook_url):
-                    hooks_dir = self.git_hooks_manager.repo_root / ".git" / "hooks" if self.git_hooks_manager.repo_root else None
-                    if hooks_dir and hooks_dir.exists():
-                        post_push_exists = (hooks_dir / "post-push").exists()
-                        github_workflow_exists = (self.git_hooks_manager.repo_root / ".github" / "workflows" / "auto-deploy.yml").exists()
-                        
+                    product_root = await get_product_project_dir(self.company_brain)
+                    if product_root:
+                        hooks_dir = product_root / ".git" / "hooks"
+                        post_push_exists = hooks_dir.exists() and (hooks_dir / "post-push").exists()
+                        github_workflow_exists = (product_root / ".github" / "workflows" / "auto-deploy.yml").exists()
+
                         if not post_push_exists and not github_workflow_exists:
-                            # Automatically set up hooks ONCE
-                            hooks_result = self.git_hooks_manager.setup_all_hooks()
+                            hooks_manager = GitHooksManager(repo_root=product_root)
+                            hooks_result = hooks_manager.setup_all_hooks()
                             if hooks_result.get("success"):
                                 logger.info("auto_hooks_setup", task_id=task.task_id)
                                 result.output = f"{result.output}\n\n[✅ Git hooks automatically configured for deployments]"
@@ -394,10 +400,10 @@ class DevOpsAgent(BaseAgent):
         """Background monitoring loop - check GitHub Actions workflows periodically."""
         self.is_running = True
         await self.agent_memory.initialize(self.agent_id, self.role)
-        
-        # Initialize GitHub Actions manager if repo exists
-        if self.git_hooks_manager.repo_root:
-            self.github_actions = GitHubActionsManager(self.git_hooks_manager.repo_root)
+
+        product_root = await get_product_project_dir(self.company_brain)
+        if product_root:
+            self.github_actions = GitHubActionsManager(product_root)
 
         while self.is_running:
             try:
@@ -493,13 +499,16 @@ class DevOpsAgent(BaseAgent):
         import time
         start = time.time()
         
-        if not self.github_actions:
+        product_root = await get_product_project_dir(self.company_brain)
+        if not product_root:
             return TaskResult(
                 task_id=task.task_id,
                 success=False,
-                error="GitHub Actions manager not initialized",
+                error="Could not resolve product repository from company brain",
                 time_taken_seconds=int(time.time() - start),
             )
+        if not self.github_actions:
+            self.github_actions = GitHubActionsManager(product_root)
 
         try:
             # Get context from task
@@ -585,10 +594,10 @@ Provide the complete fixed workflow file wrapped in ```yaml code block with file
             
             if yaml_match:
                 fixed_content = yaml_match.group(1)
-                # Write fixed workflow
-                workflow_path = self.git_hooks_manager.repo_root / ".github" / "workflows" / workflow_name
+                # Write fixed workflow in product repo
+                workflow_path = product_root / ".github" / "workflows" / workflow_name
                 if not workflow_path.exists():
-                    workflow_path = self.git_hooks_manager.repo_root / ".github" / "workflows" / "deploy.yml"
+                    workflow_path = product_root / ".github" / "workflows" / "deploy.yml"
                 
                 write_result = await self.code_writer.write_code(
                     code_output=fixed_content,

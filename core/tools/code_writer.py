@@ -2,7 +2,7 @@
 
 import re
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 
 import structlog
 
@@ -10,6 +10,7 @@ from core.config import get_settings
 from core.tools.code_validator import CodeValidator
 from core.tools.file_manager import FileManager
 from core.tools.git_manager import GitManager
+from core.tools.product_resolver import get_product_project_dir
 
 logger = structlog.get_logger(__name__)
 
@@ -79,88 +80,14 @@ def infer_filename(code: str, language: str, task_description: str) -> Optional[
 
 
 class CodeWriter:
-    """Write code to files and commit to git."""
+    """Write code to files and commit to git. One repo per product in company brain."""
 
-    def __init__(self, base_path: Optional[str] = None):
+    def __init__(self, company_brain: Optional[Any] = None):
         self.settings = get_settings()
+        self.company_brain = company_brain
         self.validator = CodeValidator()
-        # Get or create project repository (where agents build the product)
-        repo_root = self._get_repo_root()
-        if repo_root:
-            self.file_manager = FileManager(repo_root)
-            self.git_manager = GitManager(repo_root)
-            logger.info("code_writer_initialized", project_dir=str(repo_root))
-        else:
-            self.file_manager = None
-            self.git_manager = None
-            logger.warning("code_writer_no_repo", project_dir=self.settings.project_dir)
-
-    def _get_repo_root(self) -> Optional[Path]:
-        """
-        Get the project directory where agents build the product.
-        Creates a new git repo if it doesn't exist.
-        """
-        # Use configured project directory (where agents build the product)
-        project_dir = Path(self.settings.project_dir).resolve()
-        
-        # Create directory if it doesn't exist
-        project_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Initialize git repo if it doesn't exist (synchronous for now)
-        if not (project_dir / ".git").exists():
-            logger.info("initializing_project_repo", dir=str(project_dir))
-            try:
-                import subprocess
-                
-                # Initialize git repo
-                proc = subprocess.run(
-                    ["git", "init"],
-                    cwd=str(project_dir),
-                    capture_output=True,
-                    text=True,
-                )
-                if proc.returncode == 0:
-                    # Create initial commit
-                    readme_path = project_dir / "README.md"
-                    if not readme_path.exists():
-                        readme_path.write_text(
-                            "# Product Built by Autonomous AI Company\n\n"
-                            "This repository contains the product built by AI agents.\n"
-                            "All code is generated and maintained autonomously.\n"
-                        )
-                        subprocess.run(
-                            ["git", "add", "README.md"],
-                            cwd=str(project_dir),
-                            capture_output=True,
-                        )
-                        subprocess.run(
-                            ["git", "commit", "-m", "Initial commit - Product repository"],
-                            cwd=str(project_dir),
-                            capture_output=True,
-                        )
-                    logger.info("project_repo_initialized", dir=str(project_dir))
-                    
-                    # Automatically configure GitHub remote if token is available
-                    if self.settings.github_token:
-                        try:
-                            from core.tools.github_repo import GitHubRepoManager
-                            github_manager = GitHubRepoManager(project_dir)
-                            # This will run async, but we're in sync context - schedule it
-                            import asyncio
-                            loop = asyncio.get_event_loop()
-                            if loop.is_running():
-                                # If loop is running, create task
-                                asyncio.create_task(github_manager.ensure_remote_configured())
-                            else:
-                                # If no loop, run it
-                                asyncio.run(github_manager.ensure_remote_configured())
-                        except Exception as e:
-                            logger.warning("auto_github_setup_failed", error=str(e))
-            except Exception as e:
-                logger.error("failed_to_init_repo", dir=str(project_dir), error=str(e))
-                return None
-        
-        return project_dir
+        self.file_manager: Optional[FileManager] = None
+        self.git_manager: Optional[GitManager] = None
 
     async def write_code(
         self,
@@ -170,10 +97,20 @@ class CodeWriter:
         agent_role: str,
     ) -> dict[str, any]:
         """Write code blocks to files in the project directory. Returns dict with files_written, git_committed."""
-        repo_root = self._get_repo_root()
+        if not self.company_brain:
+            logger.warning("code_writer_no_company_brain")
+            return {"files_written": [], "git_committed": False, "error": "Company brain not configured"}
+        
+        repo_root = await get_product_project_dir(self.company_brain)
         if not repo_root:
-            logger.warning("no_project_repo", path=str(Path.cwd()))
-            return {"files_written": [], "git_committed": False, "error": "Could not initialize project repository"}
+            logger.warning("no_product_repo", path=str(Path.cwd()))
+            return {"files_written": [], "git_committed": False, "error": "Could not resolve product repository"}
+        
+        # Ensure file_manager and git_manager match current product
+        if self.file_manager is None or str(self.file_manager.repo_root) != str(repo_root):
+            self.file_manager = FileManager(repo_root)
+            self.git_manager = GitManager(repo_root)
+            logger.info("code_writer_using_product", project_dir=str(repo_root))
 
         blocks = extract_code_blocks(code_output)
         if not blocks:

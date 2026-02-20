@@ -86,7 +86,7 @@ RAG-powered knowledge retrieval system:
 
 Agents build products in a **separate isolated repository**:
 
-- **Location**: `./product/` directory (configurable via `PROJECT_DIR`)
+- **Location**: `./products/<slug>/` directory (one repo per product, configurable via `PRODUCTS_BASE_DIR`)
 - **Auto-Initialization**: Git repository created automatically on first use
 - **Isolation**: Complete separation from agent system code
 - **Git Operations**: Feature branches, commits, and pushes handled automatically
@@ -415,7 +415,7 @@ make validate-env
 |----------|-------------|---------|
 | `ANTHROPIC_MODEL` | Default Claude model | `claude-sonnet-4-5` |
 | `CHROMA_PERSIST_DIR` | ChromaDB storage path | `./chroma_db` |
-| `PROJECT_DIR` | Product repository directory | `./product` |
+| `PRODUCTS_BASE_DIR` | Base directory for product repos (one per product_name) | `./products` |
 | `KNOWLEDGE_BASE_DIR` | Knowledge base PDF directory | `./knowledge_base` |
 | `CEO_LOOP_INTERVAL` | CEO strategic loop interval (seconds) | `300` |
 | `CTO_LOOP_INTERVAL` | CTO orchestration loop interval (seconds) | `120` |
@@ -473,10 +473,10 @@ The system runs in foreground. Press `Ctrl+C` to stop.
 
 ### Project Repository
 
-Agents automatically create and work in `./product/` directory:
+Agents create one repo per product in `./products/<slug>/` (based on `product_name` in company brain):
 
-- Git repository initialized automatically
-- All product code written here
+- Each product gets its own git repository under `./products/<product-slug>/`
+- Product code written in the resolved directory
 - Separate from agent system code
 - Can be deployed independently
 
@@ -502,11 +502,12 @@ autonomous-ai-company/
 ├── scripts/                   run_agents, validate_env, seed_knowledge
 ├── supabase/                  Database migrations
 ├── tests/                     Unit and integration tests
-└── product/                   Product repository (created by agents, gitignored)
-    ├── .git/                  Separate git repository
-    ├── app/                   Generated application code
-    ├── migrations/             Database migrations
-    └── ...
+└── products/                  Product repos (one per product_name, gitignored)
+    └── <slug>/                e.g. my-cool-app/
+        ├── .git/              Separate git repository per product
+        ├── app/               Generated application code
+        ├── migrations/        Database migrations
+        └── ...
 ```
 
 ## Performance and Scaling

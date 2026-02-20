@@ -7,6 +7,7 @@ from typing import Any
 
 from agents.base_agent import BaseAgent, TaskResult
 from core.config import get_settings
+from core.tools.product_resolver import get_product_project_dir
 from core.messaging.channels import Channels
 from core.messaging.schemas import TaskMessage
 from core.memory.company_brain import CompanyBrain
@@ -59,8 +60,18 @@ class CodeReviewAgent(BaseAgent):
         start = time.time()
         
         try:
+            # Resolve product directory from company brain
+            project_dir = await get_product_project_dir(self.company_brain)
+            if not project_dir:
+                return TaskResult(
+                    task_id=task.task_id,
+                    success=False,
+                    error="Could not resolve product directory from company brain",
+                    time_taken_seconds=int(time.time() - start),
+                )
+            
             # Extract file paths from task description or context
-            file_paths = self._extract_file_paths(task)
+            file_paths = self._extract_file_paths(task, project_dir)
             if not file_paths:
                 return TaskResult(
                     task_id=task.task_id,
@@ -68,8 +79,6 @@ class CodeReviewAgent(BaseAgent):
                     error="No file paths found in task description",
                     time_taken_seconds=int(time.time() - start),
                 )
-            
-            project_dir = Path(self.settings.project_dir).resolve()
             
             # Parallelize file reviews and scans
             async def review_file_async(file_path_str: str):
@@ -165,7 +174,7 @@ class CodeReviewAgent(BaseAgent):
                 time_taken_seconds=int(time.time() - start),
             )
 
-    def _extract_file_paths(self, task: TaskMessage) -> list[str]:
+    def _extract_file_paths(self, task: TaskMessage, project_dir: Path | None = None) -> list[str]:
         """Extract file paths from task description or context."""
         paths = []
         
@@ -186,19 +195,17 @@ class CodeReviewAgent(BaseAgent):
             paths.extend(matches)
         
         # If still no paths, try to find recently modified files
-        if not paths:
-            project_dir = Path(self.settings.project_dir).resolve()
-            if project_dir.exists():
-                # Get Python files modified in last hour
-                import time
-                cutoff = time.time() - 3600
-                for py_file in project_dir.rglob("*.py"):
-                    try:
-                        if py_file.stat().st_mtime > cutoff:
-                            rel_path = py_file.relative_to(project_dir)
-                            paths.append(str(rel_path))
-                    except Exception:
-                        pass
+        if not paths and project_dir and project_dir.exists():
+            # Get Python files modified in last hour
+            import time
+            cutoff = time.time() - 3600
+            for py_file in project_dir.rglob("*.py"):
+                try:
+                    if py_file.stat().st_mtime > cutoff:
+                        rel_path = py_file.relative_to(project_dir)
+                        paths.append(str(rel_path))
+                except Exception:
+                    pass
         
         return list(set(paths))[:10]  # Limit to 10 files
 

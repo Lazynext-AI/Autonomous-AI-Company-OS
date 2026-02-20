@@ -46,5 +46,5 @@ out/
 .DS_Store
 Thumbs.db
 
-# Product directory (agents build products here in separate repo)
-product/
+# Product repos (one per product in company brain)
+products/
