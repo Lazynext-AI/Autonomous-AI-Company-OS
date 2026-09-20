@@ -1,6 +1,9 @@
-"""Deployment tools - Railway and Vercel integration for agents."""
+"""Deployment tools - Cloudflare Pages (frontend) and Containers (backend)."""
 
-import httpx
+import asyncio
+import os
+import re
+from pathlib import Path
 from typing import Optional
 
 import structlog
@@ -9,287 +12,236 @@ from core.config import get_settings
 
 logger = structlog.get_logger(__name__)
 
+CONTAINER_WORKER_JS = '''import { Container, getContainer } from "@cloudflare/containers";
 
-class RailwayDeployer:
-    """Deploy backend to Railway."""
+export class Backend extends Container {
+  defaultPort = 8000;
+  sleepAfter = "10m";
+}
 
-    def __init__(self):
-        self.settings = get_settings()
-        self.token = self.settings.railway_token.strip()
-        self.base_url = "https://backboard.railway.app/graphql/v2"
+export default {
+  async fetch(request, env) {
+    return getContainer(env.BACKEND).fetch(request);
+  },
+};
+'''
 
-    async def trigger_deployment(self, project_id: Optional[str] = None) -> dict:
-        """
-        Trigger Railway deployment and get deployment URL.
-        If project_id is None, uses deploy hook URL from env.
-        Returns deployment URL if available.
-        """
-        if not self.token:
-            return {
-                "success": False,
-                "error": "RAILWAY_TOKEN not set",
-            }
+CONTAINER_PACKAGE_JSON = '''{
+  "private": true,
+  "dependencies": {
+    "@cloudflare/containers": "^0.1.0",
+    "wrangler": "^4.0.0"
+  }
+}
+'''
 
-        try:
-            # Option 1: Use deploy hook URL (simpler, recommended)
-            deploy_hook = self.settings.railway_deploy_hook_url
-            if deploy_hook:
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    response = await client.post(deploy_hook)
-                    if response.status_code == 200:
-                        logger.info("railway_deploy_triggered", hook=deploy_hook[:50])
-                        
-                        # Try to get deployment URL from Railway API
-                        deployment_url = await self._get_deployment_url()
-                        
-                        result = {
-                            "success": True,
-                            "method": "deploy_hook",
-                            "message": "Deployment triggered via hook",
-                        }
-                        if deployment_url:
-                            result["url"] = deployment_url
-                            logger.info("railway_deployment_url_fetched", url=deployment_url)
-                        
-                        return result
-                    else:
-                        return {
-                            "success": False,
-                            "error": f"Deploy hook returned {response.status_code}",
-                        }
+CONTAINER_WRANGLER_TOML = '''name = "{name}"
+main = "worker.js"
+compatibility_date = "2025-09-01"
 
-            # Option 2: Use Railway GraphQL API (if project_id provided)
-            if project_id:
-                query = """
-                mutation {
-                    deploymentCreate(input: {
-                        projectId: "%s"
-                    }) {
-                        id
-                        status
-                    }
-                }
-                """ % project_id
+[[containers]]
+class_name = "Backend"
+image = "{dockerfile}"
+max_instances = 2
 
-                headers = {
-                    "Authorization": f"Bearer {self.token}",
-                    "Content-Type": "application/json",
-                }
+[[durable_objects.bindings]]
+name = "BACKEND"
+class_name = "Backend"
 
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    response = await client.post(
-                        self.base_url,
-                        json={"query": query},
-                        headers=headers,
-                    )
-                    if response.status_code == 200:
-                        data = response.json()
-                        if "errors" in data:
-                            return {
-                                "success": False,
-                                "error": str(data["errors"]),
-                            }
-                        logger.info("railway_deploy_triggered", project_id=project_id)
-                        return {
-                            "success": True,
-                            "method": "graphql",
-                            "deployment_id": data.get("data", {}).get("deploymentCreate", {}).get("id"),
-                        }
-                    else:
-                        return {
-                            "success": False,
-                            "error": f"Railway API returned {response.status_code}",
-                        }
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Backend"]
+'''
 
-            return {
-                "success": False,
-                "error": "No deploy hook URL or project_id provided",
-            }
-        except Exception as e:
-            logger.error("railway_deploy_failed", error=str(e))
-            return {
-                "success": False,
-                "error": str(e),
-            }
-    
-    async def _get_deployment_url(self) -> Optional[str]:
-        """Get the latest Railway deployment URL from API."""
-        try:
-            # Query Railway GraphQL API for project deployments
-            query = """
-            query {
-                deployments {
-                    edges {
-                        node {
-                            id
-                            status
-                            url
-                            createdAt
-                        }
-                    }
-                }
-            }
-            """
-            
-            headers = {
-                "Authorization": f"Bearer {self.token}",
-                "Content-Type": "application/json",
-            }
-            
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                response = await client.post(
-                    self.base_url,
-                    json={"query": query},
-                    headers=headers,
-                )
-                if response.status_code == 200:
-                    data = response.json()
-                    if "data" in data and "deployments" in data["data"]:
-                        edges = data["data"]["deployments"].get("edges", [])
-                        if edges:
-                            # Get most recent deployment
-                            latest = edges[0]["node"]
-                            if latest.get("status") == "SUCCESS" and latest.get("url"):
-                                return latest["url"]
-            
-            return None
-        except Exception as e:
-            logger.warning("railway_url_fetch_failed", error=str(e))
-            return None
+GENERIC_DOCKERFILE = '''FROM python:3.12-slim
+WORKDIR /app
+COPY . .
+RUN pip install --no-cache-dir -r requirements.txt
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+'''
 
 
-class VercelDeployer:
-    """Deploy frontend to Vercel."""
+def _wrangler_env() -> dict:
+    """Env vars for wrangler subprocesses. Prefers the scoped deploy token,
+    falls back to global API key + email."""
+    s = get_settings()
+    env = dict(os.environ)
+    if s.cloudflare_account_id:
+        env["CLOUDFLARE_ACCOUNT_ID"] = s.cloudflare_account_id
+    if s.cloudflare_deploy_token:
+        env["CLOUDFLARE_API_TOKEN"] = s.cloudflare_deploy_token
+        env.pop("CLOUDFLARE_API_KEY", None)
+        env.pop("CLOUDFLARE_EMAIL", None)
+    else:
+        if s.cloudflare_api_key:
+            env["CLOUDFLARE_API_KEY"] = s.cloudflare_api_key
+        if s.cloudflare_email:
+            env["CLOUDFLARE_EMAIL"] = s.cloudflare_email
+    return env
+
+
+def _wrangler_available() -> bool:
+    s = get_settings()
+    return bool(s.cloudflare_deploy_token or (s.cloudflare_api_key and s.cloudflare_email))
+
+
+def _worker_subdomain() -> str:
+    """Derive workers.dev subdomain from the deployed API worker URL."""
+    url = get_settings().cloudflare_api_url
+    m = re.match(r"https?://[^.]+\.([^.]+\.workers\.dev)", url)
+    return m.group(1) if m else ""
+
+
+async def _run(cmd: list[str], cwd: Optional[Path] = None, timeout: int = 300) -> tuple[int, str]:
+    """Run a command, return (returncode, combined output)."""
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        cwd=str(cwd) if cwd else None,
+        env=_wrangler_env(),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
+    )
+    try:
+        out, _ = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+    except asyncio.TimeoutError:
+        proc.kill()
+        return 124, "timed out"
+    return proc.returncode or 0, (out or b"").decode(errors="replace")
+
+
+def _slugify(name: str) -> str:
+    slug = re.sub(r"[^a-z0-9-]+", "-", name.lower()).strip("-")
+    return slug[:50] or "product"
+
+
+class CloudflarePagesDeployer:
+    """Deploy static frontend to Cloudflare Pages via wrangler direct upload."""
 
     def __init__(self):
         self.settings = get_settings()
-        self.token = self.settings.vercel_token.strip()
-        self.team_id = self.settings.vercel_team_id.strip()
-        self.base_url = "https://api.vercel.com"
 
     async def trigger_deployment(
-        self, project_name: Optional[str] = None, directory: str = "dashboard"
+        self, project_name: Optional[str] = None, directory: Optional[str] = None
     ) -> dict:
-        """
-        Trigger Vercel deployment and get deployment URL.
-        If project_name is None, uses deploy hook URL from env.
-        Returns deployment URL if available.
-        """
-        if not self.token:
-            return {
-                "success": False,
-                "error": "VERCEL_TOKEN not set",
-            }
+        """Upload a static directory to Cloudflare Pages. Returns {success, url}."""
+        if not _wrangler_available():
+            return {"success": False, "error": "CLOUDFLARE_DEPLOY_TOKEN (or API_KEY+EMAIL) not set"}
 
-        try:
-            # Option 1: Use deploy hook URL (simpler, recommended)
-            deploy_hook = self.settings.vercel_deploy_hook_url
-            if deploy_hook:
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    response = await client.post(deploy_hook)
-                    if response.status_code == 200:
-                        logger.info("vercel_deploy_triggered", hook=deploy_hook[:50])
-                        
-                        # Try to get deployment URL from Vercel API
-                        deployment_url = await self._get_deployment_url(project_name)
-                        
-                        result = {
-                            "success": True,
-                            "method": "deploy_hook",
-                            "message": "Deployment triggered via hook",
-                        }
-                        if deployment_url:
-                            result["url"] = deployment_url
-                            logger.info("vercel_deployment_url_fetched", url=deployment_url)
-                        
-                        return result
-                    else:
-                        return {
-                            "success": False,
-                            "error": f"Deploy hook returned {response.status_code}",
-                        }
+        if not directory:
+            return {"success": False, "error": "No frontend directory provided"}
+        src = Path(directory)
+        if not src.exists() or not src.is_dir():
+            return {"success": False, "error": f"Frontend directory not found: {directory}"}
+        # Prefer a built output dir if present
+        for sub in ("dist", "out", "build"):
+            if (src / sub).is_dir():
+                src = src / sub
+                break
+        if not (src / "index.html").exists():
+            return {"success": False, "error": f"No index.html in {src} - build the frontend first"}
 
-            # Option 2: Use Vercel API (if project_name provided)
-            if project_name:
-                headers = {
-                    "Authorization": f"Bearer {self.token}",
-                    "Content-Type": "application/json",
+        name = _slugify(project_name or src.parent.name)
+        code, out = await _run(
+            ["npx", "wrangler", "pages", "deploy", str(src), "--project-name", name, "--branch", "main"],
+            timeout=300,
+        )
+        if code != 0:
+            logger.error("pages_deploy_failed", output=out[:400])
+            return {"success": False, "error": out.strip()[:200]}
+
+        m = re.search(r"https://[a-z0-9.-]*\.pages\.dev", out)
+        url = m.group(0) if m else f"https://{name}.pages.dev"
+        logger.info("pages_deployed", url=url)
+        return {"success": True, "method": "wrangler_pages", "url": url}
+
+
+class CloudflareBackendDeployer:
+    """Deploy a containerized backend to Cloudflare Containers via wrangler.
+
+    Requires a Dockerfile in the backend directory (a generic FastAPI one is
+    generated if missing) and Docker running locally for the image build.
+    """
+
+    def __init__(self):
+        self.settings = get_settings()
+
+    async def trigger_deployment(
+        self, project_name: Optional[str] = None, directory: Optional[str] = None
+    ) -> dict:
+        """Deploy the backend. JS/TS backends deploy as a plain Worker (free tier);
+        anything with requirements.txt / Dockerfile goes to Cloudflare Containers."""
+        if not _wrangler_available():
+            return {"success": False, "error": "CLOUDFLARE_DEPLOY_TOKEN (or API_KEY+EMAIL) not set"}
+        if not directory:
+            return {"success": False, "error": "No backend directory provided"}
+
+        backend = Path(directory)
+        if not backend.exists() or not backend.is_dir():
+            return {"success": False, "error": f"Backend directory not found: {directory}"}
+
+        if (backend / "wrangler.toml").exists():
+            return await self._deploy_js_worker(backend)
+        dockerfile = backend / "Dockerfile"
+        if not dockerfile.exists():
+            if not (backend / "requirements.txt").exists():
+                return {
+                    "success": False,
+                    "error": "No Dockerfile or requirements.txt in backend directory",
                 }
+            dockerfile.write_text(GENERIC_DOCKERFILE)
+            logger.info("dockerfile_generated", path=str(dockerfile))
 
-                # Get project ID first
-                url = f"{self.base_url}/v9/projects/{project_name}"
-                if self.team_id:
-                    url += f"?teamId={self.team_id}"
+        name = _slugify(f"{project_name or backend.parent.name}-backend")
+        deploy_dir = backend.parent / ".deploy" / name
+        deploy_dir.mkdir(parents=True, exist_ok=True)
+        (deploy_dir / "worker.js").write_text(CONTAINER_WORKER_JS)
+        (deploy_dir / "package.json").write_text(CONTAINER_PACKAGE_JSON)
+        (deploy_dir / "wrangler.toml").write_text(
+            CONTAINER_WRANGLER_TOML.format(name=name, dockerfile=dockerfile.resolve())
+        )
 
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    # Trigger deployment
-                    deploy_url = f"{self.base_url}/v13/deployments"
-                    if self.team_id:
-                        deploy_url += f"?teamId={self.team_id}"
+        code, out = await _run(["npm", "install", "--silent"], cwd=deploy_dir, timeout=180)
+        if code != 0:
+            return {"success": False, "error": f"npm install failed: {out.strip()[:200]}"}
 
-                    payload = {
-                        "name": project_name,
-                        "projectSettings": {"framework": "nextjs"},
-                    }
+        # wrangler builds the image from the Dockerfile and pushes it
+        code, out = await _run(["npx", "wrangler", "deploy"], cwd=deploy_dir, timeout=900)
+        if code != 0:
+            logger.error("containers_deploy_failed", output=out[:400])
+            return {"success": False, "error": out.strip()[:200]}
 
-                    response = await client.post(deploy_url, json=payload, headers=headers)
-                    if response.status_code in (200, 201):
-                        data = response.json()
-                        logger.info("vercel_deploy_triggered", project=project_name)
-                        return {
-                            "success": True,
-                            "method": "api",
-                            "deployment_id": data.get("uid"),
-                            "url": data.get("url"),
-                        }
-                    else:
-                        return {
-                            "success": False,
-                            "error": f"Vercel API returned {response.status_code}: {response.text[:200]}",
-                        }
+        subdomain = _worker_subdomain()
+        url = f"https://{name}.{subdomain}" if subdomain else None
+        logger.info("containers_deployed", url=url)
+        result = {"success": True, "method": "wrangler_containers"}
+        if url:
+            result["url"] = url
+        return result
 
-            return {
-                "success": False,
-                "error": "No deploy hook URL or project_name provided",
-            }
-        except Exception as e:
-            logger.error("vercel_deploy_failed", error=str(e))
-            return {
-                "success": False,
-                "error": str(e),
-            }
-    
-    async def _get_deployment_url(self, project_name: Optional[str] = None) -> Optional[str]:
-        """Get the latest Vercel deployment URL from API."""
-        try:
-            headers = {
-                "Authorization": f"Bearer {self.token}",
-                "Content-Type": "application/json",
-            }
-            
-            # If project_name provided, get project deployments
-            if project_name:
-                url = f"{self.base_url}/v6/deployments"
-                params = {"projectId": project_name, "limit": 1}
-                if self.team_id:
-                    params["teamId"] = self.team_id
-                
-                async with httpx.AsyncClient(timeout=15.0) as client:
-                    response = await client.get(url, params=params, headers=headers)
-                    if response.status_code == 200:
-                        data = response.json()
-                        deployments = data.get("deployments", [])
-                        if deployments:
-                            latest = deployments[0]
-                            if latest.get("readyState") == "READY" and latest.get("url"):
-                                return f"https://{latest['url']}"
-            
-            # Fallback: Try to get from project settings
-            # Vercel projects have a default domain pattern: project-name.vercel.app
-            if project_name:
-                return f"https://{project_name}.vercel.app"
-            
-            return None
-        except Exception as e:
-            logger.warning("vercel_url_fetch_failed", error=str(e))
-            return None
+    async def _deploy_js_worker(self, backend: Path) -> dict:
+        """Deploy a JS/TS backend directory (must contain wrangler.toml + entry point)."""
+        name = ""
+        toml = (backend / "wrangler.toml").read_text()
+        m = re.search(r'^name\s*=\s*"([^"]+)"', toml, re.M)
+        name = m.group(1) if m else _slugify(backend.name)
+
+        if (backend / "package.json").exists() and not (backend / "node_modules").exists():
+            code, out = await _run(["npm", "install", "--silent"], cwd=backend, timeout=180)
+            if code != 0:
+                return {"success": False, "error": f"npm install failed: {out.strip()[:200]}"}
+
+        code, out = await _run(["npx", "wrangler", "deploy"], cwd=backend, timeout=300)
+        if code != 0:
+            logger.error("worker_deploy_failed", output=out[:400])
+            return {"success": False, "error": out.strip()[:200]}
+
+        m = re.search(r"https://[a-z0-9.-]+\.workers\.dev", out)
+        url = m.group(0) if m else (
+            f"https://{name}.{_worker_subdomain()}" if _worker_subdomain() else None
+        )
+        logger.info("worker_deployed", url=url)
+        result = {"success": True, "method": "wrangler_worker"}
+        if url:
+            result["url"] = url
+        return result

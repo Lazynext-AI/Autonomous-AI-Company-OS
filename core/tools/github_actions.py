@@ -20,7 +20,6 @@ class GitHubActionsManager:
         self.repo_root = repo_root
         self.settings = get_settings()
         self.token = self.settings.github_token.strip() if self.settings.github_token else ""
-        self.org = self.settings.github_org.strip() if self.settings.github_org else ""
         self._repo_owner = None
         self._repo_name = None
 

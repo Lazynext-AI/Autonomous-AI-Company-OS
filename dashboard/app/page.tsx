@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { queryApi, parseJson } from "@/lib/api";
 import Link from "next/link";
 import { Activity, Users, DollarSign, TrendingUp, AlertCircle, CheckCircle, Clock, Zap } from "lucide-react";
 
@@ -33,42 +33,34 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
   useEffect(() => {
-    if (!supabaseUrl || !supabaseKey) {
-      setLoading(false);
-      return;
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Initial fetch
     const fetchData = async () => {
       try {
-        // Fetch company brain
-        const { data: brainData } = await supabase
-          .from("company_brain")
-          .select("*")
-          .limit(1)
-          .single();
-
+        const brainRows = await queryApi<any>(
+          "SELECT * FROM company_brain LIMIT 1"
+        );
+        const brainData = brainRows[0];
         if (brainData) {
-          setBrain(brainData);
-          setAgentStatuses(brainData.agent_statuses || {});
+          const parsed = {
+            ...brainData,
+            metrics: parseJson(brainData.metrics, {}),
+            agent_statuses: parseJson(brainData.agent_statuses, {}),
+            tech_stack: parseJson(brainData.tech_stack, {}),
+            live_urls: parseJson(brainData.live_urls, {}),
+            current_sprint: parseJson(brainData.current_sprint, {}),
+            open_bugs: parseJson(brainData.open_bugs, []),
+            shipped_features: parseJson(brainData.shipped_features, []),
+            user_feedback: parseJson(brainData.user_feedback, []),
+            blockers: parseJson(brainData.blockers, []),
+          };
+          setBrain(parsed);
+          setAgentStatuses(parsed.agent_statuses);
         }
 
-        // Fetch recent tasks
-        const { data: tasksData } = await supabase
-          .from("task_log")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(50);
-
-        if (tasksData) {
-          setTasks(tasksData as Task[]);
-        }
+        const tasksData = await queryApi<Task>(
+          "SELECT * FROM task_log ORDER BY created_at DESC LIMIT 50"
+        );
+        setTasks(tasksData);
 
         setLoading(false);
         setLastUpdate(new Date());
@@ -79,61 +71,9 @@ export default function DashboardPage() {
     };
 
     fetchData();
-
-    // Set up real-time subscriptions
-    const brainChannel = supabase
-      .channel("company_brain_changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "company_brain",
-        },
-        (payload) => {
-          if (payload.new) {
-            setBrain(payload.new);
-            setAgentStatuses((payload.new as any).agent_statuses || {});
-            setLastUpdate(new Date());
-          }
-        }
-      )
-      .subscribe();
-
-    const taskChannel = supabase
-      .channel("task_log_changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "task_log",
-        },
-        async () => {
-          // Refetch tasks on any change
-          const { data: tasksData } = await supabase
-            .from("task_log")
-            .select("*")
-            .order("created_at", { ascending: false })
-            .limit(50);
-
-          if (tasksData) {
-            setTasks(tasksData as Task[]);
-            setLastUpdate(new Date());
-          }
-        }
-      )
-      .subscribe();
-
-    // Poll for updates every 2 seconds as fallback
     const pollInterval = setInterval(fetchData, 2000);
-
-    return () => {
-      brainChannel.unsubscribe();
-      taskChannel.unsubscribe();
-      clearInterval(pollInterval);
-    };
-  }, [supabaseUrl, supabaseKey]);
+    return () => clearInterval(pollInterval);
+  }, []);
 
   if (loading) {
     return (
@@ -214,6 +154,9 @@ export default function DashboardPage() {
           </Link>
           <Link href="/brain" className="text-zinc-400 hover:text-zinc-200 transition">
             Company Brain
+          </Link>
+          <Link href="/briefings" className="text-zinc-400 hover:text-zinc-200 transition">
+            Briefings
           </Link>
         </nav>
 

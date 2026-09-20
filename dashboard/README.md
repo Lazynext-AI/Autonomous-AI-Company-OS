@@ -1,12 +1,11 @@
 # Autonomous AI Company Dashboard
 
-A comprehensive, real-time dashboard for monitoring your autonomous AI company. Everything streams live - no need to check Supabase or console logs.
+A comprehensive, real-time dashboard for monitoring your autonomous AI company. Data refreshes automatically - no need to check the database or console logs.
 
 ## Features
 
-### 🎯 Real-Time Updates
-- **Live Data Streaming**: All data updates automatically via Supabase Realtime subscriptions
-- **Polling Fallback**: 1-2 second polling ensures data is always fresh
+### 🎯 Live Updates
+- **Polling**: Data refreshes every 1-2 seconds via `/api/query` (server-side proxy to the Cloudflare Worker)
 - **Visual Indicators**: Live status indicators show when data is updating
 
 ### 📊 Overview Page (`/`)
@@ -45,30 +44,21 @@ A comprehensive, real-time dashboard for monitoring your autonomous AI company. 
 
 ### 1. Environment Variables
 
-Create a `.env.local` file in the dashboard directory:
+Create a `.env.local` file in the dashboard directory (server-side only, never exposed to the browser):
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+CLOUDFLARE_API_URL=https://ai-company-os.<your-account>.workers.dev
+CLOUDFLARE_API_TOKEN=your_shared_worker_secret
 ```
 
-### 2. Enable Supabase Realtime
-
-In your Supabase dashboard:
-1. Go to Database → Replication
-2. Enable replication for these tables:
-   - `company_brain`
-   - `task_log`
-   - `agent_memories`
-
-### 3. Install Dependencies
+### 2. Install Dependencies
 
 ```bash
 cd dashboard
 npm install
 ```
 
-### 4. Run Development Server
+### 3. Run Development Server
 
 ```bash
 npm run dev
@@ -78,15 +68,13 @@ The dashboard will be available at `http://localhost:3000`
 
 ## Real-Time Features
 
-### Supabase Realtime
-- Subscribes to PostgreSQL changes
-- Instant updates when data changes
-- Efficient and scalable
+### Worker API Proxy
+- `/api/query` Next.js route proxies SQL queries to the Cloudflare Worker
+- The Worker token stays server-side (never shipped to the browser)
 
-### Polling Fallback
+### Polling
 - 1-2 second intervals for critical data
-- Ensures updates even if Realtime fails
-- Graceful degradation
+- Ensures updates without realtime subscriptions
 
 ### Visual Feedback
 - Live indicator (pulsing green dot)
@@ -144,16 +132,14 @@ The dashboard will be available at `http://localhost:3000`
 ## Troubleshooting
 
 ### No Data Showing
-1. Check environment variables are set
-2. Verify Supabase tables exist
-3. Check browser console for errors
-4. Ensure Realtime is enabled in Supabase
+1. Check `CLOUDFLARE_API_URL` / `CLOUDFLARE_API_TOKEN` are set in `.env.local`
+2. Verify the Worker is deployed and the D1 schema was applied (`make worker-migrate`)
+3. Check browser console and the Network tab for `/api/query` responses
+4. Confirm the agents are running and writing to D1
 
-### Updates Not Streaming
-1. Check Supabase Realtime is enabled
-2. Verify table replication is on
-3. Check network tab for WebSocket connections
-4. Polling fallback should still work
+### Updates Not Refreshing
+1. Polling runs every 1-2 seconds; check `/api/query` in the Network tab
+2. Verify the Worker `/health` endpoint returns 200
 
 ### Styling Issues
 1. Ensure Tailwind CSS is compiled

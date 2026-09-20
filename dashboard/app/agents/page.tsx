@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { queryApi, parseJson } from "@/lib/api";
 import Link from "next/link";
 import { Activity, CheckCircle, Clock, AlertCircle, TrendingUp, Zap } from "lucide-react";
 
@@ -22,36 +22,30 @@ export default function AgentsPage() {
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
   useEffect(() => {
-    if (!supabaseUrl || !supabaseKey) {
-      setLoading(false);
-      return;
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     const fetchAgents = async () => {
       try {
-        const { data: agentsData } = await supabase
-          .from("agent_memories")
-          .select("*")
-          .order("last_active", { ascending: false });
+        const agentsData = await queryApi<any>(
+          "SELECT * FROM agent_memories ORDER BY last_active DESC"
+        );
+        setAgents(
+          agentsData.map((a) => ({
+            ...a,
+            current_task: parseJson(a.current_task, null),
+            tasks_completed: parseJson(a.tasks_completed, []),
+            tasks_failed: parseJson(a.tasks_failed, []),
+          })) as AgentMemory[]
+        );
 
-        if (agentsData) {
-          setAgents(agentsData as AgentMemory[]);
-        }
-
-        const { data: brainData } = await supabase
-          .from("company_brain")
-          .select("agent_statuses")
-          .limit(1)
-          .single();
-
+        const brainRows = await queryApi<any>(
+          "SELECT agent_statuses FROM company_brain LIMIT 1"
+        );
+        const brainData = brainRows[0];
         if (brainData) {
-          setBrain(brainData);
+          setBrain({
+            ...brainData,
+            agent_statuses: parseJson(brainData.agent_statuses, {}),
+          });
         }
 
         setLoading(false);
@@ -63,41 +57,9 @@ export default function AgentsPage() {
     };
 
     fetchAgents();
-
-    // Real-time subscription
-    const channel = supabase
-      .channel("agent_updates")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "agent_memories",
-        },
-        () => {
-          fetchAgents();
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "company_brain",
-        },
-        () => {
-          fetchAgents();
-        }
-      )
-      .subscribe();
-
     const pollInterval = setInterval(fetchAgents, 2000);
-
-    return () => {
-      channel.unsubscribe();
-      clearInterval(pollInterval);
-    };
-  }, [supabaseUrl, supabaseKey]);
+    return () => clearInterval(pollInterval);
+  }, []);
 
   if (loading) {
     return (
@@ -162,6 +124,9 @@ export default function AgentsPage() {
           </Link>
           <Link href="/brain" className="text-zinc-400 hover:text-zinc-200 transition">
             Company Brain
+          </Link>
+          <Link href="/briefings" className="text-zinc-400 hover:text-zinc-200 transition">
+            Briefings
           </Link>
         </nav>
 

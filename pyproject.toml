@@ -8,14 +8,6 @@ packages = [{include = "core"}, {include = "agents"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-langgraph = "^0.2"
-langchain = "^0.3"
-langchain-community = "^0.3"
-supabase = "^2.0"
-redis = "^5.0"
-chromadb = "^0.5"
-llama-index = "^0.11"
-llama-index-vector-stores-chroma = "^0.2"
 fastapi = "^0.115"
 uvicorn = "^0.30"
 pydantic = "^2.8"
@@ -29,9 +21,10 @@ python-dotenv = "^1.0"
 PyGithub = "^2.4"
 resend = "^2.4"
 schedule = "^1.2"
-rich = "^13.8"
+rich = "^14.0"
 e2b-code-interpreter = "^2.4"
 sentence-transformers = "^2.7"
+pypdf = "^5.0"
 pyyaml = "^6.0"
 
 [tool.poetry.group.dev.dependencies]

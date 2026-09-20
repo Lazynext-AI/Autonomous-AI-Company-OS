@@ -1,4 +1,4 @@
-"""Task lifecycle tracker backed by Supabase task_log."""
+"""Task lifecycle tracker backed by D1 task_log via Cloudflare Worker."""
 
 import asyncio
 from datetime import datetime, timezone
@@ -6,7 +6,7 @@ from typing import Any
 
 import structlog
 
-from core.supabase_client import SupabaseClient
+from core.cloudflare_client import CloudflareClient
 
 logger = structlog.get_logger(__name__)
 
@@ -19,7 +19,7 @@ class TaskTracker:
     """Create and update task lifecycle rows in task_log."""
 
     def __init__(self) -> None:
-        self._client = SupabaseClient()
+        self._client = CloudflareClient()
 
     def is_enabled(self) -> bool:
         return self._client.is_configured()

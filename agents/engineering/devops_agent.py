@@ -1,4 +1,4 @@
-"""DevOps Agent - CI/CD, deployments, monitoring."""
+"""DevOps Agent - Cloudflare deployments, monitoring."""
 
 import asyncio
 import uuid
@@ -12,7 +12,7 @@ from core.memory.company_brain import BlockerSchema
 from core.messaging.channels import Channels
 from core.messaging.schemas import QAAlertMessage, TaskMessage
 from core.tools.code_writer import CodeWriter
-from core.tools.deployment import RailwayDeployer, VercelDeployer
+from core.tools.deployment import CloudflareBackendDeployer, CloudflarePagesDeployer
 from core.tools.git_hooks import GitHooksManager
 from core.tools.github_actions import GitHubActionsManager
 
@@ -21,7 +21,7 @@ logger = structlog.get_logger(__name__)
 
 DEVOPS_SYSTEM_PROMPT = """You are a senior DevOps engineer. You manage CI/CD pipelines, deployments,
 environment configuration, and infrastructure monitoring.
-You use GitHub Actions for CI, Railway for backend deployment, Vercel for frontend.
+You deploy frontends to Cloudflare Pages and containerized backends to Cloudflare Containers.
 You monitor GitHub Actions workflows and automatically fix failures."""
 
 
@@ -31,8 +31,8 @@ class DevOpsAgent(BaseAgent):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.code_writer = CodeWriter(company_brain=self.company_brain)
-        self.railway_deployer = RailwayDeployer()
-        self.vercel_deployer = VercelDeployer()
+        self.backend_deployer = CloudflareBackendDeployer()
+        self.pages_deployer = CloudflarePagesDeployer()
         self.github_actions = None  # Initialized in run() or _fix_workflow_failures using product repo
 
     def get_subscribed_channels(self) -> list[Channels]:
@@ -46,7 +46,7 @@ class DevOpsAgent(BaseAgent):
         start = time.time()
         try:
             desc_lower = task.description.lower()
-            
+
             # Check if this is a hook setup task
             if any(kw in desc_lower for kw in ["setup", "configure", "install", "hook", "git hook", "deployment hook"]):
                 product_root = await get_product_project_dir(self.company_brain)
@@ -65,7 +65,6 @@ class DevOpsAgent(BaseAgent):
                 post_push_exists = hooks_dir.exists() and (hooks_dir / "post-push").exists()
 
                 if github_workflow_exists or post_push_exists:
-                    # Hooks already exist, skip setup
                     return TaskResult(
                         task_id=task.task_id,
                         success=True,
@@ -100,17 +99,16 @@ class DevOpsAgent(BaseAgent):
                         error=f"Hook setup failed: {hooks_result.get('error', 'Unknown error')}",
                         time_taken_seconds=int(time.time() - start),
                     )
-            
-            prompt = f"Provide deployment/CI/CD execution plan for: {task.description}. Include verification and rollback steps."
-            
+
+            prompt = f"Provide deployment/infrastructure execution plan for: {task.description}. Include verification and rollback steps."
+
             # Handle GitHub Actions workflow failures
             if any(kw in desc_lower for kw in ["fix workflow", "workflow failed", "github actions", "ci/cd failed", "pipeline failed"]):
                 return await self._fix_workflow_failures(task)
-            
-            # If task involves creating config files, ask for code
-            if any(kw in desc_lower for kw in ["github actions", "workflow", "docker", "dockerfile", "docker-compose", "config", "yaml", "yml"]):
-                prompt += "\n\nIMPORTANT: If this requires creating configuration files (GitHub Actions workflows, Dockerfiles, etc.), wrap the file content in markdown code blocks with language tag (e.g., ```yaml\\ncode\\n```). Include the file path as a comment (e.g., # File: .github/workflows/deploy.yml)."
-            
+
+            if any(kw in desc_lower for kw in ["github actions", "workflow", "dockerfile", "wrangler", "docker", "config", "yaml", "yml", "toml"]):
+                prompt += "\n\nIMPORTANT: If this requires creating configuration files (Dockerfiles, wrangler.toml, etc.), wrap the file content in markdown code blocks with language tag (e.g., ```yaml\\ncode\\n```). Include the file path as a comment (e.g., # File: backend/Dockerfile)."
+
             output = await self.call_llm(
                 DEVOPS_SYSTEM_PROMPT,
                 prompt,
@@ -132,15 +130,15 @@ class DevOpsAgent(BaseAgent):
 
     async def post_task_hook(self, task: TaskMessage, result: TaskResult) -> None:
         """Write generated config files, trigger deployments, and verify."""
-        # Auto-setup git hooks ONCE if deploy hooks are configured but hooks don't exist
+        # Auto-setup deploy hooks ONCE if Cloudflare creds are configured but hooks don't exist
         # Only do this once per session to prevent loops
         if not hasattr(self, '_hooks_setup_attempted'):
             self._hooks_setup_attempted = False
-        
+
         if not self._hooks_setup_attempted:
             try:
                 settings = get_settings()
-                if (settings.railway_deploy_hook_url or settings.vercel_deploy_hook_url):
+                if settings.cloudflare_api_key and settings.cloudflare_email:
                     product_root = await get_product_project_dir(self.company_brain)
                     if product_root:
                         hooks_dir = product_root / ".git" / "hooks"
@@ -157,7 +155,7 @@ class DevOpsAgent(BaseAgent):
             except Exception as e:
                 logger.warning("auto_hooks_setup_failed", error=str(e))
                 self._hooks_setup_attempted = True  # Mark as attempted even on error
-        
+
         # Write code/config files first
         if result.success and result.output:
             try:
@@ -179,49 +177,59 @@ class DevOpsAgent(BaseAgent):
                         result.output += "\n[Committed to git]"
             except Exception as e:
                 logger.error("config_write_failed", task_id=task.task_id, error=str(e))
-        
+
         # Trigger deployments if this is a deploy task
         desc_lower = task.description.lower()
         if self._is_deploy_task(task.description):
             deployment_info = []
-            railway_url = None
-            vercel_url = None
-            
-            # Deploy backend to Railway
-            if any(kw in desc_lower for kw in ["backend", "api", "railway", "server"]):
-                railway_result = await self.railway_deployer.trigger_deployment()
-                if railway_result.get("success"):
-                    railway_url = railway_result.get("url")
-                    if railway_url:
-                        deployment_info.append(f"✓ Railway deployment triggered: {railway_url}")
+            backend_url = None
+            frontend_url = None
+            product_root = await get_product_project_dir(self.company_brain)
+            product_name = product_root.name if product_root else None
+
+            # Deploy backend to Cloudflare Containers
+            if any(kw in desc_lower for kw in ["backend", "api", "server", "container"]):
+                backend_dir = product_root / "backend" if product_root else None
+                backend_result = await self.backend_deployer.trigger_deployment(
+                    project_name=product_name,
+                    directory=str(backend_dir) if backend_dir else None,
+                )
+                if backend_result.get("success"):
+                    backend_url = backend_result.get("url")
+                    if backend_url:
+                        deployment_info.append(f"✓ Backend deployed to Cloudflare: {backend_url}")
                     else:
-                        deployment_info.append("✓ Railway deployment triggered (URL pending)")
-                    logger.info("railway_deploy_triggered", task_id=task.task_id, url=railway_url)
+                        deployment_info.append("✓ Backend deployed to Cloudflare (URL pending)")
+                    logger.info("backend_deploy_triggered", task_id=task.task_id, url=backend_url)
                 else:
-                    deployment_info.append(f"✗ Railway deploy failed: {railway_result.get('error', 'Unknown error')}")
-                    logger.warning("railway_deploy_failed", task_id=task.task_id, error=railway_result.get("error"))
-            
-            # Deploy frontend to Vercel
-            if any(kw in desc_lower for kw in ["frontend", "dashboard", "vercel", "ui", "client"]):
-                vercel_result = await self.vercel_deployer.trigger_deployment()
-                if vercel_result.get("success"):
-                    vercel_url = vercel_result.get("url")
-                    if vercel_url:
-                        deployment_info.append(f"✓ Vercel deployment triggered: {vercel_url}")
+                    deployment_info.append(f"✗ Backend deploy failed: {backend_result.get('error', 'Unknown error')}")
+                    logger.warning("backend_deploy_failed", task_id=task.task_id, error=backend_result.get("error"))
+
+            # Deploy frontend to Cloudflare Pages
+            if any(kw in desc_lower for kw in ["frontend", "dashboard", "ui", "client", "pages"]):
+                frontend_dir = product_root / "frontend" if product_root else None
+                pages_result = await self.pages_deployer.trigger_deployment(
+                    project_name=f"{product_name}-frontend" if product_name else None,
+                    directory=str(frontend_dir) if frontend_dir else None,
+                )
+                if pages_result.get("success"):
+                    frontend_url = pages_result.get("url")
+                    if frontend_url:
+                        deployment_info.append(f"✓ Frontend deployed to Cloudflare Pages: {frontend_url}")
                     else:
-                        deployment_info.append("✓ Vercel deployment triggered (URL pending)")
-                    logger.info("vercel_deploy_triggered", task_id=task.task_id, url=vercel_url)
+                        deployment_info.append("✓ Frontend deployed to Cloudflare Pages (URL pending)")
+                    logger.info("frontend_deploy_triggered", task_id=task.task_id, url=frontend_url)
                 else:
-                    deployment_info.append(f"✗ Vercel deploy failed: {vercel_result.get('error', 'Unknown error')}")
-                    logger.warning("vercel_deploy_failed", task_id=task.task_id, error=vercel_result.get("error"))
-            
+                    deployment_info.append(f"✗ Frontend deploy failed: {pages_result.get('error', 'Unknown error')}")
+                    logger.warning("frontend_deploy_failed", task_id=task.task_id, error=pages_result.get("error"))
+
             if deployment_info:
                 result.output = f"{result.output}\n\n[Deployments: {'; '.join(deployment_info)}]"
-            
+
             # Automatically update live_urls in company_brain after successful deployment
-            if railway_url or vercel_url:
-                await self._update_live_urls(railway_url, vercel_url)
-        
+            if backend_url or frontend_url:
+                await self._update_live_urls(backend_url, frontend_url)
+
         # Then verify deployments
         if not self._is_deploy_task(task.description):
             return
@@ -237,7 +245,7 @@ class DevOpsAgent(BaseAgent):
                 )
                 new_count = int(current) + 1
                 await self.company_brain.update_metrics({"deploy_count": new_count})
-                
+
                 # Check if this is the first deployment milestone
                 if new_count == 1:
                     await self._record_first_deployment_milestone()
@@ -249,52 +257,6 @@ class DevOpsAgent(BaseAgent):
                 f"Task {task.task_id} passed verification.",
             )
             return
-    
-    async def _record_first_deployment_milestone(self) -> None:
-        """Record first deployment milestone to enable email notifications."""
-        try:
-            from core.supabase_client import SupabaseClient
-            from datetime import datetime, timezone
-            
-            client = SupabaseClient()
-            if not client.is_configured():
-                return
-            
-            # Check if already logged
-            def _check():
-                r = client.table("milestone_log").select("id").eq("milestone_type", "first_deployment").limit(1).execute()
-                return len(r.data or []) > 0
-            
-            already_logged = await asyncio.to_thread(_check)
-            if already_logged:
-                return
-            
-            # Save milestone
-            payload = {
-                "milestone_type": "first_deployment",
-                "description": "First successful deployment completed",
-                "achieved_at": datetime.now(timezone.utc).isoformat(),
-            }
-            
-            def _insert():
-                client.table("milestone_log").insert(payload).execute()
-            
-            await asyncio.to_thread(_insert)
-            logger.info("first_deployment_milestone_recorded")
-            
-            # Broadcast milestone message
-            from core.messaging.schemas import MilestoneMessage
-            from core.messaging.channels import Channels
-            await self.message_bus.publish(
-                Channels.MILESTONE_BROADCASTS,
-                MilestoneMessage(
-                    from_agent=self.agent_id,
-                    milestone_type="first_deployment",
-                    description="First successful deployment completed",
-                ),
-            )
-        except Exception as e:
-            logger.warning("first_deployment_milestone_failed", error=str(e))
 
         if source == "auto_rollback":
             await self.message_bus.publish(
@@ -359,6 +321,52 @@ class DevOpsAgent(BaseAgent):
         except Exception as e:
             self.logger.warning("deploy_blocker_record_failed", error=str(e))
 
+    async def _record_first_deployment_milestone(self) -> None:
+        """Record first deployment milestone to enable founder briefings."""
+        try:
+            from core.cloudflare_client import CloudflareClient
+            from datetime import datetime, timezone
+
+            client = CloudflareClient()
+            if not client.is_configured():
+                return
+
+            # Check if already logged
+            def _check():
+                r = client.table("milestone_log").select("id").eq("milestone_type", "first_deployment").limit(1).execute()
+                return len(r.data or []) > 0
+
+            already_logged = await asyncio.to_thread(_check)
+            if already_logged:
+                return
+
+            # Save milestone
+            payload = {
+                "milestone_type": "first_deployment",
+                "description": "First successful deployment completed",
+                "achieved_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+            def _insert():
+                client.table("milestone_log").insert(payload).execute()
+
+            await asyncio.to_thread(_insert)
+            logger.info("first_deployment_milestone_recorded")
+
+            # Broadcast milestone message
+            from core.messaging.schemas import MilestoneMessage
+            from core.messaging.channels import Channels
+            await self.message_bus.publish(
+                Channels.MILESTONE_BROADCASTS,
+                MilestoneMessage(
+                    from_agent=self.agent_id,
+                    milestone_type="first_deployment",
+                    description="First successful deployment completed",
+                ),
+            )
+        except Exception as e:
+            logger.warning("first_deployment_milestone_failed", error=str(e))
+
     def _is_deploy_task(self, description: str) -> bool:
         desc = description.lower()
         keywords = ("deploy", "release", "pipeline", "rollout", "ci/cd", "staging", "production")
@@ -369,24 +377,24 @@ class DevOpsAgent(BaseAgent):
         try:
             brain = await self.company_brain.get()
             current_urls = brain.live_urls or {}
-            
+
             updated = False
             new_urls = dict(current_urls)
-            
+
             if api_url and api_url != current_urls.get("api"):
                 new_urls["api"] = api_url
                 updated = True
                 logger.info("live_urls_updated", field="api", url=api_url)
-            
+
             if frontend_url and frontend_url != current_urls.get("frontend"):
                 new_urls["frontend"] = frontend_url
                 updated = True
                 logger.info("live_urls_updated", field="frontend", url=frontend_url)
-            
+
             if updated:
                 await self.company_brain.update_field("live_urls", new_urls)
                 logger.info("company_brain_live_urls_updated", urls=new_urls)
-                
+
                 # Notify that QA monitoring will now start automatically
                 await self.episodic_memory.add_event(
                     self.agent_id,
@@ -395,6 +403,32 @@ class DevOpsAgent(BaseAgent):
                 )
         except Exception as e:
             logger.warning("live_urls_update_failed", error=str(e))
+
+    async def _verify_live_system(self) -> tuple[bool, str]:
+        """Run smoke checks against live URLs configured in company brain."""
+        brain = await self.company_brain.get()
+        urls = brain.live_urls or {}
+        api_url = urls.get("api")
+        frontend_url = urls.get("frontend")
+
+        if not api_url and not frontend_url:
+            return False, "No live_urls configured in company brain."
+
+        try:
+            import httpx
+
+            async with httpx.AsyncClient(timeout=12.0) as client:
+                if api_url:
+                    api = await client.get(f"{api_url.rstrip('/')}/health")
+                    if api.status_code != 200:
+                        return False, f"API health check returned {api.status_code}"
+                if frontend_url:
+                    ui = await client.get(frontend_url)
+                    if ui.status_code >= 500:
+                        return False, f"Frontend returned {ui.status_code}"
+            return True, "Verification passed."
+        except Exception as e:
+            return False, str(e)
 
     async def run(self) -> None:
         """Background monitoring loop - check GitHub Actions workflows periodically."""
@@ -409,12 +443,12 @@ class DevOpsAgent(BaseAgent):
             try:
                 await self._maybe_update_status("active", "monitoring")
                 await self._monitor_github_actions()
-                await asyncio.sleep(120)  # Reduced from 300s (5min) to 120s (2min) for faster monitoring
+                await asyncio.sleep(120)
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 self.logger.error("devops_monitoring_loop_error", error=str(e))
-                await asyncio.sleep(120)  # Reduced from 300s to 120s for faster recovery
+                await asyncio.sleep(120)
 
         self.is_running = False
         await self._maybe_update_status("stopped", "")
@@ -427,7 +461,7 @@ class DevOpsAgent(BaseAgent):
         try:
             # Get failed workflows
             failed_workflows = await self.github_actions.get_failed_workflows(limit=5)
-            
+
             if not failed_workflows:
                 return
 
@@ -437,7 +471,7 @@ class DevOpsAgent(BaseAgent):
             for workflow in failed_workflows:
                 run_id = workflow.get("id")
                 workflow_name = workflow.get("name", "unknown")
-                
+
                 # Get detailed logs
                 run_details = await self.github_actions.get_workflow_run_logs(run_id)
                 if not run_details:
@@ -454,7 +488,7 @@ class DevOpsAgent(BaseAgent):
             workflow_name = workflow.get("name", "unknown")
             branch = workflow.get("head_branch", "unknown")
             run_id = workflow.get("id")
-            
+
             # Check if we already created a task for this workflow run
             existing_tasks = await self.task_tracker.get_tasks_by_status("pending")
             for task in existing_tasks:
@@ -481,7 +515,7 @@ class DevOpsAgent(BaseAgent):
                     "run_details": run_details,
                 },
             )
-            
+
             await self.task_tracker.create_task(
                 fix_task.task_id,
                 "devops",
@@ -498,7 +532,7 @@ class DevOpsAgent(BaseAgent):
         """Fix GitHub Actions workflow failures."""
         import time
         start = time.time()
-        
+
         product_root = await get_product_project_dir(self.company_brain)
         if not product_root:
             return TaskResult(
@@ -591,14 +625,10 @@ Provide the complete fixed workflow file wrapped in ```yaml code block with file
             yaml_match = re.search(r"```yaml\n(.*?)\n```", fixed_workflow, re.DOTALL)
             if not yaml_match:
                 yaml_match = re.search(r"```\n(.*?)\n```", fixed_workflow, re.DOTALL)
-            
+
             if yaml_match:
                 fixed_content = yaml_match.group(1)
-                # Write fixed workflow in product repo
-                workflow_path = product_root / ".github" / "workflows" / workflow_name
-                if not workflow_path.exists():
-                    workflow_path = product_root / ".github" / "workflows" / "deploy.yml"
-                
+
                 write_result = await self.code_writer.write_code(
                     code_output=fixed_content,
                     task_description=f"Fix GitHub Actions workflow {workflow_name}",
@@ -634,29 +664,3 @@ Provide the complete fixed workflow file wrapped in ```yaml code block with file
                 error=str(e),
                 time_taken_seconds=int(time.time() - start),
             )
-
-    async def _verify_live_system(self) -> tuple[bool, str]:
-        """Run smoke checks against live URLs configured in company brain."""
-        brain = await self.company_brain.get()
-        urls = brain.live_urls or {}
-        api_url = urls.get("api")
-        frontend_url = urls.get("frontend")
-
-        if not api_url and not frontend_url:
-            return False, "No live_urls configured in company brain."
-
-        try:
-            import httpx
-
-            async with httpx.AsyncClient(timeout=12.0) as client:
-                if api_url:
-                    api = await client.get(f"{api_url.rstrip('/')}/health")
-                    if api.status_code != 200:
-                        return False, f"API health check returned {api.status_code}"
-                if frontend_url:
-                    ui = await client.get(frontend_url)
-                    if ui.status_code >= 500:
-                        return False, f"Frontend returned {ui.status_code}"
-            return True, "Verification passed."
-        except Exception as e:
-            return False, str(e)

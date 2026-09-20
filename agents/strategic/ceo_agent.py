@@ -186,8 +186,8 @@ Return ONLY the JSON object."""
     async def _is_milestone_logged(self, milestone_type: str) -> bool:
         """Check if milestone already exists in milestone_log."""
         try:
-            from core.supabase_client import SupabaseClient
-            client = SupabaseClient()
+            from core.cloudflare_client import CloudflareClient
+            client = CloudflareClient()
             if not client.is_configured():
                 return False
             
@@ -203,10 +203,10 @@ Return ONLY the JSON object."""
     async def _save_milestone(self, milestone_type: str, description: str) -> None:
         """Save milestone to milestone_log table."""
         try:
-            from core.supabase_client import SupabaseClient
+            from core.cloudflare_client import CloudflareClient
             from datetime import datetime, timezone
             
-            client = SupabaseClient()
+            client = CloudflareClient()
             if not client.is_configured():
                 return
             
@@ -225,32 +225,33 @@ Return ONLY the JSON object."""
             self.logger.warning("milestone_save_failed", milestone_type=milestone_type, error=str(e))
 
     async def maybe_generate_weekly_brief(self) -> None:
-        from core.config import get_settings
-        settings = get_settings()
-        if not settings.founder_email:
-            return
-        
-        # Only send emails after first milestone is achieved
+        # Only post briefings after first milestone is achieved
         if not await self._has_any_milestones():
-            self.logger.debug("skipping_email_no_milestones", message="Waiting for first milestone before sending emails")
+            self.logger.debug("skipping_brief_no_milestones", message="Waiting for first milestone before posting briefings")
             return
-        
+
         now = datetime.now(timezone.utc).date()
         if self._last_brief_date and (now - self._last_brief_date).days < 7:
             return
         brief = await self.generate_weekly_brief()
         self._last_brief_date = now
-        try:
-            from core.tools.email_tool import send_email
-            await send_email(settings.founder_email, "Founder Briefing", brief)
-        except Exception as e:
-            self.logger.warning("weekly_brief_email_failed", error=str(e))
+        from core.operations.briefings import post_briefing
+        await post_briefing("founder_brief", "Founder Briefing", brief)
+
+        from core.config import get_settings
+        settings = get_settings()
+        if settings.founder_email:
+            try:
+                from core.tools.email_tool import send_email
+                await send_email(settings.founder_email, "Founder Briefing", brief)
+            except Exception as e:
+                self.logger.warning("weekly_brief_email_failed", error=str(e))
     
     async def _has_any_milestones(self) -> bool:
         """Check if any milestones have been achieved."""
         try:
-            from core.supabase_client import SupabaseClient
-            client = SupabaseClient()
+            from core.cloudflare_client import CloudflareClient
+            client = CloudflareClient()
             if not client.is_configured():
                 return False
             

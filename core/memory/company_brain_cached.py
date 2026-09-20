@@ -1,12 +1,10 @@
-"""Cached company brain - Redis cache with 60s TTL to reduce Supabase reads."""
+"""Cached company brain - Workers KV cache with 60s TTL to reduce D1 reads."""
 
 import json
 from typing import Any
 
-import redis.asyncio as redis
 import structlog
 
-from core.config import get_settings
 from core.memory.company_brain import CompanyBrain, CompanyBrainSchema
 
 logger = structlog.get_logger(__name__)
@@ -16,22 +14,22 @@ CACHE_TTL = 60
 
 
 class CachedCompanyBrain(CompanyBrain):
-    """Company brain with Redis cache layer."""
+    """Company brain with Workers KV cache layer."""
 
     def __init__(self) -> None:
         super().__init__()
-        self._redis: redis.Redis | None = None
+        self._cache_client = None
 
-    async def _get_redis(self) -> redis.Redis | None:
-        if self._redis is None:
+    def _get_cache(self):
+        if self._cache_client is None:
             try:
-                self._redis = redis.from_url(
-                    get_settings().redis_url,
-                    decode_responses=True,
-                )
+                from core.cloudflare_client import CloudflareClient
+                c = CloudflareClient()
+                if c.is_configured():
+                    self._cache_client = c
             except Exception as e:
-                logger.warning("company_brain_cache_redis_failed", error=str(e))
-        return self._redis
+                logger.warning("company_brain_cache_init_failed", error=str(e))
+        return self._cache_client
 
     def _schema_to_cache(self, schema: CompanyBrainSchema) -> str:
         data = schema.model_dump(mode="json")
@@ -50,38 +48,34 @@ class CachedCompanyBrain(CompanyBrain):
             return None
 
     async def get(self) -> CompanyBrainSchema:
-        """Get from cache first, fallback to Supabase."""
-        r = await self._get_redis()
-        if r:
+        """Get from KV cache first, fallback to D1."""
+        cache = self._get_cache()
+        if cache:
             try:
-                cached = await r.get(CACHE_KEY)
+                cached = await cache.kv_get(CACHE_KEY)
                 if cached:
                     schema = self._cache_to_schema(cached)
                     if schema:
                         return schema
-            except redis.RedisError:
+            except Exception:
                 pass
 
         result = await super().get()
 
-        if r:
+        if cache:
             try:
-                await r.setex(
-                    CACHE_KEY,
-                    CACHE_TTL,
-                    self._schema_to_cache(result),
-                )
-            except redis.RedisError:
+                await cache.kv_put(CACHE_KEY, self._schema_to_cache(result), ttl=CACHE_TTL)
+            except Exception:
                 pass
 
         return result
 
     async def update_field(self, field: str, value: Any) -> None:
-        """Update Supabase and invalidate cache."""
+        """Update D1 and invalidate cache."""
         await super().update_field(field, value)
-        r = await self._get_redis()
-        if r:
+        cache = self._get_cache()
+        if cache:
             try:
-                await r.delete(CACHE_KEY)
-            except redis.RedisError:
+                await cache.kv_delete(CACHE_KEY)
+            except Exception:
                 pass

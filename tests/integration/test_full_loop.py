@@ -1,6 +1,13 @@
-"""Integration tests for the full system loop. Requires Redis running."""
+"""Integration tests for the full system loop. Requires a deployed Cloudflare Worker."""
+
+import os
 
 import pytest
+
+pytestmark = pytest.mark.skipif(
+    not os.getenv("CLOUDFLARE_API_URL") or not os.getenv("CLOUDFLARE_API_TOKEN"),
+    reason="Cloudflare Worker not configured (CLOUDFLARE_API_URL/CLOUDFLARE_API_TOKEN)",
+)
 
 
 @pytest.mark.asyncio
@@ -48,5 +55,5 @@ async def test_config_model_registry() -> None:
     """Test model registry."""
     from core.config import get_model_for_role
 
-    assert get_model_for_role("ceo") == "claude-sonnet-4-5"
-    assert get_model_for_role("backend") == "claude-sonnet-4-5"
+    assert get_model_for_role("ceo") == "deepseek-ai/DeepSeek-V3.1-Terminus"
+    assert get_model_for_role("backend") == "deepseek-ai/DeepSeek-V3.1-Terminus"

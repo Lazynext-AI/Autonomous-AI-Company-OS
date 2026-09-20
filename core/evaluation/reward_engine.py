@@ -86,8 +86,8 @@ class RewardEngine:
         """Inject celebration into all agent memories."""
         prompt = f"Milestone achieved: {milestone_type} - {description}. Celebrate and keep building!"
         try:
-            from core.supabase_client import SupabaseClient
-            client = SupabaseClient()
+            from core.cloudflare_client import CloudflareClient
+            client = CloudflareClient()
             if client.is_configured():
                 r = await asyncio.to_thread(
                     lambda: client.table("agent_memories").select("agent_id").execute()

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { queryApi, parseJson } from "@/lib/api";
 import Link from "next/link";
 import { Brain, Code, AlertTriangle, CheckCircle, TrendingUp, Package } from "lucide-react";
 
@@ -10,29 +10,25 @@ export default function BrainPage() {
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
   useEffect(() => {
-    if (!supabaseUrl || !supabaseKey) {
-      setLoading(false);
-      return;
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     const fetchBrain = async () => {
       try {
-        const { data } = await supabase
-          .from("company_brain")
-          .select("*")
-          .limit(1)
-          .single();
-
+        const rows = await queryApi<any>("SELECT * FROM company_brain LIMIT 1");
+        const data = rows[0];
         if (data) {
-          setBrain(data);
+          setBrain({
+            ...data,
+            metrics: parseJson(data.metrics, {}),
+            tech_stack: parseJson(data.tech_stack, {}),
+            live_urls: parseJson(data.live_urls, {}),
+            current_sprint: parseJson(data.current_sprint, {}),
+            open_bugs: parseJson(data.open_bugs, []),
+            shipped_features: parseJson(data.shipped_features, []),
+            user_feedback: parseJson(data.user_feedback, []),
+            agent_statuses: parseJson(data.agent_statuses, {}),
+            blockers: parseJson(data.blockers, []),
+          });
         }
-
         setLoading(false);
         setLastUpdate(new Date());
       } catch (error) {
@@ -42,33 +38,9 @@ export default function BrainPage() {
     };
 
     fetchBrain();
-
-    // Real-time subscription
-    const channel = supabase
-      .channel("brain_updates")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "company_brain",
-        },
-        (payload) => {
-          if (payload.new) {
-            setBrain(payload.new);
-            setLastUpdate(new Date());
-          }
-        }
-      )
-      .subscribe();
-
     const pollInterval = setInterval(fetchBrain, 2000);
-
-    return () => {
-      channel.unsubscribe();
-      clearInterval(pollInterval);
-    };
-  }, [supabaseUrl, supabaseKey]);
+    return () => clearInterval(pollInterval);
+  }, []);
 
   if (loading) {
     return (
@@ -118,6 +90,9 @@ export default function BrainPage() {
           </Link>
           <Link href="/brain" className="text-blue-400 font-semibold border-b-2 border-blue-400 pb-2">
             Company Brain
+          </Link>
+          <Link href="/briefings" className="text-zinc-400 hover:text-zinc-200 transition">
+            Briefings
           </Link>
         </nav>
 

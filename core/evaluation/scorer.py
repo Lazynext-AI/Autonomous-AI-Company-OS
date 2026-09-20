@@ -29,8 +29,8 @@ class PerformanceScorer:
 
         qa_score = 0.5
         try:
-            from core.supabase_client import SupabaseClient
-            client = SupabaseClient()
+            from core.cloudflare_client import CloudflareClient
+            client = CloudflareClient()
             if client.is_configured():
                 r = await asyncio.to_thread(
                     lambda: client.table("task_log").select("result").eq("task_id", task_id).execute()

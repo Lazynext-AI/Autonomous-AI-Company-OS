@@ -86,25 +86,25 @@ class CompanyBrain:
         self._initialized = False
 
     def _get_client(self):
-        """Lazy init Supabase client."""
+        """Lazy init Cloudflare client."""
         if self._client is None:
             try:
-                from core.supabase_client import SupabaseClient
-                c = SupabaseClient()
+                from core.cloudflare_client import CloudflareClient
+                c = CloudflareClient()
                 if c.is_configured():
                     self._client = c
                     self._initialized = True
                 else:
-                    logger.warning("company_brain_supabase_not_configured")
+                    logger.warning("company_brain_cloudflare_not_configured")
             except Exception as e:
-                logger.error("company_brain_supabase_init_failed", error=str(e))
+                logger.error("company_brain_cloudflare_init_failed", error=str(e))
         return self._client
 
     async def _run_sync(self, fn, *args, **kwargs):
-        """Run sync Supabase call in thread pool."""
+        """Run sync client call in thread pool."""
         client = self._get_client()
         if client is None:
-            raise RuntimeError("Supabase not configured - set SUPABASE_URL and SUPABASE_SERVICE_KEY")
+            raise RuntimeError("Cloudflare not configured - set CLOUDFLARE_API_URL and CLOUDFLARE_API_TOKEN")
         return await asyncio.to_thread(fn, *args, **kwargs)
 
     def _row_to_schema(self, row: dict) -> CompanyBrainSchema:

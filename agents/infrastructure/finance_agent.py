@@ -38,14 +38,9 @@ Output concise, professional reports. Use actual data provided. Never use placeh
         await self._maybe_update_status("stopped", "")
 
     async def run_weekly_finance_report(self) -> None:
-        from core.config import get_settings
-        s = get_settings()
-        if not s.founder_email:
-            return
-        
-        # Only send emails after first milestone is achieved
+        # Only post reports after first milestone is achieved
         if not await self._has_any_milestones():
-            self.logger.debug("skipping_email_no_milestones", message="Waiting for first milestone before sending emails")
+            self.logger.debug("skipping_report_no_milestones", message="Waiting for first milestone before posting reports")
             return
         
         brain = await self.company_brain.get()
@@ -61,18 +56,24 @@ Product: {brain.product_name or 'Not defined'}
 Write a professional 3-5 sentence report. Include: key metrics, trends (if inferable), and one recommendation.
 No placeholders. Use the actual numbers. Output plain text only."""
         report = await self.call_llm(self.get_system_prompt(), prompt)
-        try:
-            from core.tools.email_tool import send_email
-            await send_email(s.founder_email, "Weekly Finance Report", report)
-        except Exception as e:
-            self.logger.warning("finance_report_email_failed", error=str(e))
+        from core.operations.briefings import post_briefing
+        await post_briefing("finance_report", "Weekly Finance Report", report)
+
+        from core.config import get_settings
+        s = get_settings()
+        if s.founder_email:
+            try:
+                from core.tools.email_tool import send_email
+                await send_email(s.founder_email, "Weekly Finance Report", report)
+            except Exception as e:
+                self.logger.warning("finance_report_email_failed", error=str(e))
     
     async def _has_any_milestones(self) -> bool:
         """Check if any milestones have been achieved."""
         try:
             import asyncio
-            from core.supabase_client import SupabaseClient
-            client = SupabaseClient()
+            from core.cloudflare_client import CloudflareClient
+            client = CloudflareClient()
             if not client.is_configured():
                 return False
             

@@ -1,0 +1,20 @@
+name = "ai-company-os"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+preview_urls = false
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ai-company-db"
+database_id = "a1c3a62f-96e0-4b1f-86eb-c0de063c9ee0"
+
+[[kv_namespaces]]
+binding = "EPHEMERAL"
+id = "15bccb97f4aa4f9c8c1a1b97b54a558f"
+
+[[vectorize]]
+binding = "VECTORS"
+index_name = "company-knowledge"
+
+# Shared bearer token between Python agents/dashboard and this Worker.
+# Set with: npx wrangler secret put API_TOKEN

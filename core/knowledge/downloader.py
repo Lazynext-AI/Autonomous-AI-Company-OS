@@ -195,17 +195,18 @@ class KnowledgeDownloader:
         return DownloadResult(success=True, filepath=filepath, source=source, title=best_title)
 
     async def get_download_history(self) -> list[dict]:
-        """Get download history from Redis cache."""
+        """Get download history from D1."""
         try:
-            import redis.asyncio as redis
-            r = redis.from_url(self._settings.redis_url, decode_responses=True)
-            raw = await r.lrange(self._history_key, 0, 99)
-            await r.aclose()
+            from core.cloudflare_client import CloudflareClient
+            client = CloudflareClient()
+            rows = await client.aquery(
+                "SELECT payload FROM download_history ORDER BY id DESC LIMIT 100"
+            )
             history = []
-            for item in raw:
+            for row in rows:
                 try:
                     import json
-                    history.append(json.loads(item))
+                    history.append(json.loads(row.get("payload", "{}")))
                 except Exception:
                     pass
             return history

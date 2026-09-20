@@ -1,0 +1,241 @@
+/**
+ * AI Company OS - Cloudflare Worker API layer.
+ * D1: relational state + message bus emulation (consumer-group semantics).
+ * KV: hot-path cache (company brain). Vectorize: knowledge embeddings.
+ * Auth: Authorization: Bearer <API_TOKEN secret>.
+ */
+
+export interface Env {
+  DB: D1Database;
+  EPHEMERAL: KVNamespace;
+  VECTORS: VectorizeIndex;
+  API_TOKEN?: string;
+}
+
+const JSON_HEADERS = { "content-type": "application/json" };
+
+function json(data: unknown, status = 200): Response {
+  return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
+}
+
+function unauthorized(): Response {
+  return json({ error: "unauthorized" }, 401);
+}
+
+async function readBody<T>(req: Request): Promise<T> {
+  return (await req.json()) as T;
+}
+
+function isReadQuery(sql: string): boolean {
+  const head = sql.trimStart().slice(0, 6).toLowerCase();
+  return (
+    head.startsWith("select") ||
+    head.startsWith("pragma") ||
+    head.startsWith("with") ||
+    head.startsWith("explain")
+  );
+}
+
+async function handleQuery(env: Env, body: { sql: string; params?: unknown[] }) {
+  const stmt = env.DB.prepare(body.sql).bind(...(body.params ?? []));
+  if (isReadQuery(body.sql)) {
+    const res = await stmt.all();
+    return json({ results: res.results ?? [] });
+  }
+  const res = await stmt.run();
+  return json({ success: res.success, meta: res.meta });
+}
+
+async function handleBatch(env: Env, body: { statements: { sql: string; params?: unknown[] }[] }) {
+  const stmts = body.statements.map((s) => env.DB.prepare(s.sql).bind(...(s.params ?? [])));
+  const results = await env.DB.batch(stmts);
+  return json({
+    results: results.map((r) => ({
+      success: r.success,
+      results: r.results ?? [],
+      meta: r.meta,
+    })),
+  });
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function handleBusPoll(
+  env: Env,
+  body: { channel: string; group: string; consumer: string; count?: number; wait_ms?: number },
+): Promise<Response> {
+  const { channel, group, consumer } = body;
+  const count = Math.min(body.count ?? 10, 100);
+  const deadline = Date.now() + Math.min(body.wait_ms ?? 3000, 5000);
+
+  await env.DB.prepare(
+    "INSERT OR IGNORE INTO bus_offsets (channel, group_name, last_id) VALUES (?, ?, 0)",
+  )
+    .bind(channel, group)
+    .run();
+
+  while (true) {
+    const offsetRow = await env.DB.prepare(
+      "SELECT last_id FROM bus_offsets WHERE channel = ? AND group_name = ?",
+    )
+      .bind(channel, group)
+      .first<{ last_id: number }>();
+    const lastId = offsetRow?.last_id ?? 0;
+
+    const { results: msgs } = await env.DB.prepare(
+      `SELECT m.id, m.payload FROM bus_messages m
+       WHERE m.channel = ? AND m.id > ?
+         AND NOT EXISTS (
+           SELECT 1 FROM bus_deliveries d
+           WHERE d.message_id = m.id AND d.group_name = ?
+         )
+       ORDER BY m.id LIMIT ?`,
+    )
+      .bind(channel, lastId, group, count)
+      .all<{ id: number; payload: string }>();
+
+    if (msgs.length > 0) {
+      const now = new Date().toISOString();
+      const maxId = msgs[msgs.length - 1].id;
+      const writes: D1PreparedStatement[] = msgs.map((m) =>
+        env.DB.prepare(
+          "INSERT INTO bus_deliveries (message_id, channel, group_name, consumer, delivered_at) VALUES (?, ?, ?, ?, ?)",
+        ).bind(m.id, channel, group, consumer, now),
+      );
+      writes.push(
+        env.DB.prepare(
+          "UPDATE bus_offsets SET last_id = ? WHERE channel = ? AND group_name = ?",
+        ).bind(maxId, channel, group),
+      );
+      await env.DB.batch(writes);
+      return json({ messages: msgs.map((m) => ({ id: String(m.id), payload: m.payload })) });
+    }
+
+    if (Date.now() >= deadline) return json({ messages: [] });
+    await sleep(400);
+  }
+}
+
+async function route(req: Request, env: Env, path: string): Promise<Response> {
+  if (path === "/health") {
+    await env.DB.prepare("SELECT 1").all();
+    return json({ ok: true });
+  }
+
+  if (req.method !== "POST") return json({ error: "not found" }, 404);
+
+  switch (path) {
+    case "/query":
+      return handleQuery(env, await readBody(req));
+    case "/batch":
+      return handleBatch(env, await readBody(req));
+
+    case "/bus/publish": {
+      const b = await readBody<{ channel: string; payload: string }>(req);
+      const res = await env.DB.prepare(
+        "INSERT INTO bus_messages (channel, payload, created_at) VALUES (?, ?, ?)",
+      )
+        .bind(b.channel, b.payload, new Date().toISOString())
+        .run();
+      return json({ id: String(res.meta.last_row_id) });
+    }
+    case "/bus/poll":
+      return handleBusPoll(env, await readBody(req));
+    case "/bus/ack": {
+      const b = await readBody<{ channel: string; group: string; ids: (string | number)[] }>(req);
+      if (!b.ids?.length) return json({ ok: true });
+      const marks = b.ids.map(() => "?").join(",");
+      await env.DB.prepare(
+        `DELETE FROM bus_deliveries WHERE channel = ? AND group_name = ? AND message_id IN (${marks})`,
+      )
+        .bind(b.channel, b.group, ...b.ids.map(Number))
+        .run();
+      return json({ ok: true });
+    }
+    case "/bus/pending": {
+      const b = await readBody<{ channel: string; group?: string }>(req);
+      const sql = b.group
+        ? "SELECT message_id, consumer, delivered_at FROM bus_deliveries WHERE channel = ? AND group_name = ?"
+        : "SELECT message_id, group_name, consumer, delivered_at FROM bus_deliveries WHERE channel = ?";
+      const stmt = b.group
+        ? env.DB.prepare(sql).bind(b.channel, b.group)
+        : env.DB.prepare(sql).bind(b.channel);
+      const { results } = await stmt.all();
+      return json({ count: results.length, pending: results });
+    }
+    case "/bus/ensure": {
+      const b = await readBody<{ channels: string[]; group: string }>(req);
+      const stmts = b.channels.map((c) =>
+        env.DB.prepare(
+          "INSERT OR IGNORE INTO bus_offsets (channel, group_name, last_id) VALUES (?, ?, 0)",
+        ).bind(c, b.group),
+      );
+      if (stmts.length) await env.DB.batch(stmts);
+      return json({ ok: true });
+    }
+
+    case "/kv/get": {
+      const b = await readBody<{ key: string }>(req);
+      const value = await env.EPHEMERAL.get(b.key);
+      return json({ value });
+    }
+    case "/kv/put": {
+      const b = await readBody<{ key: string; value: string; ttl?: number }>(req);
+      await env.EPHEMERAL.put(b.key, b.value, {
+        expirationTtl: Math.max(b.ttl ?? 60, 60),
+      });
+      return json({ ok: true });
+    }
+    case "/kv/delete": {
+      const b = await readBody<{ key: string }>(req);
+      await env.EPHEMERAL.delete(b.key);
+      return json({ ok: true });
+    }
+
+    case "/vectorize/upsert": {
+      const b = await readBody<{
+        vectors: { id: string; values: number[]; metadata?: Record<string, VectorizeVectorMetadata> }[];
+      }>(req);
+      const inserted = await env.VECTORS.upsert(
+        b.vectors.map((v) => ({ id: v.id, values: v.values, metadata: v.metadata ?? {} })),
+      );
+      return json({ count: inserted.count });
+    }
+    case "/vectorize/query": {
+      const b = await readBody<{
+        vector: number[];
+        topK?: number;
+        filter?: VectorizeVectorMetadataFilter;
+      }>(req);
+      const matches = await env.VECTORS.query(b.vector, {
+        topK: b.topK ?? 5,
+        filter: b.filter,
+        returnMetadata: "all",
+      });
+      return json({ matches: matches.matches });
+    }
+    case "/vectorize/delete": {
+      const b = await readBody<{ ids: string[] }>(req);
+      const res = await env.VECTORS.deleteByIds(b.ids);
+      return json(res);
+    }
+
+    default:
+      return json({ error: "not found" }, 404);
+  }
+}
+
+export default {
+  async fetch(req: Request, env: Env): Promise<Response> {
+    const url = new URL(req.url);
+    if (env.API_TOKEN) {
+      const auth = req.headers.get("authorization") ?? "";
+      if (auth !== `Bearer ${env.API_TOKEN}`) return unauthorized();
+    }
+    try {
+      return await route(req, env, url.pathname);
+    } catch (e) {
+      return json({ error: e instanceof Error ? e.message : String(e) }, 500);
+    }
+  },
+};

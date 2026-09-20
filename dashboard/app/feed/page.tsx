@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { queryApi, parseJson } from "@/lib/api";
 import Link from "next/link";
 import { Activity, CheckCircle, XCircle, Clock, AlertCircle, Zap, Code, GitBranch } from "lucide-react";
 
@@ -24,29 +24,18 @@ export default function FeedPage() {
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
   useEffect(() => {
-    if (!supabaseUrl || !supabaseKey) {
-      setLoading(false);
-      return;
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     const fetchTasks = async () => {
       try {
-        const { data: tasksData } = await supabase
-          .from("task_log")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(100);
-
-        if (tasksData) {
-          setTasks(tasksData as Task[]);
-        }
-
+        const tasksData = await queryApi<any>(
+          "SELECT * FROM task_log ORDER BY created_at DESC LIMIT 100"
+        );
+        setTasks(
+          tasksData.map((t) => ({
+            ...t,
+            error_log: parseJson(t.error_log, []),
+          })) as Task[]
+        );
         setLoading(false);
         setLastUpdate(new Date());
       } catch (error) {
@@ -56,39 +45,9 @@ export default function FeedPage() {
     };
 
     fetchTasks();
-
-    // Real-time subscription
-    const channel = supabase
-      .channel("task_feed")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "task_log",
-        },
-        async () => {
-          const { data: tasksData } = await supabase
-            .from("task_log")
-            .select("*")
-            .order("created_at", { ascending: false })
-            .limit(100);
-
-          if (tasksData) {
-            setTasks(tasksData as Task[]);
-            setLastUpdate(new Date());
-          }
-        }
-      )
-      .subscribe();
-
-    const pollInterval = setInterval(fetchTasks, 1000);
-
-    return () => {
-      channel.unsubscribe();
-      clearInterval(pollInterval);
-    };
-  }, [supabaseUrl, supabaseKey]);
+    const pollInterval = setInterval(fetchTasks, 2000);
+    return () => clearInterval(pollInterval);
+  }, []);
 
   // Auto-scroll to top on new tasks
   useEffect(() => {
@@ -184,6 +143,9 @@ export default function FeedPage() {
           </Link>
           <Link href="/brain" className="text-zinc-400 hover:text-zinc-200 transition">
             Company Brain
+          </Link>
+          <Link href="/briefings" className="text-zinc-400 hover:text-zinc-200 transition">
+            Briefings
           </Link>
         </nav>
 

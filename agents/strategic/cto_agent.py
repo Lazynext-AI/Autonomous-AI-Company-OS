@@ -145,10 +145,10 @@ class CTOAgent(BaseAgent):
     async def _get_recent_tasks(self) -> list[dict]:
         """Get recent tasks from task_log for duplicate prevention."""
         try:
-            from core.supabase_client import SupabaseClient
+            from core.cloudflare_client import CloudflareClient
             from datetime import datetime, timedelta, timezone
             
-            client = SupabaseClient()
+            client = CloudflareClient()
             if not client.is_configured():
                 return []
             
@@ -288,8 +288,8 @@ Return 5-10 UNIQUE tasks. Return ONLY the JSON array."""
 
     async def check_agent_workloads(self) -> None:
         try:
-            from core.supabase_client import SupabaseClient
-            client = SupabaseClient()
+            from core.cloudflare_client import CloudflareClient
+            client = CloudflareClient()
             if not client.is_configured():
                 return
             r = await asyncio.to_thread(

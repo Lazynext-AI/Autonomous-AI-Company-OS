@@ -14,7 +14,6 @@ from core.memory.company_brain import CompanyBrain
 from core.memory.agent_memory import AgentMemory
 from core.memory.episodic_memory import EpisodicMemory
 from core.messaging.bus import MessageBus
-from core.llm.claude_client import ClaudeClient
 import structlog
 
 logger = structlog.get_logger(__name__)

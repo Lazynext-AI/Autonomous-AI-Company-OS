@@ -20,30 +20,23 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # Supabase
-    supabase_url: str = ""
-    supabase_anon_key: str = ""
-    supabase_service_key: str = ""
+    # Cloudflare Worker (D1 + KV + Vectorize API layer)
+    cloudflare_api_url: str = ""
+    cloudflare_api_token: str = ""
 
-    # Redis
-    redis_url: str = "redis://localhost:6379"
+    # Atlas Cloud LLM API (OpenAI-compatible)
+    atlas_api_key: str = ""
+    atlas_base_url: str = "https://api.atlascloud.ai/v1"
+    atlas_model: str = "deepseek-ai/DeepSeek-V3.1-Terminus"
 
-    # ChromaDB
-    chroma_persist_dir: str = "./chroma_db"
+    # Cloudflare account credentials (wrangler / deployments / resource management)
+    cloudflare_account_id: str = ""
+    cloudflare_deploy_token: str = ""  # scoped API token (preferred)
+    cloudflare_api_key: str = ""       # Global API key fallback (cfk_...)
+    cloudflare_email: str = ""
 
-    # Anthropic Claude API
-    anthropic_api_key: str = ""
-    anthropic_model: str = "claude-sonnet-4-5"
-    ollama_base_url: str = "http://localhost:11434"
-
-    # External APIs
+    # External APIs (optional)
     github_token: str = ""
-    github_org: str = ""
-    vercel_token: str = ""
-    vercel_team_id: str = ""
-    vercel_deploy_hook_url: str = ""  # Vercel deploy hook URL
-    railway_token: str = ""
-    railway_deploy_hook_url: str = ""  # Railway deploy hook URL
     resend_api_key: str = ""
     e2b_api_key: str = ""
 
@@ -66,25 +59,24 @@ class Settings(BaseSettings):
         return v.upper()
 
 
-# Model role mapping - tiered Claude models by importance (cost-optimized)
-# High priority (coding, complex reasoning): Sonnet 4.5 (replaced Opus 4.6 for cost savings)
-# Medium priority (strategic, orchestration): Sonnet 4.5
-# Low priority (simple tasks, reporting): Haiku 4.5
+# Model role mapping - tiered Atlas Cloud models by importance (cost-optimized)
+# High priority (coding, complex reasoning): DeepSeek V3.1 Terminus
+# Low priority (simple tasks, reporting): DeepSeek V4 Flash
 MODEL_REGISTRY: dict[str, str] = {
-    "ceo": "claude-sonnet-4-5",           # Strategic thinking
-    "cto": "claude-sonnet-4-5",           # Task decomposition (downgraded from Opus for cost)
-    "backend": "claude-sonnet-4-5",       # Code generation (downgraded from Opus for cost)
-    "frontend": "claude-sonnet-4-5",      # UI code (downgraded from Opus for cost)
-    "fullstack": "claude-sonnet-4-5",     # Full-stack code (downgraded from Opus for cost)
-    "code_review": "claude-sonnet-4-5",   # Security and quality review (downgraded from Opus for cost)
-    "devops": "claude-sonnet-4-5",        # Infrastructure automation
-    "qa": "claude-sonnet-4-5",            # Testing and validation
-    "marketing": "claude-haiku-4-5",      # Content generation
-    "sales": "claude-haiku-4-5",          # Outreach templates
-    "customer_success": "claude-haiku-4-5",  # Support responses
-    "hr": "claude-haiku-4-5",             # Simple HR tasks
-    "knowledge": "claude-haiku-4-5",      # RAG queries
-    "finance": "claude-haiku-4-5",        # Report generation
+    "ceo": "deepseek-ai/DeepSeek-V3.1-Terminus",
+    "cto": "deepseek-ai/DeepSeek-V3.1-Terminus",
+    "backend": "deepseek-ai/DeepSeek-V3.1-Terminus",
+    "frontend": "deepseek-ai/DeepSeek-V3.1-Terminus",
+    "fullstack": "deepseek-ai/DeepSeek-V3.1-Terminus",
+    "code_review": "deepseek-ai/DeepSeek-V3.1-Terminus",
+    "devops": "deepseek-ai/DeepSeek-V3.1-Terminus",
+    "qa": "deepseek-ai/DeepSeek-V3.1-Terminus",
+    "marketing": "deepseek-ai/deepseek-v4-flash",
+    "sales": "deepseek-ai/deepseek-v4-flash",
+    "customer_success": "deepseek-ai/deepseek-v4-flash",
+    "hr": "deepseek-ai/deepseek-v4-flash",
+    "knowledge": "deepseek-ai/deepseek-v4-flash",
+    "finance": "deepseek-ai/deepseek-v4-flash",
 }
 
 
@@ -98,14 +90,10 @@ def get_model_for_role(role: str) -> str:
     """Return the model name for a given agent role."""
     settings = get_settings()
     role_lower = role.lower().strip()
-    default_model = settings.anthropic_model or "claude-sonnet-4-5"
+    default_model = settings.atlas_model
     return MODEL_REGISTRY.get(role_lower, default_model)
 
 
 def get_light_model() -> str:
     """Return the light model for routing/simple tasks."""
-    settings = get_settings()
-    # Allow override via env, but default to haiku for cost efficiency
-    if settings.anthropic_model and "haiku" in settings.anthropic_model.lower():
-        return settings.anthropic_model
-    return "claude-haiku-4-5"
+    return "deepseek-ai/deepseek-v4-flash"

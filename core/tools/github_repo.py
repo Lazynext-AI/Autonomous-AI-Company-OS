@@ -19,7 +19,6 @@ class GitHubRepoManager:
         self.repo_root = repo_root
         self.settings = get_settings()
         self.token = self.settings.github_token.strip() if self.settings.github_token else ""
-        self.org = self.settings.github_org.strip() if self.settings.github_org else ""
 
     async def ensure_remote_configured(self, repo_name: Optional[str] = None) -> bool:
         """
@@ -30,6 +29,7 @@ class GitHubRepoManager:
         returncode, stdout, _ = await self._run_git("remote", "get-url", "origin")
         if returncode == 0:
             logger.info("remote_already_configured", remote_url=stdout.strip())
+            await self._set_deploy_secrets(stdout.strip())
             return True
 
         # No remote exists - create one
@@ -57,10 +57,33 @@ class GitHubRepoManager:
         returncode, _, stderr = await self._run_git("remote", "add", "origin", authenticated_url)
         if returncode == 0:
             logger.info("remote_added", repo_url=repo_url.split("@")[-1] if "@" in repo_url else repo_url)
+            await self._set_deploy_secrets(repo_url)
             return True
         else:
             logger.error("failed_to_add_remote", error=stderr)
             return False
+
+    async def _set_deploy_secrets(self, repo_url: str) -> None:
+        """Set CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID secrets so the
+        auto-deploy workflow can publish to Cloudflare on push."""
+        try:
+            from github import Github
+            from github.GithubException import GithubException
+
+            clean = repo_url.split("@")[-1].replace("https://", "").replace("github.com/", "").removesuffix(".git")
+            gh = Github(self.token)
+            repo = gh.get_repo(clean)
+
+            secrets = {
+                "CLOUDFLARE_ACCOUNT_ID": self.settings.cloudflare_account_id,
+                "CLOUDFLARE_API_TOKEN": self.settings.cloudflare_deploy_token or "",
+            }
+            for name, value in secrets.items():
+                if value:
+                    repo.create_secret(name, value)
+                    logger.info("repo_secret_set", repo=clean, secret=name)
+        except Exception as e:
+            logger.warning("repo_secrets_failed", error=str(e))
 
     async def _create_github_repo(self, repo_name: str) -> Optional[str]:
         """Create a GitHub repository using GitHub API."""
@@ -90,36 +113,7 @@ class GitHubRepoManager:
                 username = user_response.json().get("login")
                 logger.info("github_auth_verified", username=username)
 
-                # Skip org repos for now - always create under user account to avoid 404 errors
-                # Org repos require special permissions and approval
-                if False and self.org:  # Disabled org repos temporarily
-                    org_url = f"https://api.github.com/orgs/{self.org}/repos"
-                    response = await client.post(org_url, json=payload, headers=headers)
-                    
-                    if response.status_code == 201:
-                        data = response.json()
-                        repo_url = data.get("clone_url") or data.get("ssh_url")
-                        logger.info("github_repo_created", repo_name=repo_name, org=self.org, url=repo_url)
-                        return repo_url
-                    elif response.status_code == 404:
-                        # Org not found or no access - fallback to user repo
-                        logger.warning("github_org_not_found", org=self.org, message="Falling back to user repository")
-                    elif response.status_code == 403:
-                        # No permission for org - fallback to user repo
-                        logger.warning("github_org_no_permission", org=self.org, message="Falling back to user repository")
-                    elif response.status_code == 422:
-                        # Repo might already exist
-                        error_data = response.json()
-                        if "already exists" in str(error_data).lower():
-                            repo_url = f"https://github.com/{self.org}/{repo_name}.git"
-                            logger.info("github_repo_exists", repo_name=repo_name, url=repo_url)
-                            return repo_url
-                        else:
-                            logger.warning("github_org_repo_creation_failed", status=response.status_code, error=response.text[:200], message="Falling back to user repository")
-                    else:
-                        logger.warning("github_org_repo_creation_failed", status=response.status_code, error=response.text[:200], message="Falling back to user repository")
-
-                # Create user repository (fallback or primary)
+                # Create repository under the user's account
                 user_url = "https://api.github.com/user/repos"
                 response = await client.post(user_url, json=payload, headers=headers)
                 

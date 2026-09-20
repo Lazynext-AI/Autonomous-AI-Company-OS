@@ -1,0 +1,17 @@
+name = "ai-company-dashboard"
+main = ".open-next/worker.js"
+compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
+preview_urls = false
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+# Same-account workers can't HTTP-fetch each other (error 1042) - use a service binding
+[[services]]
+binding = "COMPANY_API"
+service = "ai-company-os"
+
+# Server-side env: CLOUDFLARE_API_URL + CLOUDFLARE_API_TOKEN
+# Set with: npx wrangler secret put CLOUDFLARE_API_URL / CLOUDFLARE_API_TOKEN --name ai-company-dashboard

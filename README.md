@@ -2,6 +2,8 @@
 
 A production-grade, self-running organization of AI agents that autonomously builds, deploys, markets, and grows software products with zero human intervention after initial setup. The system operates as a complete virtual company with strategic leadership, engineering teams, growth functions, and infrastructure agents, all coordinated through an event-driven message bus architecture.
 
+The entire backend runs on Cloudflare's serverless platform (D1, Workers KV, Vectorize, Workers) and Atlas Cloud for LLM inference — no local services required.
+
 ## Table of Contents
 
 1. [Overview](#overview)
@@ -27,7 +29,7 @@ The Autonomous AI Company OS is an enterprise-grade multi-agent system that simu
 - **Strategic Planning**: CEO agent sets strategic direction based on company state and market analysis
 - **Task Orchestration**: CTO agent decomposes strategic goals into executable technical tasks
 - **Code Generation**: Engineering agents write production-quality code with validation and testing
-- **Automatic Deployment**: DevOps agents trigger deployments via Railway/Vercel with verification
+- **Automatic Deployment**: DevOps agents deploy frontends to Cloudflare Pages and JS/TS backends to Cloudflare Workers, with verification
 - **Quality Assurance**: Continuous testing and health monitoring with automatic remediation
 - **Performance Tracking**: Comprehensive scoring and reward system for agent improvement
 - **Knowledge Management**: RAG-powered knowledge base for context-aware decision making
@@ -35,25 +37,32 @@ The Autonomous AI Company OS is an enterprise-grade multi-agent system that simu
 ### Core Principles
 
 - **Separation of Concerns**: Product code is built in a separate repository (`./product/`) isolated from the agent system
-- **Event-Driven Architecture**: Redis Streams ensure reliable, exactly-once message delivery
+- **Event-Driven Architecture**: D1-backed message streams ensure reliable, exactly-once message delivery
 - **Tiered Model Selection**: Cost-optimized LLM usage based on task importance
 - **Fail-Safe Operations**: Automatic retries, rollbacks, and escalation protocols
 - **Production-Ready**: Code validation, file backups, conflict detection, and git branch management
 
 ## System Architecture
 
-### Message Bus (Redis Streams)
+### API Layer (Cloudflare Worker)
 
-The system uses Redis Streams as the backbone for inter-agent communication. Each channel represents a specific message type or routing destination:
+All state access goes through a single Cloudflare Worker (`worker/`) that fronts D1, KV, and Vectorize. Agents and the dashboard authenticate with a shared bearer token (`API_TOKEN` Worker secret).
+
+- **Endpoints**: `/query`, `/batch` (D1 SQL), `/bus/*` (message streams), `/kv/*` (cache), `/vectorize/*` (embeddings), `/health`
+- **Auth**: `Authorization: Bearer <API_TOKEN>` on every request
+
+### Message Bus (D1-backed Streams)
+
+The system uses a D1-backed message bus exposed by the Worker for inter-agent communication. Each channel represents a specific message type or routing destination:
 
 - **Channels**: `ceo.directives`, `cto.tasks.backend`, `cto.tasks.frontend`, `agent.reports`, `qa.alerts`, etc.
-- **Consumer Groups**: Agents consume messages using Redis consumer groups for exactly-once delivery
+- **Consumer Groups**: Emulated in D1 via `bus_offsets` + `bus_deliveries` — each (channel, group) sees every message; within a group each message is delivered to exactly one consumer until acked
 - **Role-Based Routing**: CTO publishes tasks to role-specific channels ensuring correct agent assignment
-- **Blocking Reads**: Agents poll channels with 3-second block time for responsive task processing
+- **Blocking Reads**: Agents poll `/bus/poll` with ~3s long-poll for responsive task processing
 
-### Company Brain (Supabase)
+### Company Brain (Cloudflare D1)
 
-Persistent shared state stored in PostgreSQL via Supabase:
+Persistent shared state stored in D1 (serverless SQLite):
 
 - **Product State**: Product name, description, mission, tech stack
 - **Metrics**: Users, revenue, MRR, uptime, error rates, deployment counts
@@ -61,24 +70,26 @@ Persistent shared state stored in PostgreSQL via Supabase:
 - **Blockers**: Technical blockers preventing progress
 - **Agent Statuses**: Current status and activity of all agents
 
-**Caching**: Redis cache with 60-second TTL reduces database load for frequent reads.
+JSON columns are stored as TEXT and transparently encoded/decoded by `core/cloudflare_client.py`.
 
-### Episodic Memory (Redis)
+**Caching**: Workers KV with 60-second TTL reduces database load for frequent reads.
 
-Short-term event storage per agent:
+### Episodic Memory (D1)
+
+Short-term event storage per agent in the `episodic_events` table:
 
 - **Recent Events**: Task started, completed, failed events
-- **Context Window**: Last 24 hours of activity
+- **Retention**: Last 7 days of activity (pruned lazily on writes)
 - **Purpose**: Provides context for LLM calls and decision-making
-- **Expiration**: Events automatically expire after 24 hours
 
-### Knowledge Base (ChromaDB + LlamaIndex)
+### Knowledge Base (Vectorize + D1)
 
 RAG-powered knowledge retrieval system:
 
-- **Vector Store**: ChromaDB for semantic search
+- **Vector Store**: Cloudflare Vectorize for semantic search
+- **Chunk Store**: `knowledge_chunks` D1 table holds chunk text; Vectorize metadata links chunk IDs
 - **Embeddings**: Free local `sentence-transformers/all-MiniLM-L6-v2` (384 dimensions)
-- **Ingestion**: PDF documents ingested and chunked for retrieval
+- **Ingestion**: PDF documents parsed with pypdf, chunked, embedded, and stored
 - **Query Interface**: Agents query knowledge base when stuck or need context
 - **Categories**: Engineering, business, marketing, domain-specific knowledge
 
@@ -96,14 +107,14 @@ Agents build products in a **separate isolated repository**:
 ### Strategic Agents
 
 #### CEO Agent
-- **Model**: Claude Sonnet 4.5
+- **Model**: DeepSeek V3.1 Terminus (via Atlas Cloud)
 - **Responsibilities**: Strategic direction, market analysis, goal setting
 - **Output**: Strategic directives with priorities and deadlines
 - **Frequency**: Runs every 5 minutes (configurable)
 - **Channels**: Publishes to `ceo.directives`
 
 #### CTO Agent
-- **Model**: Claude Sonnet 4.5 (cost-optimized)
+- **Model**: DeepSeek V3.1 Terminus (cost-optimized)
 - **Responsibilities**: Technical orchestration, task decomposition, routing
 - **Output**: 5-10 executable tasks per directive with acceptance criteria
 - **Frequency**: Runs every 2 minutes (configurable)
@@ -112,28 +123,28 @@ Agents build products in a **separate isolated repository**:
 ### Engineering Agents
 
 #### Backend Agent
-- **Model**: Claude Sonnet 4.5 (cost-optimized)
+- **Model**: DeepSeek V3.1 Terminus
 - **Responsibilities**: FastAPI endpoints, database schemas, server logic
-- **Capabilities**: Code generation, E2B testing, file writing, git commits
+- **Capabilities**: Code generation, local sandboxed test execution, file writing, git commits
 - **Channels**: Subscribes to `cto.tasks.backend`
 - **Output**: Python/FastAPI code with validation and testing
 
 #### Frontend Agent
-- **Model**: Claude Sonnet 4.5 (cost-optimized)
+- **Model**: DeepSeek V3.1 Terminus
 - **Responsibilities**: Next.js pages, React components, UI implementation
 - **Capabilities**: TypeScript/React code generation, file writing
 - **Channels**: Subscribes to `cto.tasks.frontend`
 - **Output**: TypeScript/React/Next.js code
 
 #### DevOps Agent
-- **Model**: Claude Sonnet 4.5
+- **Model**: DeepSeek V3.1 Terminus
 - **Responsibilities**: CI/CD pipelines, deployments, infrastructure
-- **Capabilities**: Railway/Vercel deployments, git hooks setup, deployment verification
+- **Capabilities**: Cloudflare Pages/Workers deployments, deployment verification, live-URL health monitoring
 - **Channels**: Subscribes to `cto.tasks.devops`
-- **Output**: Deployment configurations, GitHub Actions workflows
+- **Output**: wrangler configs, deployment records
 
 #### QA Agent
-- **Model**: Claude Sonnet 4.5
+- **Model**: DeepSeek V3.1 Terminus
 - **Responsibilities**: Continuous testing, health monitoring, bug detection
 - **Frequency**: Runs health suite every 15 minutes
 - **Channels**: Publishes to `qa.alerts`
@@ -142,19 +153,19 @@ Agents build products in a **separate isolated repository**:
 ### Growth Agents
 
 #### Marketing Agent
-- **Model**: Claude Haiku 4.5
+- **Model**: DeepSeek V4 Flash
 - **Responsibilities**: Content creation, SEO, campaigns, messaging
 - **Channels**: Subscribes to `cto.tasks.marketing`
 - **Output**: Marketing content, campaign strategies
 
 #### Sales Agent
-- **Model**: Claude Haiku 4.5
+- **Model**: DeepSeek V4 Flash
 - **Responsibilities**: Outreach, demos, pipeline management
 - **Channels**: Subscribes to `cto.tasks.sales`
 - **Output**: Sales outreach templates, demo scripts
 
 #### Customer Success Agent
-- **Model**: Claude Haiku 4.5
+- **Model**: DeepSeek V4 Flash
 - **Responsibilities**: Support, onboarding, feedback processing
 - **Channels**: Subscribes to `cto.tasks.customer_success`
 - **Output**: Support responses, onboarding guides
@@ -162,19 +173,19 @@ Agents build products in a **separate isolated repository**:
 ### Infrastructure Agents
 
 #### Knowledge Agent
-- **Model**: Claude Haiku 4.5
+- **Model**: DeepSeek V4 Flash
 - **Responsibilities**: RAG queries, document ingestion, knowledge retrieval
 - **Channels**: Subscribes to `knowledge.requests`
 - **Output**: Answers to knowledge queries, document summaries
 
 #### HR Agent
-- **Model**: Claude Haiku 4.5
+- **Model**: DeepSeek V4 Flash
 - **Responsibilities**: Agent scaling, resource allocation, team management
 - **Channels**: Subscribes to `hr.requests`
 - **Output**: Scaling recommendations, resource allocation plans
 
 #### Finance Agent
-- **Model**: Claude Haiku 4.5
+- **Model**: DeepSeek V4 Flash
 - **Responsibilities**: Financial reporting, metrics analysis, budget tracking
 - **Frequency**: Generates weekly finance reports
 - **Output**: Financial reports, revenue analysis
@@ -191,7 +202,7 @@ Agents build products in a **separate isolated repository**:
 
 2. **Task Decomposition Phase**
    - CTO agent consumes directive from `ceo.directives`
-   - Uses Claude Sonnet 4.5 to decompose into 5-10 technical tasks
+   - Uses DeepSeek V3.1 Terminus to decompose into 5-10 technical tasks
    - Each task includes: description, acceptance criteria, estimated minutes, assign_to field
    - Publishes tasks to role-specific channels (e.g., `cto.tasks.backend`)
 
@@ -201,7 +212,7 @@ Agents build products in a **separate isolated repository**:
    - Builds context: company brain, episodic memory, knowledge base queries
    - Executes task via LLM call with role-specific system prompt
    - Validates generated code syntax (Python, TypeScript, YAML, etc.)
-   - Tests code with E2B sandbox (if available, skips dependency-heavy code)
+   - Tests code in a local sandboxed subprocess (timeout-guarded)
    - Writes code to files in project directory with automatic backups
    - Creates git feature branch: `agent/{task_id}/{description}`
    - Commits code with task ID and description
@@ -216,7 +227,7 @@ Agents build products in a **separate isolated repository**:
 
 5. **Deployment Phase** (if deploy task)
    - DevOps agent detects deployment keywords in task description
-   - Triggers Railway deployment (backend) or Vercel deployment (frontend)
+   - Deploys frontend to Cloudflare Pages or backend to Cloudflare Workers (Python backends run locally)
    - Verifies deployment via health checks
    - Updates deployment metrics in company brain
    - Auto-generates rollback tasks if verification fails
@@ -289,8 +300,8 @@ The `RewardEngine` processes performance scores and injects context into agent m
 
 Rewards and corrections are stored in `agent_memories` table:
 
-- **Reward History**: JSONB array of positive feedback prompts
-- **Correction History**: JSONB array of improvement guidance
+- **Reward History**: JSON array of positive feedback prompts
+- **Correction History**: JSON array of improvement guidance
 - **Performance Score**: Running average of task scores (0-100)
 - **Patterns Learned**: Array of learned patterns and strategies
 
@@ -307,21 +318,22 @@ When significant milestones are achieved (e.g., first deployment, 100 users, rev
 | Component | Technology | Purpose |
 |-----------|------------|---------|
 | Language | Python 3.11+ | Agent runtime and core logic |
-| LLM Provider | Anthropic Claude API | Language model for all agents |
-| Database | Supabase (PostgreSQL) | Persistent company state and task logs |
-| Cache & Messaging | Redis 5.x | Message bus and episodic memory |
-| Vector Store | ChromaDB | Knowledge base embeddings |
-| RAG Framework | LlamaIndex | Retrieval augmented generation |
+| LLM Provider | Atlas Cloud (OpenAI-compatible) | Language model for all agents |
+| Database | Cloudflare D1 (SQLite) | Persistent company state and task logs |
+| Cache | Cloudflare Workers KV | Company brain cache (60s TTL) |
+| Message Bus | Cloudflare D1 via Worker | Streams + consumer-group emulation |
+| Vector Store | Cloudflare Vectorize | Knowledge base embeddings |
+| Chunk Store | Cloudflare D1 | Knowledge chunk text |
 | Embeddings | sentence-transformers/all-MiniLM-L6-v2 | Free local embeddings (384 dimensions) |
 
 ### LLM Model Selection (Tiered Strategy)
 
-| Agent Role | Model | Cost (Input/Output per 1M tokens) | Rationale |
-|------------|-------|----------------------------------|-----------|
-| Backend, Frontend, Fullstack | Claude Sonnet 4.5 | $3 / $15 | Code generation (cost-optimized from Opus) |
-| CTO | Claude Sonnet 4.5 | $3 / $15 | Task decomposition (cost-optimized from Opus) |
-| CEO, DevOps, QA | Claude Sonnet 4.5 | $3 / $15 | Strategic thinking and infrastructure automation |
-| Marketing, Sales, Support, HR, Finance, Knowledge | Claude Haiku 4.5 | $1 / $5 | Simple tasks optimized for cost efficiency |
+| Agent Role | Model | Approx. Cost (per 1M tokens) | Rationale |
+|------------|-------|------------------------------|-----------|
+| Backend, Frontend, Fullstack | DeepSeek V3.1 Terminus | $0.30 / $0.95 | Code generation |
+| CTO | DeepSeek V3.1 Terminus | $0.30 / $0.95 | Task decomposition |
+| CEO, DevOps, QA, Code Review | DeepSeek V3.1 Terminus | $0.30 / $0.95 | Strategic thinking and infrastructure automation |
+| Marketing, Sales, Support, HR, Finance, Knowledge | DeepSeek V4 Flash | $0.14 / $0.28 | Simple tasks optimized for cost efficiency |
 
 ### Development Tools
 
@@ -329,8 +341,8 @@ When significant milestones are achieved (e.g., first deployment, 100 users, rev
 |------|---------|
 | FastAPI | Web framework for API endpoints |
 | Next.js | Frontend dashboard framework |
-| Docker Compose | Local service orchestration (Redis, ChromaDB) |
-| Poetry | Python dependency management |
+| Wrangler | Cloudflare Worker deployment + resource management |
+| uv / Poetry | Python dependency management |
 | Structlog | Structured logging |
 | Pydantic | Data validation and settings |
 
@@ -338,37 +350,33 @@ When significant milestones are achieved (e.g., first deployment, 100 users, rev
 
 | Service | Purpose | Required |
 |---------|---------|----------|
-| Anthropic Claude API | LLM provider | Yes |
-| Supabase | Database and storage | Yes |
-| Redis | Message bus and caching | Yes |
-| ChromaDB | Vector store | Yes |
-| GitHub | Version control and CI/CD | Optional |
-| Vercel | Frontend deployment | Optional |
-| Railway | Backend deployment | Optional |
+| Atlas Cloud API | LLM provider | Yes |
+| Cloudflare (Worker + D1 + KV + Vectorize + Pages + Containers) | All persistent state and deployments | Yes |
+| GitHub | Remote repos, push triggers, Actions CI monitoring | Optional |
+| Resend | Weekly founder briefing emails (also on dashboard) | Optional |
 | E2B | Code execution sandbox | Optional |
-| Resend | Email notifications | Optional |
+
+Frontends deploy to Cloudflare Pages, backends to Workers (JS/TS) or Containers
+(Python). Briefings appear on the dashboard and optionally via email.
 
 ## Installation
 
 ### Prerequisites
 
 - **Operating System**: macOS or Linux
-- **Python**: 3.11 or higher
-- **Node.js**: 18 or higher (for dashboard)
-- **Docker**: For Redis and ChromaDB services
+- **Python**: 3.11 or 3.12 (3.13+ untested with sentence-transformers)
+- **Node.js**: 18 or higher (for worker + dashboard)
+- **Cloudflare account**: For D1, KV, Vectorize, and Workers
 - **Git**: For version control
 
 ### Required Services
 
-1. **Supabase Project**: Create at [supabase.com](https://supabase.com)
-   - Get `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`
-   - Run migration: `supabase/migrations/001_initial.sql`
+1. **Cloudflare Account**: [cloudflare.com](https://cloudflare.com)
+   - API token (`CF_API_TOKEN`) with edit perms for Workers Scripts, Workers KV, D1, Vectorize
+   - Account ID (`CF_ACCOUNT_ID`) from the dashboard sidebar
 
-2. **Anthropic Claude API Key**: Get from [console.anthropic.com](https://console.anthropic.com)
+2. **Atlas Cloud API Key**: Get from [atlascloud.ai](https://www.atlascloud.ai)
    - Required for all agent operations
-
-3. **Redis Instance**: Local via Docker or cloud provider
-   - Default: `redis://localhost:6379`
 
 ### Installation Steps
 
@@ -380,21 +388,28 @@ cd autonomous-ai-company
 # Copy environment template
 cp .env.example .env
 
-# Edit .env with your API keys and configuration
-# Required: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY
+# Edit .env: ATLASCLOUD_API_KEY, CF_ACCOUNT_ID, CF_API_TOKEN
 
-# Install Python dependencies
+# Install dependencies (uses uv)
 make setup
-# or: poetry install
+# or: uv venv --python 3.12 .venv && uv pip install -e . --python .venv/bin/python
 
-# Install sentence-transformers for free embeddings
-pip install sentence-transformers
+# Create Cloudflare resources (D1, KV namespace, Vectorize index)
+make worker-resources
+# Copy the printed resource IDs into worker/wrangler.toml
+
+# Set the shared Worker secret
+cd worker && npx wrangler secret put API_TOKEN && cd ..
+
+# Apply the D1 schema and deploy the Worker
+make worker-migrate
+make worker-deploy
+
+# Set CLOUDFLARE_API_URL + CLOUDFLARE_API_TOKEN in .env to the deployed worker URL
+# and the secret you chose above
 
 # Validate configuration
 make validate-env
-
-# Run database migration
-# Execute supabase/migrations/001_initial.sql in Supabase SQL Editor
 ```
 
 ## Configuration
@@ -403,53 +418,46 @@ make validate-env
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `SUPABASE_URL` | Supabase project URL | `https://xxx.supabase.co` |
-| `SUPABASE_ANON_KEY` | Supabase anonymous key | `eyJhbGci...` |
-| `SUPABASE_SERVICE_KEY` | Supabase service role key | `eyJhbGci...` |
-| `ANTHROPIC_API_KEY` | Anthropic Claude API key | `sk-ant-...` |
-| `REDIS_URL` | Redis connection string | `redis://localhost:6379` |
+| `CLOUDFLARE_API_URL` | Deployed Worker URL | `https://ai-company-os.you.workers.dev` |
+| `CLOUDFLARE_API_TOKEN` | Shared Worker secret | any long random string |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID | `abc123...` |
+| `CLOUDFLARE_API_KEY` | Cloudflare Global API Key (wrangler + deploys) | `cfk_...` |
+| `CLOUDFLARE_EMAIL` | Cloudflare account email (global-key auth) | `you@example.com` |
+| `ATLASCLOUD_API_KEY` | Atlas Cloud API key | `apikey-...` |
 
 ### Optional Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `ANTHROPIC_MODEL` | Default Claude model | `claude-sonnet-4-5` |
-| `CHROMA_PERSIST_DIR` | ChromaDB storage path | `./chroma_db` |
-| `PRODUCTS_BASE_DIR` | Base directory for product repos (one per product_name) | `./products` |
+| `ATLAS_BASE_URL` | Atlas Cloud base URL | `https://api.atlascloud.ai/v1` |
+| `ATLAS_MODEL` | Default model | `deepseek-ai/DeepSeek-V3.1-Terminus` |
+| `PRODUCTS_BASE_DIR` | Base directory for product repos | `./products` |
 | `KNOWLEDGE_BASE_DIR` | Knowledge base PDF directory | `./knowledge_base` |
 | `CEO_LOOP_INTERVAL` | CEO strategic loop interval (seconds) | `300` |
 | `CTO_LOOP_INTERVAL` | CTO orchestration loop interval (seconds) | `120` |
-| `FOUNDER_EMAIL` | Email for founder briefings | - |
-| `GITHUB_TOKEN` | GitHub API token | - |
-| `VERCEL_TOKEN` | Vercel deployment token | - |
-| `VERCEL_DEPLOY_HOOK_URL` | Vercel deploy hook URL | - |
-| `RAILWAY_TOKEN` | Railway deployment token | - |
-| `RAILWAY_DEPLOY_HOOK_URL` | Railway deploy hook URL | - |
-| `E2B_API_KEY` | E2B sandbox API key | - |
-| `RESEND_API_KEY` | Resend email API key | - |
+No optional service keys needed - everything runs on Cloudflare + Atlas Cloud + local git.
 
 ### Database Schema
 
-Run the migration script in Supabase SQL Editor:
+Apply `db/migrations/001_initial.sql` to D1 (`make worker-migrate`). Creates:
 
-```sql
--- Creates tables:
--- - company_brain: Single row with full company state
--- - agent_memories: Per-agent performance and memory
--- - task_log: All tasks with status and results
--- - milestone_log: Achieved milestones
-```
-
-See `supabase/migrations/001_initial.sql` for complete schema.
+- `company_brain`: Single row with full company state
+- `agent_memories`: Per-agent performance and memory
+- `task_log`: All tasks with status and results
+- `milestone_log`: Achieved milestones
+- `bus_messages` / `bus_deliveries` / `bus_offsets`: Message bus streams + consumer groups
+- `episodic_events`: Agent + company event feeds
+- `knowledge_chunks`: RAG chunk text (embeddings in Vectorize)
+- `download_history`: Knowledge downloader history
 
 ## Running the System
 
 ### Development Mode
 
 ```bash
-# Start Redis and ChromaDB services
+# Start all agents (talks to the deployed Worker)
 make dev
-# or: docker-compose up -d && python scripts/run_agents.py
+# or: PYTHONPATH=. python3 scripts/run_agents.py
 
 # In separate terminal, start dashboard
 make dashboard
@@ -460,16 +468,15 @@ The system runs in foreground. Press `Ctrl+C` to stop.
 
 ### Initialization
 
-1. **Start Services**: `make dev` starts Redis and ChromaDB
-2. **Set Mission**: Update `company_brain` table in Supabase:
+1. **Deploy Worker**: `make worker-deploy` (after `worker-resources` + `worker-migrate`)
+2. **Set Mission**: Update `company_brain` via the Worker or D1 console:
    ```sql
    UPDATE company_brain 
    SET product_name = 'Your Product Name', 
-       mission = 'Your mission statement'
-   WHERE id = (SELECT id FROM company_brain LIMIT 1);
+       mission = 'Your mission statement';
    ```
 3. **Agents Begin**: CEO agent picks up mission and starts strategic loop
-4. **Monitor**: Check dashboard at http://localhost:3000 or Supabase tables
+4. **Monitor**: Check dashboard at http://localhost:3000 or the D1 console
 
 ### Project Repository
 
@@ -490,17 +497,18 @@ autonomous-ai-company/
 │   ├── growth/               Marketing, Sales, Customer Success agents
 │   └── infrastructure/       Knowledge, HR, Finance agents
 ├── core/                      Core infrastructure
-│   ├── llm/                  Claude client, local embeddings
-│   ├── memory/                Company brain, agent memory, episodic memory
-│   ├── messaging/             Redis bus, channels, message schemas
-│   ├── knowledge/             RAG engine, document ingestion
+│   ├── llm/                  Atlas Cloud client, local embeddings
+│   ├── memory/               Company brain, agent memory, episodic memory
+│   ├── messaging/            D1-backed bus, channels, message schemas
+│   ├── knowledge/            RAG engine (Vectorize), document ingestion
 │   ├── operations/           Task tracker, task log persistence
-│   ├── evaluation/            Performance scorer, reward engine
-│   ├── tools/                 Code writer, validator, file manager, git manager, deployment
-│   └── watchdog/               Deadlock detector, health monitoring
+│   ├── evaluation/           Performance scorer, reward engine
+│   ├── tools/                Code writer, validator, file manager, git manager, deployment
+│   └── watchdog/             Deadlock detector, health monitoring
+├── worker/                    Cloudflare Worker API layer (D1 + KV + Vectorize)
+├── db/                        D1 migrations
 ├── dashboard/                 Next.js Founder control panel
 ├── scripts/                   run_agents, validate_env, seed_knowledge
-├── supabase/                  Database migrations
 ├── tests/                     Unit and integration tests
 └── products/                  Product repos (one per product_name, gitignored)
     └── <slug>/                e.g. my-cool-app/
@@ -514,24 +522,24 @@ autonomous-ai-company/
 
 ### Optimization Strategies
 
-**Model Selection**: Cost-optimized tiered model usage. Sonnet 4.5 for code generation (replaced Opus 4.6), Haiku 4.5 for simple tasks. Reduces costs by ~70% compared to using Opus for all tasks.
+**Model Selection**: Cost-optimized tiered model usage. DeepSeek V3.1 Terminus for code generation, DeepSeek V4 Flash for simple tasks.
 
 **Caching**: 
-- Company brain: 60-second Redis cache reduces Supabase reads by ~90%
-- Episodic memory: In-memory Redis lists for fast access
+- Company brain: 60-second Workers KV cache reduces D1 reads by ~90%
+- Episodic memory: D1 `episodic_events` table with lazy pruning
 
 **Message Bus**:
-- 3-second block time balances responsiveness and CPU usage
-- Consumer groups ensure exactly-once delivery
+- ~3-second long-poll balances responsiveness and request volume
+- Consumer-group emulation ensures exactly-once delivery
 - Horizontal scaling via multiple consumer instances
 
 **Status Updates**:
 - Throttled to maximum once per 60 seconds per agent
-- Reduces Supabase write load significantly
+- Reduces D1 write load significantly
 
 ### Rate Limiting
 
-Claude API client includes automatic retry logic for 429 (rate limit) errors:
+Atlas Cloud client includes automatic retry logic for 429 (rate limit) errors:
 
 - **Backoff Strategy**: Exponential backoff (15s → 30s → 60s → 90s → 120s)
 - **Retry Count**: Up to 5 retries before failure
@@ -541,14 +549,14 @@ Claude API client includes automatic retry logic for 429 (rate limit) errors:
 
 **Estimated Monthly Costs** (1000 tasks/day):
 
-- Sonnet (coding): ~$15-30/month (replaced Opus for cost savings)
-- Sonnet (strategy): ~$30-60/month  
-- Haiku (simple tasks): ~$10-20/month
-- **Total**: ~$90-180/month
+- DeepSeek V3.1 Terminus (coding/strategy): ~$20-50/month
+- DeepSeek V4 Flash (simple tasks): ~$5-15/month
+- Cloudflare (D1 + KV + Vectorize + Workers): free tier covers most workloads
+- **Total**: ~$25-65/month
 
 **Optimization Tips**:
 - Increase `CEO_LOOP_INTERVAL` and `CTO_LOOP_INTERVAL` for production
-- Use Haiku for non-critical tasks
+- Use the light model for non-critical tasks
 - Cache company brain reads aggressively
 - Batch operations where possible
 
@@ -557,30 +565,26 @@ Claude API client includes automatic retry logic for 429 (rate limit) errors:
 ### Infrastructure Requirements
 
 **Minimum**:
-- 2 CPU cores, 4GB RAM
-- Supabase project (free tier sufficient)
-- Redis instance (managed or self-hosted)
-- ChromaDB (local or managed)
+- 2 CPU cores, 4GB RAM for the agent runner
+- Cloudflare account (free tier sufficient)
 
 **Recommended**:
 - 4 CPU cores, 8GB RAM
-- Managed Supabase (production tier)
-- Managed Redis (Redis Cloud, AWS ElastiCache)
-- Managed ChromaDB or persistent volume
+- Cloudflare paid plan for higher D1/Workers limits
 
 ### Deployment Steps
 
-1. **Deploy Services**:
+1. **Deploy Cloudflare resources**:
    ```bash
-   # Redis: Use managed service (Redis Cloud, AWS ElastiCache)
-   # ChromaDB: Deploy with persistent storage
+   make worker-resources   # create D1, KV, Vectorize
+   make worker-migrate     # apply schema
+   make worker-deploy      # deploy Worker
    ```
 
 2. **Deploy Agents**:
    ```bash
    # Option 1: Cloud VM (DigitalOcean, AWS EC2, etc.)
-   # Option 2: Serverless (AWS Lambda, Google Cloud Functions)
-   # Option 3: Kubernetes (for high availability)
+   # Option 2: Kubernetes (for high availability)
    ```
 
 3. **Configure Environment**:
@@ -591,13 +595,12 @@ Claude API client includes automatic retry logic for 429 (rate limit) errors:
 
 4. **Deploy Dashboard**:
    ```bash
-   # Deploy to Vercel, Netlify, or similar
-   # Configure environment variables
+   # Deploy to Cloudflare Pages, or any static host
+   # Set CLOUDFLARE_API_URL + CLOUDFLARE_API_TOKEN (server-side only)
    ```
 
 5. **Set Up CI/CD**:
-   - GitHub Actions workflow included
-   - Configure deploy hooks for Railway/Vercel
+   - Products deploy via wrangler (Pages/Workers) directly from the agent runner
    - Set up monitoring and alerts
 
 ### Horizontal Scaling
@@ -605,9 +608,8 @@ Claude API client includes automatic retry logic for 429 (rate limit) errors:
 Agents are stateless and can scale horizontally:
 
 - Run multiple instances of same agent type
-- Use distinct consumer group names per instance
-- Redis Streams distributes messages across instances
-- Supabase handles concurrent writes
+- Consumer-group emulation distributes messages across instances
+- D1 handles concurrent writes
 
 **Example**: Run 3 Backend Agent instances for high throughput.
 

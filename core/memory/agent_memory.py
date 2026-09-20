@@ -45,24 +45,24 @@ class AgentMemory:
         self._client = None
 
     def _get_client(self):
-        """Lazy init Supabase client."""
+        """Lazy init Cloudflare client."""
         if self._client is None:
             try:
-                from core.supabase_client import SupabaseClient
-                c = SupabaseClient()
+                from core.cloudflare_client import CloudflareClient
+                c = CloudflareClient()
                 if c.is_configured():
                     self._client = c
                 else:
-                    logger.warning("agent_memory_supabase_not_configured")
+                    logger.warning("agent_memory_cloudflare_not_configured")
             except Exception as e:
-                logger.error("agent_memory_supabase_init_failed", error=str(e))
+                logger.error("agent_memory_cloudflare_init_failed", error=str(e))
         return self._client
 
     async def _run_sync(self, fn, *args, **kwargs):
-        """Run sync Supabase call in thread pool."""
+        """Run sync client call in thread pool."""
         client = self._get_client()
         if client is None:
-            raise RuntimeError("Supabase not configured")
+            raise RuntimeError("Cloudflare not configured")
         return await asyncio.to_thread(fn, *args, **kwargs)
 
     def _row_to_schema(self, row: dict) -> AgentMemorySchema:

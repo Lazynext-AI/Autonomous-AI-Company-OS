@@ -1,11 +1,10 @@
-"""Redis Streams message bus for agent communication."""
+"""Message bus over the Cloudflare Worker (D1-backed streams + consumer groups)."""
 
 import json
 import uuid
 from datetime import datetime
 from typing import TypeVar
 
-import redis.asyncio as redis
 import structlog
 
 from core.config import get_settings
@@ -38,29 +37,22 @@ MESSAGE_TYPE_MAP = {
 
 
 class MessageBus:
-    """Async message bus using Redis Streams."""
+    """Async message bus using the Cloudflare Worker bus endpoints."""
 
     def __init__(self) -> None:
         self._settings = get_settings()
-        self._redis: redis.Redis | None = None
+        self._client = None
 
-    async def _get_redis(self) -> redis.Redis:
-        """Get or create Redis connection with reconnection logic."""
-        if self._redis is None:
-            self._redis = redis.from_url(
-                self._settings.redis_url,
-                decode_responses=True,
-            )
-        return self._redis
+    def _get_client(self):
+        if self._client is None:
+            from core.cloudflare_client import CloudflareClient
+            self._client = CloudflareClient()
+        return self._client
 
     async def close(self) -> None:
-        """Close Redis connection."""
-        if self._redis:
-            await self._redis.aclose()
-            self._redis = None
-
-    def _stream_name(self, channel: Channels) -> str:
-        return f"stream:{channel.value}"
+        if self._client:
+            await self._client.close()
+            self._client = None
 
     def _serialize(self, message: BaseMessage) -> str:
         """Serialize message to JSON."""
@@ -96,32 +88,23 @@ class MessageBus:
     async def publish(self, channel: Channels, message: BaseMessage) -> str:
         """Publish message to channel. Returns message ID."""
         try:
-            r = await self._get_redis()
+            client = self._get_client()
             if not message.message_id:
                 message.message_id = str(uuid.uuid4())
-            stream = self._stream_name(channel)
-            msg_id = await r.xadd(stream, {"payload": self._serialize(message)}, maxlen=10000)
+            msg_id = await client.bus_publish(channel.value, self._serialize(message))
             logger.debug("message_published", channel=channel.value, message_id=message.message_id)
             return msg_id
-        except redis.RedisError as e:
+        except Exception as e:
             logger.error("message_publish_failed", channel=channel.value, error=str(e))
             raise
 
     async def create_consumer_groups(self) -> None:
-        """Create consumer groups for all channels (idempotent)."""
+        """Ensure consumer group offsets exist for all channels (idempotent)."""
         try:
-            r = await self._get_redis()
-            for channel in Channels:
-                stream = self._stream_name(channel)
-                try:
-                    await r.xgroup_create(stream, "agents", "0", mkstream=True)
-                except redis.ResponseError as e:
-                    if "BUSYGROUP" in str(e):
-                        pass  # Group exists
-                    else:
-                        raise
+            client = self._get_client()
+            await client.bus_ensure_groups([c.value for c in Channels], "agents")
             logger.info("consumer_groups_created")
-        except redis.RedisError as e:
+        except Exception as e:
             logger.error("create_consumer_groups_failed", error=str(e))
             raise
 
@@ -134,51 +117,35 @@ class MessageBus:
     ) -> list[tuple[str, BaseMessage]]:
         """Read messages for consumer. Returns list of (message_id, message)."""
         try:
-            r = await self._get_redis()
-            stream = self._stream_name(channel)
-            raw = await r.xreadgroup(
-                consumer_group,
-                consumer_name,
-                {stream: ">"},
-                count=count,
-                block=3000,
+            client = self._get_client()
+            raw = await client.bus_poll(
+                channel.value, consumer_group, consumer_name, count=count, wait_ms=3000
             )
             result = []
-            for stream_name, entries in raw:
-                for msg_id, fields in entries:
-                    payload = fields.get("payload", "{}")
-                    try:
-                        msg = self._deserialize(payload)
-                        result.append((msg_id, msg))
-                    except (json.JSONDecodeError, TypeError) as e:
-                        logger.warning("message_deserialize_failed", msg_id=msg_id, error=str(e))
+            for entry in raw:
+                try:
+                    msg = self._deserialize(entry.get("payload", "{}"))
+                    result.append((entry["id"], msg))
+                except (json.JSONDecodeError, TypeError, KeyError) as e:
+                    logger.warning("message_deserialize_failed", error=str(e))
             return result
-        except redis.RedisError as e:
+        except Exception as e:
             logger.error("read_messages_failed", channel=channel.value, error=str(e))
             return []
 
     async def acknowledge(self, channel: Channels, consumer_group: str, message_id: str) -> None:
         """Acknowledge message processing."""
         try:
-            r = await self._get_redis()
-            stream = self._stream_name(channel)
-            await r.xack(stream, consumer_group, message_id)
-        except redis.RedisError as e:
+            client = self._get_client()
+            await client.bus_ack(channel.value, consumer_group, [message_id])
+        except Exception as e:
             logger.error("acknowledge_failed", channel=channel.value, message_id=message_id, error=str(e))
             raise
 
     async def get_pending_count(self, channel: Channels) -> int:
         """Get count of pending (unacked) messages for channel."""
         try:
-            r = await self._get_redis()
-            stream = self._stream_name(channel)
-            try:
-                info = await r.xinfo_groups(stream)
-                total = 0
-                for g in info:
-                    total += g.get("pending", 0)
-                return total
-            except redis.ResponseError:
-                return 0
-        except redis.RedisError:
+            client = self._get_client()
+            return await client.bus_pending(channel.value)
+        except Exception:
             return 0

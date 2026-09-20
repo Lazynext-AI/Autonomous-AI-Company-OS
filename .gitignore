@@ -15,6 +15,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!dashboard/lib/
 lib64/
 parts/
 sdist/
@@ -41,6 +42,10 @@ logs/
 node_modules/
 .next/
 out/
+tsconfig.tsbuildinfo
+.wrangler/
+.open-next/
+.playwright-mcp/
 
 # OS
 .DS_Store

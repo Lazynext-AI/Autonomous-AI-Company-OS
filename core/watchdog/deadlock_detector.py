@@ -29,10 +29,10 @@ class DeadlockDetector:
 
     async def _check_stuck_agents(self) -> None:
         try:
-            if not self._settings.supabase_url:
+            if not self._settings.cloudflare_api_url:
                 return
-            from core.supabase_client import SupabaseClient
-            client = SupabaseClient()
+            from core.cloudflare_client import CloudflareClient
+            client = CloudflareClient()
             if not client.is_configured():
                 return
             cutoff = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
@@ -60,18 +60,26 @@ class DeadlockDetector:
                 logger.warning("message_backlog", channel=channel.value, count=count)
 
     async def _check_model_availability(self) -> None:
-        """Check Claude API key is configured."""
+        """Check Atlas Cloud API key is configured."""
         try:
-            if not self._settings.anthropic_api_key:
-                logger.warning("anthropic_api_key_not_set")
+            if not self._settings.atlas_api_key:
+                logger.warning("atlas_api_key_not_set")
         except Exception as e:
-            logger.error("claude_check_failed", error=str(e))
+            logger.error("atlas_check_failed", error=str(e))
 
     async def _check_connections(self) -> None:
+        """Check the Cloudflare Worker is reachable."""
         try:
-            import redis.asyncio as redis
-            r = redis.from_url(self._settings.redis_url)
-            await r.ping()
-            await r.aclose()
+            if not self._settings.cloudflare_api_url:
+                logger.warning("cloudflare_api_url_not_set")
+                return
+            import httpx
+            async with httpx.AsyncClient(timeout=10.0) as http:
+                r = await http.get(
+                    f"{self._settings.cloudflare_api_url.rstrip('/')}/health",
+                    headers={"Authorization": f"Bearer {self._settings.cloudflare_api_token}"},
+                )
+                if r.status_code != 200:
+                    logger.error("cloudflare_worker_unhealthy", status=r.status_code)
         except Exception as e:
-            logger.error("redis_check_failed", error=str(e))
+            logger.error("cloudflare_check_failed", error=str(e))

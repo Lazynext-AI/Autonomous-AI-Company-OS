@@ -7,7 +7,7 @@ from rich.console import Console
 from core.config import get_settings
 from core.evaluation.reward_engine import RewardEngine
 from core.evaluation.scorer import PerformanceScorer
-from core.llm.claude_client import ClaudeClient
+from core.llm.atlas_client import AtlasClient
 from core.memory.agent_memory import AgentMemory
 from core.memory.company_brain_cached import CachedCompanyBrain
 from core.memory.episodic_memory import EpisodicMemory
@@ -20,16 +20,16 @@ console = Console()
 
 async def main() -> None:
     settings = get_settings()
-    if not settings.supabase_url:
-        console.print("[yellow]Supabase not configured. Set SUPABASE_URL and keys in .env[/yellow]")
-    if not settings.redis_url:
-        console.print("[yellow]Redis not configured. Start with: docker-compose up -d[/yellow]")
+    if not settings.cloudflare_api_url or not settings.cloudflare_api_token:
+        console.print("[yellow]Cloudflare not configured. Set CLOUDFLARE_API_URL and CLOUDFLARE_API_TOKEN in .env[/yellow]")
+    if not settings.atlas_api_key:
+        console.print("[yellow]Atlas Cloud not configured. Set ATLASCLOUD_API_KEY in .env[/yellow]")
 
     company_brain = CachedCompanyBrain()
     agent_memory = AgentMemory()
     episodic_memory = EpisodicMemory()
     message_bus = MessageBus()
-    llm_client = ClaudeClient()
+    llm_client = AtlasClient()
     task_tracker = TaskTracker()
     await message_bus.create_consumer_groups()
     worker_task = llm_client.start_worker()
