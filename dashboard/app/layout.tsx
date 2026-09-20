@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Autonomous AI Company Dashboard",
-  description: "Real-time founder control panel",
+  title: "Lazynext",
+  description: "Lazynext: The Autonomous AI Company OS",
 };
 
 export default function RootLayout({

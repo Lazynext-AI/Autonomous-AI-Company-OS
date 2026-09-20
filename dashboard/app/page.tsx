@@ -122,7 +122,7 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Autonomous AI Company</h1>
+              <h1 className="text-2xl font-bold">Lazynext</h1>
               <p className="text-sm text-zinc-400 mt-1">
                 {brain?.product_name || "No product defined"} • {brain?.mission || "No mission set"}
               </p>

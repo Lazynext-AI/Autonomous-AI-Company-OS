@@ -1,4 +1,4 @@
-# Autonomous AI Company Operating System
+# Lazynext: The Autonomous AI Company OS
 
 A production-grade, self-running organization of AI agents that autonomously builds, deploys, markets, and grows software products with zero human intervention after initial setup. The system operates as a complete virtual company with strategic leadership, engineering teams, growth functions, and infrastructure agents, all coordinated through an event-driven message bus architecture.
 

@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "autonomous-ai-company"
+name = "lazynext"
 version = "0.1.0"
 description = "Autonomous AI Company Operating System - self-running organization of AI agents"
 authors = ["Founder"]
