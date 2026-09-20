@@ -228,6 +228,7 @@ export default {
     const path = url.pathname;
     try {
       // Public surface: API-key gateway (own auth) + CORS
+      if (path === "/favicon.ico") return new Response(null, { status: 204 });
       if (req.method === "OPTIONS") return preflight();
       if (path === "/mcp") return cors(req, await handleMcp(req, env, ctx));
       if (path.startsWith("/api/v1/webhooks"))
