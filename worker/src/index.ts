@@ -2,21 +2,15 @@
  * AI Company OS - Cloudflare Worker API layer.
  * D1: relational state + message bus emulation (consumer-group semantics).
  * KV: hot-path cache (company brain). Vectorize: knowledge embeddings.
- * Auth: Authorization: Bearer <API_TOKEN secret>.
+ * Auth: Authorization: Bearer <API_TOKEN secret> (internal) or lzk_ API key
+ * (public /api/v1/* + /mcp).
  */
 
-export interface Env {
-  DB: D1Database;
-  EPHEMERAL: KVNamespace;
-  VECTORS: VectorizeIndex;
-  API_TOKEN?: string;
-}
+import { Env, json, cors, preflight } from "./gateway";
+import { handlePublicApi } from "./public_api";
+import { handleMcp } from "./mcp";
 
-const JSON_HEADERS = { "content-type": "application/json" };
-
-function json(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
-}
+export { Env };
 
 function unauthorized(): Response {
   return json({ error: "unauthorized" }, 401);
@@ -226,14 +220,21 @@ async function route(req: Request, env: Env, path: string): Promise<Response> {
 }
 
 export default {
-  async fetch(req: Request, env: Env): Promise<Response> {
+  async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url);
-    if (env.API_TOKEN) {
-      const auth = req.headers.get("authorization") ?? "";
-      if (auth !== `Bearer ${env.API_TOKEN}`) return unauthorized();
-    }
+    const path = url.pathname;
     try {
-      return await route(req, env, url.pathname);
+      // Public surface: API-key gateway (own auth) + CORS
+      if (req.method === "OPTIONS") return preflight();
+      if (path === "/mcp") return cors(req, await handleMcp(req, env, ctx));
+      if (path.startsWith("/api/")) return cors(req, await handlePublicApi(req, env, ctx, path));
+
+      // Internal surface: shared-secret auth as before
+      if (env.API_TOKEN) {
+        const auth = req.headers.get("authorization") ?? "";
+        if (auth !== `Bearer ${env.API_TOKEN}`) return unauthorized();
+      }
+      return await route(req, env, path);
     } catch (e) {
       return json({ error: e instanceof Error ? e.message : String(e) }, 500);
     }

@@ -20,6 +20,7 @@ load_dotenv()
 
 CHECKS = {
     "api": "https://ai-company.lazynext.com/health",
+    "public-api": "https://ai-company.lazynext.com/api/v1/health",
     "dashboard": "https://dashboard.lazynext.com",
     "penpot": "https://penpot.lazynext.com",
 }

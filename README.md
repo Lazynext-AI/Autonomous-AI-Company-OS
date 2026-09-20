@@ -51,6 +51,15 @@ All state access goes through a single Cloudflare Worker (`worker/`) that fronts
 - **Endpoints**: `/query`, `/batch` (D1 SQL), `/bus/*` (message streams), `/kv/*` (cache), `/vectorize/*` (embeddings), `/health`
 - **Auth**: `Authorization: Bearer <API_TOKEN>` on every request
 
+### Public API + MCP (Gateway)
+
+External consumers use `lzk_*` API keys (issued via `/api/v1/keys` with the admin token) — scoped (`read`/`write`), rate-limited per minute via KV, hashed in D1 (`api_keys` table, migration 003).
+
+- **REST**: `GET /api/v1/health` (public), `GET /api/v1/status`, `GET /api/v1/briefings[/{id}]`, `GET /api/v1/tasks`, `POST /api/v1/tasks` (write), `POST /api/v1/knowledge/search`, `GET /api/v1/agents`
+- **MCP**: `POST /mcp` — streamable HTTP transport, spec **2026-07-28** (negotiates older versions). Tools: `company_status`, `list_briefings`, `get_briefing`, `list_tasks`, `list_agents`, `search_knowledge`, `create_task` (write), `publish_message` (write). Resources: `lazynext://briefing/{id}`.
+- **Key admin** (admin token only): `POST /api/v1/keys`, `GET /api/v1/keys`, `DELETE /api/v1/keys/{id}`
+- **Python client**: `core/public_api_client.py` (`LazynextApiClient`)
+
 ### Message Bus (D1-backed Streams)
 
 The system uses a D1-backed message bus exposed by the Worker for inter-agent communication. Each channel represents a specific message type or routing destination:
