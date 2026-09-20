@@ -11,6 +11,7 @@
  *   write scope: create_task, publish_message
  */
 import { Env, ApiKey, json, authorize, touchKey, extractKey } from "./gateway";
+import { publishToBus } from "./webhooks";
 
 const PROTOCOL_VERSION = "2026-07-28";
 const SUPPORTED_VERSIONS = new Set([
@@ -139,7 +140,7 @@ const TOOLS = [
   },
 ] as const;
 
-async function callTool(env: Env, name: string, args: Json): Promise<unknown> {
+async function callTool(env: Env, ctx: ExecutionContext, name: string, args: Json): Promise<unknown> {
   switch (name) {
     case "company_status": {
       const [tasks, briefings, chunks, pending] = await env.DB.batch<{ n: number }>([
@@ -239,12 +240,8 @@ async function callTool(env: Env, name: string, args: Json): Promise<unknown> {
           : [],
         context: { source: "mcp" },
       };
-      const res = await env.DB.prepare(
-        "INSERT INTO bus_messages (channel, payload, created_at) VALUES (?, ?, ?)",
-      )
-        .bind(channel, JSON.stringify(msg), new Date().toISOString())
-        .run();
-      return { task_id: taskId, message_id: String(res.meta.last_row_id), channel };
+      const messageId = await publishToBus(env, ctx, channel, JSON.stringify(msg));
+      return { task_id: taskId, message_id: messageId, channel };
     }
     case "publish_message": {
       const channel = String(args.channel ?? "");
@@ -257,12 +254,8 @@ async function callTool(env: Env, name: string, args: Json): Promise<unknown> {
       } catch {
         throw new Error("payload must be valid JSON");
       }
-      const res = await env.DB.prepare(
-        "INSERT INTO bus_messages (channel, payload, created_at) VALUES (?, ?, ?)",
-      )
-        .bind(channel, payload, new Date().toISOString())
-        .run();
-      return { message_id: String(res.meta.last_row_id), channel };
+      const messageId = await publishToBus(env, ctx, channel, payload);
+      return { message_id: messageId, channel };
     }
     default:
       throw Object.assign(new Error("unknown tool"), { code: -32602 });
@@ -302,7 +295,7 @@ async function readResource(env: Env, uri: string): Promise<unknown> {
 
 // ------------------------------------------------------------- dispatch ----
 
-async function dispatch(env: Env, key: ApiKey, req: RpcRequest): Promise<unknown> {
+async function dispatch(env: Env, ctx: ExecutionContext, key: ApiKey, req: RpcRequest): Promise<unknown> {
   const scopes = key.scopes.split(",").map((s) => s.trim());
   const canWrite = scopes.includes("write") || scopes.includes("admin");
 
@@ -337,7 +330,7 @@ async function dispatch(env: Env, key: ApiKey, req: RpcRequest): Promise<unknown
       if (tool.scope === "write" && !canWrite) {
         return { content: [text(`Tool '${name}' requires a write-scoped API key`)], isError: true };
       }
-      const out = await callTool(env, name, (req.params?.arguments as Json) ?? {});
+      const out = await callTool(env, ctx, name, (req.params?.arguments as Json) ?? {});
       return {
         content: [text(typeof out === "string" ? out : JSON.stringify(out, null, 2))],
         structuredContent: typeof out === "object" ? out : undefined,
@@ -398,7 +391,7 @@ export async function handleMcp(
     }
     if (isNotification(r)) return null; // notifications/initialized etc.
     try {
-      return result(r.id, await dispatch(env, key!, r));
+      return result(r.id, await dispatch(env, ctx, key!, r));
     } catch (e) {
       const code = (e as { code?: number }).code ?? -32603;
       return rpcError(r.id, code, e instanceof Error ? e.message : String(e));

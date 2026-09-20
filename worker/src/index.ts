@@ -9,6 +9,7 @@
 import { Env, json, cors, preflight } from "./gateway";
 import { handlePublicApi } from "./public_api";
 import { handleMcp } from "./mcp";
+import { fanOut, handleWebhooks, publishToBus } from "./webhooks";
 
 export { Env };
 
@@ -30,13 +31,19 @@ function isReadQuery(sql: string): boolean {
   );
 }
 
-async function handleQuery(env: Env, body: { sql: string; params?: unknown[] }) {
+async function handleQuery(env: Env, ctx: ExecutionContext, body: { sql: string; params?: unknown[] }) {
   const stmt = env.DB.prepare(body.sql).bind(...(body.params ?? []));
   if (isReadQuery(body.sql)) {
     const res = await stmt.all();
     return json({ results: res.results ?? [] });
   }
   const res = await stmt.run();
+  // Briefing inserts double as events for webhook subscribers.
+  if (/insert\s+into\s+briefings/i.test(body.sql) && res.success) {
+    ctx.waitUntil(
+      fanOut(env, ctx, "briefings", String(res.meta.last_row_id ?? ""), JSON.stringify(body.params ?? [])),
+    );
+  }
   return json({ success: res.success, meta: res.meta });
 }
 
@@ -110,7 +117,7 @@ async function handleBusPoll(
   }
 }
 
-async function route(req: Request, env: Env, path: string): Promise<Response> {
+async function route(req: Request, env: Env, ctx: ExecutionContext, path: string): Promise<Response> {
   if (path === "/health") {
     await env.DB.prepare("SELECT 1").all();
     return json({ ok: true });
@@ -120,18 +127,14 @@ async function route(req: Request, env: Env, path: string): Promise<Response> {
 
   switch (path) {
     case "/query":
-      return handleQuery(env, await readBody(req));
+      return handleQuery(env, ctx, await readBody(req));
     case "/batch":
       return handleBatch(env, await readBody(req));
 
     case "/bus/publish": {
       const b = await readBody<{ channel: string; payload: string }>(req);
-      const res = await env.DB.prepare(
-        "INSERT INTO bus_messages (channel, payload, created_at) VALUES (?, ?, ?)",
-      )
-        .bind(b.channel, b.payload, new Date().toISOString())
-        .run();
-      return json({ id: String(res.meta.last_row_id) });
+      const id = await publishToBus(env, ctx, b.channel, b.payload);
+      return json({ id });
     }
     case "/bus/poll":
       return handleBusPoll(env, await readBody(req));
@@ -227,6 +230,8 @@ export default {
       // Public surface: API-key gateway (own auth) + CORS
       if (req.method === "OPTIONS") return preflight();
       if (path === "/mcp") return cors(req, await handleMcp(req, env, ctx));
+      if (path.startsWith("/api/v1/webhooks"))
+        return cors(req, await handleWebhooks(req, env, ctx, path));
       if (path.startsWith("/api/")) return cors(req, await handlePublicApi(req, env, ctx, path));
 
       // Internal surface: shared-secret auth as before
@@ -234,7 +239,7 @@ export default {
         const auth = req.headers.get("authorization") ?? "";
         if (auth !== `Bearer ${env.API_TOKEN}`) return unauthorized();
       }
-      return await route(req, env, path);
+      return await route(req, env, ctx, path);
     } catch (e) {
       return json({ error: e instanceof Error ? e.message : String(e) }, 500);
     }

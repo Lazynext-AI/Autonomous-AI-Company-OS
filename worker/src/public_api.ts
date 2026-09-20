@@ -4,6 +4,8 @@
  * endpoints and the Python agents. No duplicated business logic.
  */
 import { Env, json, authorize, touchKey, extractKey, sha256, generateKey } from "./gateway";
+import { OPENAPI_SPEC, DOCS_HTML } from "./openapi";
+import { publishToBus } from "./webhooks";
 
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 
@@ -32,7 +34,7 @@ async function listTasks(env: Env, url: URL): Promise<Response> {
   return json({ tasks: results ?? [] });
 }
 
-async function createTask(env: Env, req: Request): Promise<Response> {
+async function createTask(env: Env, ctx: ExecutionContext, req: Request): Promise<Response> {
   const b = (await req.json()) as {
     description?: string;
     channel?: string;
@@ -57,12 +59,8 @@ async function createTask(env: Env, req: Request): Promise<Response> {
     acceptance_criteria: b.acceptance_criteria ?? [],
     context: { source: "public-api" },
   };
-  const res = await env.DB.prepare(
-    "INSERT INTO bus_messages (channel, payload, created_at) VALUES (?, ?, ?)",
-  )
-    .bind(channel, JSON.stringify(msg), new Date().toISOString())
-    .run();
-  return json({ task_id: taskId, message_id: String(res.meta.last_row_id), channel }, 201);
+  const messageId = await publishToBus(env, ctx, channel, JSON.stringify(msg));
+  return json({ task_id: taskId, message_id: messageId, channel }, 201);
 }
 
 async function companyStatus(env: Env): Promise<Response> {
@@ -179,6 +177,10 @@ export async function handlePublicApi(
   if (path === "/api/v1/health") {
     return json({ ok: true, service: "lazynext-api", version: "1.0.0" });
   }
+  if (path === "/api/v1/openapi.json") return json(OPENAPI_SPEC);
+  if (path === "/api/v1/docs") {
+    return new Response(DOCS_HTML, { headers: { "content-type": "text/html" } });
+  }
 
   if (path.startsWith("/api/v1/keys")) return handleKeyAdmin(req, env, path);
 
@@ -196,7 +198,7 @@ export async function handlePublicApi(
     return getBriefing(env, parseInt(path.split("/").pop() ?? "", 10));
   }
   if (req.method === "GET" && path === "/api/v1/tasks") return listTasks(env, url);
-  if (req.method === "POST" && path === "/api/v1/tasks") return createTask(env, req);
+  if (req.method === "POST" && path === "/api/v1/tasks") return createTask(env, ctx, req);
   if (req.method === "POST" && path === "/api/v1/knowledge/search") return knowledgeSearch(env, req);
   if (req.method === "GET" && path === "/api/v1/agents") {
     const { results } = await env.DB.prepare(
