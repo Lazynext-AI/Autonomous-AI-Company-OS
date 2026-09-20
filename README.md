@@ -58,7 +58,12 @@ External consumers use `lzk_*` API keys (issued via `/api/v1/keys` with the admi
 - **REST**: `GET /api/v1/health` (public), `GET /api/v1/status`, `GET /api/v1/briefings[/{id}]`, `GET /api/v1/tasks`, `POST /api/v1/tasks` (write), `POST /api/v1/knowledge/search`, `GET /api/v1/agents`
 - **MCP**: `POST /mcp` — streamable HTTP transport, spec **2026-07-28** (negotiates older versions). Tools: `company_status`, `list_briefings`, `get_briefing`, `list_tasks`, `list_agents`, `search_knowledge`, `create_task` (write), `publish_message` (write). Resources: `lazynext://briefing/{id}`.
 - **Key admin** (admin token only): `POST /api/v1/keys`, `GET /api/v1/keys`, `DELETE /api/v1/keys/{id}`
+- **Webhooks**: `POST /api/v1/webhooks` registers an HTTPS endpoint subscribed to bus channels (`*` or csv); every bus publish + briefing insert fans out a signed POST (`x-lazynext-signature`), deliveries logged (`/api/v1/webhooks/deliveries`)
+- **Docs**: `GET /api/v1/openapi.json` + Swagger UI at `/api/v1/docs`
 - **Python client**: `core/public_api_client.py` (`LazynextApiClient`)
+- **CLI**: `lazynext` command (installed at `/opt/homebrew/bin/lazynext`) — `status`, `briefings`, `tasks`, `task "…"`, `agents`, `search`, `health`, `mcp-tools`
+
+The dashboard is also an installable PWA (manifest + icons) — "Add to Home Screen" / browser install works on mobile and desktop.
 
 ### Message Bus (D1-backed Streams)
 
