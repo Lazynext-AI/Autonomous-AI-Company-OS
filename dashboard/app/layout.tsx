@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Lazynext",
-  description: "Lazynext: The Autonomous AI Company OS",
+  description: "Lazynext - The Autonomous AI Company OS",
 };
 
 export default function RootLayout({
