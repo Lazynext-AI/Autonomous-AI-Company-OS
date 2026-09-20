@@ -53,3 +53,6 @@ Thumbs.db
 
 # Product repos (one per product in company brain)
 products/
+backups/
+
+.health_state.json

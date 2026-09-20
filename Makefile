@@ -37,6 +37,9 @@ worker-deploy:
 		[ -n "$$CLOUDFLARE_DEPLOY_TOKEN" ] && export CLOUDFLARE_API_TOKEN=$$CLOUDFLARE_DEPLOY_TOKEN; \
 		cd worker && npx wrangler deploy'
 
+db-backup:
+	@bash scripts/db_backup.sh
+
 dev:
 	PYTHONPATH=. $(PY) scripts/run_agents.py
 

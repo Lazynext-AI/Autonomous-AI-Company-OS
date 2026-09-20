@@ -142,6 +142,11 @@ class CloudflarePagesDeployer:
             return {"success": False, "error": f"No index.html in {src} - build the frontend first"}
 
         name = _slugify(project_name or src.parent.name)
+        # Wrangler no longer auto-creates the project on deploy.
+        await _run(
+            ["npx", "wrangler", "pages", "project", "create", name, "--production-branch", "main"],
+            timeout=60,
+        )
         code, out = await _run(
             ["npx", "wrangler", "pages", "deploy", str(src), "--project-name", name, "--branch", "main"],
             timeout=300,
