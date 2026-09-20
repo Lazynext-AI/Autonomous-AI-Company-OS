@@ -1,8 +1,10 @@
 .PHONY: setup models dev dashboard test seed agents validate-env worker-resources worker-deploy worker-migrate
 
+PY := $(shell [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3)
+
 validate-env:
 	@echo "Validating .env and API keys..."
-	PYTHONPATH=. python3 scripts/validate_env.py
+	PYTHONPATH=. $(PY) scripts/validate_env.py
 
 setup:
 	@bash scripts/setup.sh
@@ -36,16 +38,16 @@ worker-deploy:
 		cd worker && npx wrangler deploy'
 
 dev:
-	PYTHONPATH=. python3 scripts/run_agents.py
+	PYTHONPATH=. $(PY) scripts/run_agents.py
 
 dashboard:
 	cd dashboard && npm run dev
 
 test:
-	poetry run pytest tests/ -v
+	PYTHONPATH=. $(PY) -m pytest tests/ -v
 
 seed:
-	PYTHONPATH=. python3 scripts/seed_knowledge.py
+	PYTHONPATH=. $(PY) scripts/seed_knowledge.py
 
 agents:
-	PYTHONPATH=. python3 scripts/run_agents.py
+	PYTHONPATH=. $(PY) scripts/run_agents.py
