@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { queryApi } from "@/lib/api";
 import ThemeToggle from "@/components/ThemeToggle";
 import {
   LayoutDashboard, Users, ListTodo, Brain, FileText, BookOpen,
@@ -39,6 +40,22 @@ const NAV = [
 export default function Sidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const read = new Set<string>(JSON.parse(localStorage.getItem("lz_notifications_read") || "[]"));
+        const rows = await queryApi<{ id: number }>(
+          "SELECT id FROM bus_messages WHERE channel IN ('alerts','milestones','deploys') ORDER BY id DESC LIMIT 50"
+        );
+        setUnread(rows.filter((r) => !read.has(`e-${r.id}`)).length);
+      } catch {}
+    };
+    load();
+    const t = setInterval(load, 15000);
+    return () => clearInterval(t);
+  }, []);
 
   const nav = (
     <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
@@ -56,6 +73,11 @@ export default function Sidebar() {
           >
             <Icon className="w-4 h-4" />
             {item.label}
+            {item.href === "/notifications" && unread > 0 && (
+              <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-white text-[10px] font-bold flex items-center justify-center">
+                {unread > 99 ? "99+" : unread}
+              </span>
+            )}
           </Link>
         );
       })}
