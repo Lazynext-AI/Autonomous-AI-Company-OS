@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { queryApi, parseJson } from "@/lib/api";
 import { PageHeader, Card, Empty, timeAgo } from "@/components/ui";
-import { User, Bot, Key, Webhook, ListTodo, Rocket, ShieldCheck } from "lucide-react";
+import { User, Bot, Key, Webhook, ListTodo, Rocket, ShieldCheck, Download } from "lucide-react";
 
 interface AuditRow {
   id: number;
@@ -43,7 +43,25 @@ export default function AuditPage() {
 
   return (
     <>
-      <PageHeader title="Audit" subtitle="Who did what — founder actions + agent events on the bus." />
+      <PageHeader title="Audit" subtitle="Who did what — founder actions + agent events on the bus.">
+        <button
+          onClick={() => {
+            const csv = [
+              "id,channel,created_at,payload",
+              ...rows.map((r) =>
+                [r.id, r.channel, r.created_at, `"${JSON.stringify(r.payload).replace(/"/g, '""')}"`].join(",")
+              ),
+            ].join("\n");
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+            a.download = `audit-${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+          }}
+          className="inline-flex items-center gap-2 bg-card hover:bg-cardHover border border-border text-sm font-medium px-4 py-2.5 rounded-lg transition"
+        >
+          <Download className="w-4 h-4" /> Export CSV
+        </button>
+      </PageHeader>
 
       {rows.length === 0 && !loading ? (
         <Empty title="No audit events" hint="Actions you take (assign task, deploy, approve) are logged here." />

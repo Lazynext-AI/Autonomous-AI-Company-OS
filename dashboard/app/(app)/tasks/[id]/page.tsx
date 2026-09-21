@@ -5,7 +5,8 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { queryApi, parseJson } from "@/lib/api";
 import { Card, StatusBadge, Empty, timeAgo } from "@/components/ui";
-import { ArrowLeft } from "lucide-react";
+import { toast } from "@/components/Toast";
+import { ArrowLeft, XCircle, RotateCcw } from "lucide-react";
 
 interface Task {
   task_id: string;
@@ -25,6 +26,30 @@ export default function TaskDetailPage() {
   const { id } = useParams();
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
+  const [acting, setActing] = useState(false);
+
+  const act = async (sql: string, msg: string) => {
+    setActing(true);
+    const r = await fetch("/api/query", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sql, params: [id] }),
+    });
+    toast(r.ok ? msg : "Action failed");
+    setActing(false);
+    if (r.ok) setTimeout(() => location.reload(), 600);
+  };
+
+  const cancel = () =>
+    act(
+      "UPDATE task_log SET status = 'failed', error_log = json_insert(COALESCE(error_log, '[]'), '$[#]', 'cancelled by founder') WHERE task_id = ? AND status IN ('pending', 'in_progress')",
+      "Task cancelled"
+    );
+  const retry = () =>
+    act(
+      "UPDATE task_log SET status = 'pending', attempts = 0, result = NULL WHERE task_id = ? AND status = 'failed'",
+      "Task re-queued"
+    );
 
   useEffect(() => {
     const load = async () => {
@@ -75,7 +100,27 @@ export default function TaskDetailPage() {
           <h1 className="text-xl font-bold text-fg max-w-2xl">{task.description}</h1>
           <p className="text-sm text-muted mt-1">{task.agent_id.replace(/_/g, " ")}</p>
         </div>
-        <StatusBadge status={task.status} />
+        <div className="flex items-center gap-2.5 shrink-0">
+          {(task.status === "pending" || task.status === "in_progress") && (
+            <button
+              onClick={cancel}
+              disabled={acting}
+              className="inline-flex items-center gap-1.5 bg-card hover:bg-cardHover border border-border text-bad text-xs font-semibold px-3.5 py-2 rounded-lg transition"
+            >
+              <XCircle className="w-3.5 h-3.5" /> Cancel
+            </button>
+          )}
+          {task.status === "failed" && (
+            <button
+              onClick={retry}
+              disabled={acting}
+              className="inline-flex items-center gap-1.5 bg-accent hover:bg-accentSoft text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition"
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Retry
+            </button>
+          )}
+          <StatusBadge status={task.status} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
