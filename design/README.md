@@ -36,4 +36,9 @@ mobile-login · mobile-settings · tablet
 email-briefing · email-alert · email-welcome · email-reset · email-invoice
 
 ## Design system
-design-system · ui-states · terminal · site-map
+design-system · ui-states · terminal · site-map ·
+buttons · inputs · icons · spacing-grid · motion · accessibility
+
+## Tokens
+tokens.json — machine-readable design tokens (colors, type, space,
+radius, breakpoints, motion, a11y, component specs) for design-to-code
