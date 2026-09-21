@@ -5,12 +5,14 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   LayoutDashboard, Users, ListTodo, Brain, FileText, BookOpen,
-  Activity, Key, Settings, Menu, X, BarChart3, Package,
+  Activity, Key, Settings, Menu, X, BarChart3, Package, Bell, Search,
 } from "lucide-react";
 
 const NAV = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/products", label: "Products", icon: Package },
+  { href: "/notifications", label: "Notifications", icon: Bell },
+  { href: "/search", label: "Search", icon: Search },
   { href: "/agents", label: "Agents", icon: Users },
   { href: "/tasks", label: "Tasks", icon: ListTodo },
   { href: "/brain", label: "Brain", icon: Brain },
