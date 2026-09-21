@@ -1,0 +1,1646 @@
+<svg width="720" xmlns="http://www.w3.org/2000/svg" height="600" viewBox="6020 7300 720 600" style="-webkit-print-color-adjust::exact" xmlns:xlink="http://www.w3.org/1999/xlink" fill="none" version="1.1">
+  <style>
+  </style>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba829d572c9">
+    <defs>
+      <clipPath id="frame-clip-8a7393f4-edd8-8078-8008-aba829d572c9-render-17061" class="frame-clip frame-clip-def">
+        <rect rx="0" ry="0" x="6020" y="7300" width="720" height="600" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)">
+        </rect>
+      </clipPath>
+    </defs>
+    <g class="frame-container-wrapper">
+      <g class="frame-container-blur">
+        <g class="frame-container-shadows">
+          <g clip-path="url(#frame-clip-8a7393f4-edd8-8078-8008-aba829d572c9-render-17061)" fill="none">
+            <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba829d572c9">
+              <rect rx="0" ry="0" x="6020" y="7300" width="720" height="600" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="frame-background" style="fill:#0a0a0b">
+              </rect>
+            </g>
+            <g class="frame-children">
+              <g id="shape-8a7393f4-edd8-8078-8008-aba829ea053f">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="6080" y="7350" width="67" height="15" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="66.09375" height="15.5" id="fill-0-render-17062-0">
+                      <g>
+                        <rect width="66.09375" height="15.5" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba829ea053f">
+                    <text x="6080" y="7364.5" dominant-baseline="ideographic" textLength="66.09375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#a78bfa">← webhooks</text>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba829fd14b5">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="6080" y="7378" width="143" height="27" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="142.015625" height="28.5" id="fill-0-render-17063-0">
+                      <g>
+                        <rect width="142.015625" height="28.5" style="fill:#fafafa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba829fd14b5">
+                    <text x="6080" y="7405" dominant-baseline="ideographic" textLength="142.015625" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:22px;text-decoration:none;direction:ltr;fill:#fafafa">Delivery d-8841</text>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba82a0f07f5">
+                <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a0f07f5">
+                  <rect rx="13" ry="13" x="6080" y="7418" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="80" height="26" style="fill:#0e2a1e">
+                  </rect>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba82a263802">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="6096" y="7424" width="36" height="15" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="35.203125" height="15.5" id="fill-0-render-17065-0">
+                      <g>
+                        <rect width="35.203125" height="15.5" style="fill:#34d399">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a263802">
+                    <text x="6096" y="7438.5" dominant-baseline="ideographic" textLength="35.203125" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#34d399">200 OK</text>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba82a37c1a1">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="6180" y="7424" width="186" height="15" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="185.75" height="15.5" id="fill-0-render-17066-0">
+                      <g>
+                        <rect width="185.75" height="15.5" style="fill:#9c9caa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a37c1a1">
+                    <text x="6180" y="7438.5" dominant-baseline="ideographic" textLength="185.75" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#9c9caa">cto.tasks → hooks.slack.com · 212ms</text>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba82a49bd9a">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="6080" y="7480" width="70" height="16" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="69.703125" height="17" id="fill-0-render-17067-0">
+                      <g>
+                        <rect width="69.703125" height="17" style="fill:#fafafa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a49bd9a">
+                    <text x="6080" y="7496" dominant-baseline="ideographic" textLength="69.703125" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#fafafa">Payload sent</text>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba82a5c29b6">
+                <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a5c29b6">
+                  <rect rx="10" ry="10" x="6080" y="7506" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="600" height="180" style="fill:#0e0e13">
+                  </rect>
+                </g>
+                <g id="strokes-8a7393f4-edd8-8078-8008-aba88975a8c9-8a7393f4-edd8-8078-8008-aba82a5c29b6" class="strokes">
+                  <g class="stroke-shape">
+                    <rect rx="10" ry="10" x="6080" y="7506" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="600" height="180" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
+                    </rect>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba82a748ca3">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="6096" y="7522" width="560" height="150" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-0-render-17069-0">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-1-render-17069-0">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-2-render-17069-0">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-3-render-17069-0">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-4-render-17069-0">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-5-render-17069-0">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-6-render-17069-0">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-7-render-17069-0">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-8-render-17069-0">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-9-render-17069-0">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a748ca3">
+                    <text x="6096" y="7536.5" dominant-baseline="ideographic" textLength="3.6328125" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#a78bfa">{</text>
+                  </g>
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-0-render-17069-1">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-1-render-17069-1">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-2-render-17069-1">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-3-render-17069-1">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-4-render-17069-1">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-5-render-17069-1">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-6-render-17069-1">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-7-render-17069-1">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-8-render-17069-1">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-9-render-17069-1">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a748ca3">
+                    <text x="6096" y="7550.8984375" dominant-baseline="ideographic" textLength="4.84375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#a78bfa"> </text>
+                  </g>
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-0-render-17069-2">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-1-render-17069-2">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-2-render-17069-2">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-3-render-17069-2">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-4-render-17069-2">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-5-render-17069-2">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-6-render-17069-2">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-7-render-17069-2">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-8-render-17069-2">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-9-render-17069-2">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a748ca3">
+                    <text x="6100.84375" y="7550.8984375" dominant-baseline="ideographic" textLength="133.21875" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#a78bfa">&quot;event&quot;: &quot;task.completed&quot;,</text>
+                  </g>
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-0-render-17069-3">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-1-render-17069-3">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-2-render-17069-3">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-3-render-17069-3">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-4-render-17069-3">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-5-render-17069-3">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-6-render-17069-3">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-7-render-17069-3">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-8-render-17069-3">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-9-render-17069-3">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a748ca3">
+                    <text x="6096" y="7565.296875" dominant-baseline="ideographic" textLength="4.84375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#a78bfa"> </text>
+                  </g>
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-0-render-17069-4">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-1-render-17069-4">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-2-render-17069-4">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-3-render-17069-4">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-4-render-17069-4">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-5-render-17069-4">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-6-render-17069-4">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-7-render-17069-4">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-8-render-17069-4">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-9-render-17069-4">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a748ca3">
+                    <text x="6100.84375" y="7565.296875" dominant-baseline="ideographic" textLength="112.0703125" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#a78bfa">&quot;channel&quot;: &quot;cto.tasks&quot;,</text>
+                  </g>
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-0-render-17069-5">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-1-render-17069-5">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-2-render-17069-5">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-3-render-17069-5">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-4-render-17069-5">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-5-render-17069-5">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-6-render-17069-5">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-7-render-17069-5">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-8-render-17069-5">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-9-render-17069-5">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a748ca3">
+                    <text x="6096" y="7579.6953125" dominant-baseline="ideographic" textLength="4.84375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#a78bfa"> </text>
+                  </g>
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-0-render-17069-6">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-1-render-17069-6">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-2-render-17069-6">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-3-render-17069-6">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-4-render-17069-6">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-5-render-17069-6">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-6-render-17069-6">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-7-render-17069-6">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-8-render-17069-6">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-9-render-17069-6">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a748ca3">
+                    <text x="6100.84375" y="7579.6953125" dominant-baseline="ideographic" textLength="178.875" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#a78bfa">&quot;data&quot;: { &quot;id&quot;: &quot;t-1041&quot;, &quot;title&quot;: &quot;…&quot; },</text>
+                  </g>
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-0-render-17069-7">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-1-render-17069-7">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-2-render-17069-7">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-3-render-17069-7">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-4-render-17069-7">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-5-render-17069-7">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-6-render-17069-7">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-7-render-17069-7">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-8-render-17069-7">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-9-render-17069-7">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a748ca3">
+                    <text x="6096" y="7594.09375" dominant-baseline="ideographic" textLength="4.84375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#a78bfa"> </text>
+                  </g>
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-0-render-17069-8">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-1-render-17069-8">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-2-render-17069-8">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-3-render-17069-8">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-4-render-17069-8">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-5-render-17069-8">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-6-render-17069-8">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-7-render-17069-8">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-8-render-17069-8">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-9-render-17069-8">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a748ca3">
+                    <text x="6100.84375" y="7594.09375" dominant-baseline="ideographic" textLength="84.2734375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#a78bfa">&quot;ts&quot;: 1758459840</text>
+                  </g>
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-0-render-17069-9">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-1-render-17069-9">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-2-render-17069-9">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-3-render-17069-9">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-4-render-17069-9">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-5-render-17069-9">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-6-render-17069-9">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-7-render-17069-9">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-8-render-17069-9">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-9-render-17069-9">
+                      <g>
+                        <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a748ca3">
+                    <text x="6096" y="7608.4921875" dominant-baseline="ideographic" textLength="3.6328125" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#a78bfa">}</text>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba82a8cd57f">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="6080" y="7710" width="53" height="16" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="52.65625" height="17" id="fill-0-render-17070-0">
+                      <g>
+                        <rect width="52.65625" height="17" style="fill:#fafafa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a8cd57f">
+                    <text x="6080" y="7726" dominant-baseline="ideographic" textLength="52.65625" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#fafafa">Signature</text>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba82a9e6e19">
+                <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a9e6e19">
+                  <rect rx="8" ry="8" x="6080" y="7736" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="600" height="44" style="fill:#0e0e13">
+                  </rect>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba82ab4ade5">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="6096" y="7750" width="167" height="14" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="166.015625" height="14.5" id="fill-0-render-17072-0">
+                      <g>
+                        <rect width="166.015625" height="14.5" style="fill:#9c9caa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82ab4ade5">
+                    <text x="6096" y="7763.5" dominant-baseline="ideographic" textLength="166.015625" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:11px;text-decoration:none;direction:ltr;fill:#9c9caa">x-lazynext-signature: sha256=9f2a…</text>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba82ac6f3ee">
+                <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82ac6f3ee">
+                  <rect rx="10" ry="10" x="6080" y="7810" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="140" height="44">
+                  </rect>
+                </g>
+                <g id="strokes-8a7393f4-edd8-8078-8008-aba88975e2e4-8a7393f4-edd8-8078-8008-aba82ac6f3ee" class="strokes">
+                  <g class="stroke-shape">
+                    <rect rx="10" ry="10" x="6080" y="7810" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="140" height="44" style="fill:none;fill-opacity:none;stroke-width:1.5;stroke:#a78bfa">
+                    </rect>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba82adffbb8">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="6116" y="7825" width="51" height="16" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="50.9921875" height="17" id="fill-0-render-17074-0">
+                      <g>
+                        <rect width="50.9921875" height="17" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82adffbb8">
+                    <text x="6116" y="7841" dominant-baseline="ideographic" textLength="50.9921875" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#a78bfa">Redeliver</text>
+                  </g>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba829ea053f">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="6080" y="7350" width="67" height="15" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="66.09375" height="15.5" id="fill-0-render-17075-0">
+          <g>
+            <rect width="66.09375" height="15.5" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba829ea053f">
+        <text x="6080" y="7364.5" dominant-baseline="ideographic" textLength="66.09375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#a78bfa">← webhooks</text>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba829fd14b5">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="6080" y="7378" width="143" height="27" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="142.015625" height="28.5" id="fill-0-render-17076-0">
+          <g>
+            <rect width="142.015625" height="28.5" style="fill:#fafafa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba829fd14b5">
+        <text x="6080" y="7405" dominant-baseline="ideographic" textLength="142.015625" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:22px;text-decoration:none;direction:ltr;fill:#fafafa">Delivery d-8841</text>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba82a0f07f5">
+    <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a0f07f5">
+      <rect rx="13" ry="13" x="6080" y="7418" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="80" height="26" style="fill:#0e2a1e">
+      </rect>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba82a263802">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="6096" y="7424" width="36" height="15" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="35.203125" height="15.5" id="fill-0-render-17078-0">
+          <g>
+            <rect width="35.203125" height="15.5" style="fill:#34d399">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a263802">
+        <text x="6096" y="7438.5" dominant-baseline="ideographic" textLength="35.203125" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#34d399">200 OK</text>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba82a37c1a1">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="6180" y="7424" width="186" height="15" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="185.75" height="15.5" id="fill-0-render-17079-0">
+          <g>
+            <rect width="185.75" height="15.5" style="fill:#9c9caa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a37c1a1">
+        <text x="6180" y="7438.5" dominant-baseline="ideographic" textLength="185.75" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#9c9caa">cto.tasks → hooks.slack.com · 212ms</text>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba82a49bd9a">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="6080" y="7480" width="70" height="16" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="69.703125" height="17" id="fill-0-render-17080-0">
+          <g>
+            <rect width="69.703125" height="17" style="fill:#fafafa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a49bd9a">
+        <text x="6080" y="7496" dominant-baseline="ideographic" textLength="69.703125" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#fafafa">Payload sent</text>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba82a5c29b6">
+    <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a5c29b6">
+      <rect rx="10" ry="10" x="6080" y="7506" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="600" height="180" style="fill:#0e0e13">
+      </rect>
+    </g>
+    <g id="strokes-8a7393f4-edd8-8078-8008-aba88975e2ed-8a7393f4-edd8-8078-8008-aba82a5c29b6" class="strokes">
+      <g class="stroke-shape">
+        <rect rx="10" ry="10" x="6080" y="7506" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="600" height="180" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
+        </rect>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba82a748ca3">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="6096" y="7522" width="560" height="150" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-0-render-17082-0">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-1-render-17082-0">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-2-render-17082-0">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-3-render-17082-0">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-4-render-17082-0">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-5-render-17082-0">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-6-render-17082-0">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-7-render-17082-0">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-8-render-17082-0">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-9-render-17082-0">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a748ca3">
+        <text x="6096" y="7536.5" dominant-baseline="ideographic" textLength="3.6328125" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#a78bfa">{</text>
+      </g>
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-0-render-17082-1">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-1-render-17082-1">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-2-render-17082-1">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-3-render-17082-1">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-4-render-17082-1">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-5-render-17082-1">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-6-render-17082-1">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-7-render-17082-1">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-8-render-17082-1">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-9-render-17082-1">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a748ca3">
+        <text x="6096" y="7550.8984375" dominant-baseline="ideographic" textLength="4.84375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#a78bfa"> </text>
+      </g>
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-0-render-17082-2">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-1-render-17082-2">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-2-render-17082-2">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-3-render-17082-2">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-4-render-17082-2">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-5-render-17082-2">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-6-render-17082-2">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-7-render-17082-2">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-8-render-17082-2">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-9-render-17082-2">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a748ca3">
+        <text x="6100.84375" y="7550.8984375" dominant-baseline="ideographic" textLength="133.21875" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#a78bfa">&quot;event&quot;: &quot;task.completed&quot;,</text>
+      </g>
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-0-render-17082-3">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-1-render-17082-3">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-2-render-17082-3">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-3-render-17082-3">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-4-render-17082-3">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-5-render-17082-3">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-6-render-17082-3">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-7-render-17082-3">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-8-render-17082-3">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-9-render-17082-3">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a748ca3">
+        <text x="6096" y="7565.296875" dominant-baseline="ideographic" textLength="4.84375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#a78bfa"> </text>
+      </g>
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-0-render-17082-4">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-1-render-17082-4">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-2-render-17082-4">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-3-render-17082-4">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-4-render-17082-4">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-5-render-17082-4">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-6-render-17082-4">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-7-render-17082-4">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-8-render-17082-4">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-9-render-17082-4">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a748ca3">
+        <text x="6100.84375" y="7565.296875" dominant-baseline="ideographic" textLength="112.0703125" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#a78bfa">&quot;channel&quot;: &quot;cto.tasks&quot;,</text>
+      </g>
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-0-render-17082-5">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-1-render-17082-5">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-2-render-17082-5">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-3-render-17082-5">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-4-render-17082-5">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-5-render-17082-5">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-6-render-17082-5">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-7-render-17082-5">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-8-render-17082-5">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-9-render-17082-5">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a748ca3">
+        <text x="6096" y="7579.6953125" dominant-baseline="ideographic" textLength="4.84375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#a78bfa"> </text>
+      </g>
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-0-render-17082-6">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-1-render-17082-6">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-2-render-17082-6">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-3-render-17082-6">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-4-render-17082-6">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-5-render-17082-6">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-6-render-17082-6">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-7-render-17082-6">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-8-render-17082-6">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-9-render-17082-6">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a748ca3">
+        <text x="6100.84375" y="7579.6953125" dominant-baseline="ideographic" textLength="178.875" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#a78bfa">&quot;data&quot;: { &quot;id&quot;: &quot;t-1041&quot;, &quot;title&quot;: &quot;…&quot; },</text>
+      </g>
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-0-render-17082-7">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-1-render-17082-7">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-2-render-17082-7">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-3-render-17082-7">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-4-render-17082-7">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-5-render-17082-7">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-6-render-17082-7">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-7-render-17082-7">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-8-render-17082-7">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-9-render-17082-7">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a748ca3">
+        <text x="6096" y="7594.09375" dominant-baseline="ideographic" textLength="4.84375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#a78bfa"> </text>
+      </g>
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-0-render-17082-8">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-1-render-17082-8">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-2-render-17082-8">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-3-render-17082-8">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-4-render-17082-8">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-5-render-17082-8">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-6-render-17082-8">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-7-render-17082-8">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-8-render-17082-8">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-9-render-17082-8">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a748ca3">
+        <text x="6100.84375" y="7594.09375" dominant-baseline="ideographic" textLength="84.2734375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#a78bfa">&quot;ts&quot;: 1758459840</text>
+      </g>
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-0-render-17082-9">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-1-render-17082-9">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-2-render-17082-9">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-3-render-17082-9">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-4-render-17082-9">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-5-render-17082-9">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-6-render-17082-9">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-7-render-17082-9">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-8-render-17082-9">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="183.71875" height="87.4921875" id="fill-9-render-17082-9">
+          <g>
+            <rect width="183.71875" height="87.4921875" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a748ca3">
+        <text x="6096" y="7608.4921875" dominant-baseline="ideographic" textLength="3.6328125" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#a78bfa">}</text>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba82a8cd57f">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="6080" y="7710" width="53" height="16" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="52.65625" height="17" id="fill-0-render-17083-0">
+          <g>
+            <rect width="52.65625" height="17" style="fill:#fafafa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a8cd57f">
+        <text x="6080" y="7726" dominant-baseline="ideographic" textLength="52.65625" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#fafafa">Signature</text>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba82a9e6e19">
+    <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82a9e6e19">
+      <rect rx="8" ry="8" x="6080" y="7736" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="600" height="44" style="fill:#0e0e13">
+      </rect>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba82ab4ade5">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="6096" y="7750" width="167" height="14" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="166.015625" height="14.5" id="fill-0-render-17085-0">
+          <g>
+            <rect width="166.015625" height="14.5" style="fill:#9c9caa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82ab4ade5">
+        <text x="6096" y="7763.5" dominant-baseline="ideographic" textLength="166.015625" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:11px;text-decoration:none;direction:ltr;fill:#9c9caa">x-lazynext-signature: sha256=9f2a…</text>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba82ac6f3ee">
+    <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82ac6f3ee">
+      <rect rx="10" ry="10" x="6080" y="7810" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="140" height="44">
+      </rect>
+    </g>
+    <g id="strokes-8a7393f4-edd8-8078-8008-aba8897634bb-8a7393f4-edd8-8078-8008-aba82ac6f3ee" class="strokes">
+      <g class="stroke-shape">
+        <rect rx="10" ry="10" x="6080" y="7810" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="140" height="44" style="fill:none;fill-opacity:none;stroke-width:1.5;stroke:#a78bfa">
+        </rect>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba82adffbb8">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="6116" y="7825" width="51" height="16" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="50.9921875" height="17" id="fill-0-render-17087-0">
+          <g>
+            <rect width="50.9921875" height="17" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba82adffbb8">
+        <text x="6116" y="7841" dominant-baseline="ideographic" textLength="50.9921875" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#a78bfa">Redeliver</text>
+      </g>
+    </g>
+  </g>
+</svg>

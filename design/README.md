@@ -18,7 +18,9 @@ dashboard · products · product-detail · agents · agent-detail · tasks ·
 task-detail · empty-tasks · empty-states · brain · briefings · knowledge ·
 feed · api-keys · api-playground · webhooks · billing · settings ·
 account · integrations · team · audit-log · domains · notifications ·
-command-palette · search · avatar-menu · shortcuts
+command-palette · search · avatar-menu · shortcuts ·
+deploy-detail · sandbox · logs · code-review · task-comments ·
+webhook-delivery · email-prefs · feature-flags
 
 ## Modals
 modal-create-task · modal-create-api-key · modal-create-webhook
