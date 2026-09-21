@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { queryApi, parseJson } from "@/lib/api";
 import { PageHeader, Card, StatCard, StatusBadge, Empty, timeAgo } from "@/components/ui";
+import SetupChecklist from "@/components/SetupChecklist";
 import { CheckCircle2, Clock, AlertCircle, Zap } from "lucide-react";
 
 interface Task {
@@ -69,6 +70,8 @@ export default function DashboardPage() {
           Live
         </div>
       </PageHeader>
+
+      <SetupChecklist agentsActive={agentList.filter(([, s]) => s?.status === "active").length} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard label="Tasks done" value={counts.done} />
