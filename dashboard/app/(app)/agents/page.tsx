@@ -59,7 +59,7 @@ export default function AgentsPage() {
           hint="Run make dev locally — agents register on first boot."
         />
       ) : (
-        <div className="grid grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {agents.map((a) => {
             const s = statuses[a.agent_id] || {};
             const done = Array.isArray(a.tasks_completed) ? a.tasks_completed.length : 0;

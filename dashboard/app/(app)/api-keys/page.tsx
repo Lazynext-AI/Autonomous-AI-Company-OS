@@ -47,7 +47,8 @@ export default function ApiKeysPage() {
           hint="Create one with the lazynext CLI or the /api/v1/keys endpoint."
         />
       ) : (
-        <Card className="p-0 overflow-hidden max-w-4xl">
+        <Card className="p-0 overflow-x-auto max-w-4xl">
+          <div className="min-w-[680px]">
           <div className="grid grid-cols-[1fr_140px_120px_140px_110px] px-5 py-3 border-b border-border text-[11px] font-bold text-muted uppercase tracking-wide">
             <span>Key</span><span>Scopes</span><span>Limit</span><span>Last used</span><span>Status</span>
           </div>
@@ -71,6 +72,7 @@ export default function ApiKeysPage() {
               </span>
             </div>
           ))}
+          </div>
         </Card>
       )}
 

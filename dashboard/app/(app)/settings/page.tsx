@@ -21,7 +21,7 @@ export default function SettingsPage() {
     <>
       <PageHeader title="Settings" subtitle="Company configuration and connected services." />
 
-      <div className="grid grid-cols-2 gap-5 max-w-5xl">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 max-w-5xl">
         <Card className="p-0 overflow-hidden col-span-2">
           <div className="px-5 py-4 border-b border-border text-sm font-semibold">Integrations</div>
           {INTEGRATIONS.map((i) => (

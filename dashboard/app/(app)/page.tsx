@@ -70,14 +70,14 @@ export default function DashboardPage() {
         </div>
       </PageHeader>
 
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard label="Tasks done" value={counts.done} />
         <StatCard label="Working now" value={counts.working} />
         <StatCard label="Active agents" value={agentList.filter(([, s]) => s?.status === "active").length} />
         <StatCard label="Uptime" value={`${metrics.uptime_pct ?? 100}%`} />
       </div>
 
-      <div className="grid grid-cols-3 gap-5 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
         <Card>
           <h2 className="text-sm font-semibold text-zinc-50 mb-4 flex items-center gap-2">
             <Zap className="w-4 h-4 text-accentSoft" /> Task pipeline

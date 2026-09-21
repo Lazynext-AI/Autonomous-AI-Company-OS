@@ -45,7 +45,7 @@ export default function BrainPage() {
     <>
       <PageHeader title="Brain" subtitle="The company's memory — mission, stack, shipped, blockers." />
 
-      <div className="grid grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <Card>
           <h2 className="text-sm font-semibold mb-4">Product</h2>
           <div className="space-y-3 text-sm">

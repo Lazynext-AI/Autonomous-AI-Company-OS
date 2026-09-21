@@ -62,7 +62,7 @@ export default function KnowledgePage() {
       {chunks.length === 0 && !loading ? (
         <Empty title="Knowledge base is empty" hint="Agents ingest docs via the knowledge pipeline." />
       ) : (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {Object.entries(files).map(([file, list]) => (
             <Card key={file} className="hover:border-accentDim transition">
               <div className="flex items-center gap-3 mb-2">

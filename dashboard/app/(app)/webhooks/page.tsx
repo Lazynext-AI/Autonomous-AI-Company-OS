@@ -50,7 +50,7 @@ export default function WebhooksPage() {
       {endpoints.length === 0 && !loading ? (
         <Empty title="No endpoints" hint="Register one via the CLI or /api/v1/webhooks." />
       ) : (
-        <div className="grid grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <Card className="p-0 overflow-hidden">
             <div className="px-5 py-4 border-b border-border text-sm font-semibold">Endpoints</div>
             {endpoints.map((e) => (
