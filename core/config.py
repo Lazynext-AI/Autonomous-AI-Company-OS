@@ -38,8 +38,7 @@ class Settings(BaseSettings):
     # External APIs (optional)
     github_token: str = ""
     resend_api_key: str = ""
-    # Sender address — switch to Lazynext <hello@lazynext.com> once the domain verifies
-    email_from: str = "Lazynext <onboarding@resend.dev>"
+    email_from: str = "Lazynext <hello@lazynext.com>"
     e2b_api_key: str = ""
 
     # App config
