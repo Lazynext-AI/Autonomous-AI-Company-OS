@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { queryApi, parseJson } from "@/lib/api";
 import { PageHeader, Card, Empty, timeAgo } from "@/components/ui";
-import { MessageSquare } from "lucide-react";
+import { toast } from "@/components/Toast";
+import { MessageSquare, Send } from "lucide-react";
 
 interface Msg {
   id: number;
@@ -44,6 +45,25 @@ export default function ConversationsPage() {
 
   const names = Object.keys(channels);
   const msgs = (channels[active] || []).slice().reverse();
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const send = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!draft.trim() || !active) return;
+    setSending(true);
+    const r = await fetch("/api/publish", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        channel: active,
+        payload: { from: "founder", text: draft, via: "dashboard" },
+      }),
+    });
+    setSending(false);
+    if (r.ok) setDraft("");
+    else toast("Send failed");
+  };
 
   return (
     <>
@@ -102,6 +122,23 @@ export default function ConversationsPage() {
                 );
               })}
             </div>
+            {/* composer — publishes to the channel */}
+            <form onSubmit={send} className="px-5 py-4 border-t border-border flex gap-3">
+              <input
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder={`Message #${active}`}
+                className="flex-1 bg-input border border-border rounded-lg px-3.5 py-2.5 text-sm text-fg outline-none focus:border-accent"
+              />
+              <button
+                type="submit"
+                disabled={sending || !draft.trim()}
+                className="bg-accent hover:bg-accentSoft disabled:opacity-50 text-white px-4 rounded-lg transition flex items-center"
+                aria-label="Send"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </form>
           </Card>
         </div>
       )}
