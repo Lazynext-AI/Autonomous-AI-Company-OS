@@ -14,6 +14,7 @@ interface BusMessage {
 export default function FeedPage() {
   const [messages, setMessages] = useState<BusMessage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -34,6 +35,7 @@ export default function FeedPage() {
   }, []);
 
   const channels = [...new Set(messages.map((m) => m.channel))];
+  const shown = filter ? messages.filter((m) => m.channel === filter) : messages;
 
   return (
     <>
@@ -41,22 +43,37 @@ export default function FeedPage() {
 
       {channels.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-6">
+          <button
+            onClick={() => setFilter(null)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+              filter === null
+                ? "bg-accent text-white"
+                : "bg-card border border-border text-accentSoft hover:border-accent"
+            }`}
+          >
+            all
+          </button>
           {channels.slice(0, 12).map((ch) => (
-            <span
+            <button
               key={ch}
-              className="px-3 py-1.5 rounded-lg bg-card border border-border text-xs text-accentSoft font-medium"
+              onClick={() => setFilter(filter === ch ? null : ch)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                filter === ch
+                  ? "bg-accent text-white"
+                  : "bg-card border border-border text-accentSoft hover:border-accent"
+              }`}
             >
               {ch}
-            </span>
+            </button>
           ))}
         </div>
       )}
 
-      {messages.length === 0 && !loading ? (
+      {shown.length === 0 && !loading ? (
         <Empty title="Bus is quiet" hint="Events stream here once agents are running." />
       ) : (
         <div className="space-y-2.5 max-w-4xl">
-          {messages.map((m) => (
+          {shown.map((m) => (
             <Card key={m.id} className="py-3.5 px-4">
               <div className="flex items-center gap-3">
                 <span className="text-[10px] font-mono text-muted shrink-0 w-16">
