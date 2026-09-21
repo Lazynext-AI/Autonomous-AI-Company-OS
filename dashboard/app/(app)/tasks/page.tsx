@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { queryApi, parseJson } from "@/lib/api";
+import Link from "next/link";
 import { PageHeader, Card, StatusBadge, Empty, timeAgo } from "@/components/ui";
 
 interface Task {
@@ -71,9 +72,10 @@ export default function TasksPage() {
       ) : (
         <Card className="p-0 overflow-hidden">
           {filtered.map((t) => (
-            <div
+            <Link
               key={t.task_id}
-              className="px-5 py-4 border-b border-border last:border-0 hover:bg-cardHover transition"
+              href={`/tasks/${t.task_id}`}
+              className="block px-5 py-4 border-b border-border last:border-0 hover:bg-cardHover transition"
             >
               <div className="flex items-center gap-4">
                 <div className="flex-1 min-w-0">
@@ -100,7 +102,7 @@ export default function TasksPage() {
                   ))}
                 </div>
               )}
-            </div>
+            </Link>
           ))}
         </Card>
       )}

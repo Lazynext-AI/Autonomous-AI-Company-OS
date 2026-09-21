@@ -15,6 +15,7 @@ const ITEMS = [
   { href: "/briefings", label: "Briefings", icon: FileText, hint: "Company reports" },
   { href: "/knowledge", label: "Knowledge", icon: BookOpen, hint: "Ingested docs" },
   { href: "/feed", label: "Feed", icon: Activity, hint: "Live bus messages" },
+  { href: "/analytics", label: "Analytics", icon: Activity, hint: "Tasks + scores over time" },
   { href: "/api-keys", label: "API Keys", icon: Key, hint: "lzk_* keys + scopes" },
   { href: "/settings", label: "Settings", icon: Settings, hint: "Integrations + links" },
 ];
