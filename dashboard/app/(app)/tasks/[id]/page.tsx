@@ -27,6 +27,8 @@ export default function TaskDetailPage() {
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
+  const [comments, setComments] = useState<{ text: string; by: string; at: string }[]>([]);
+  const [comment, setComment] = useState("");
 
   const act = async (sql: string, msg: string) => {
     setActing(true);
@@ -59,6 +61,16 @@ export default function TaskDetailPage() {
           [id]
         );
         if (rows[0]) setTask({ ...rows[0], error_log: parseJson(rows[0].error_log, []) });
+        const cs = await queryApi<any>(
+          "SELECT payload, created_at FROM bus_messages WHERE channel = 'task_comments' AND payload LIKE ? ORDER BY id ASC LIMIT 50",
+          [`%"task_id":"${id}"%`]
+        );
+        setComments(
+          cs.map((c) => {
+            const p = parseJson<any>(c.payload, {});
+            return { text: p.text || "", by: p.by || "founder", at: c.created_at };
+          })
+        );
         setLoading(false);
       } catch {
         setLoading(false);
@@ -143,17 +155,65 @@ export default function TaskDetailPage() {
           )}
         </Card>
 
-        <Card>
-          <h2 className="text-sm font-semibold mb-4">Details</h2>
-          <div className="space-y-3">
-            {meta.map(([k, v]) => (
-              <div key={k} className="flex justify-between text-sm">
-                <span className="text-muted">{k}</span>
-                <span className="text-fg text-right">{v}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
+        <div className="space-y-5">
+          <Card>
+            <h2 className="text-sm font-semibold mb-4">Details</h2>
+            <div className="space-y-3">
+              {meta.map(([k, v]) => (
+                <div key={k} className="flex justify-between text-sm">
+                  <span className="text-muted">{k}</span>
+                  <span className="text-fg text-right">{v}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card>
+            <h2 className="text-sm font-semibold mb-4">Comments</h2>
+            <div className="space-y-3 mb-4 max-h-48 overflow-y-auto">
+              {comments.length === 0 ? (
+                <p className="text-xs text-muted">No comments yet.</p>
+              ) : (
+                comments.map((c: any, i) => (
+                  <div key={i} className="text-xs bg-input rounded-lg px-3 py-2">
+                    <span className="text-accentSoft font-semibold">{c.by || "founder"}</span>
+                    <span className="text-muted ml-2">{c.at ? timeAgo(c.at) : ""}</span>
+                    <div className="text-fg/80 mt-1">{c.text}</div>
+                  </div>
+                ))
+              )}
+            </div>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!comment.trim()) return;
+                const r = await fetch("/api/publish", {
+                  method: "POST",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify({
+                    channel: "task_comments",
+                    payload: { task_id: id, text: comment, by: "founder" },
+                  }),
+                });
+                if (r.ok) {
+                  setComments((cs) => [...cs, { text: comment, by: "founder", at: new Date().toISOString() }]);
+                  setComment("");
+                } else toast("Comment failed");
+              }}
+              className="flex gap-2"
+            >
+              <input
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Add a comment…"
+                className="flex-1 bg-input border border-border rounded-lg px-3 py-2 text-xs text-fg outline-none focus:border-accent"
+              />
+              <button type="submit" className="bg-accent hover:bg-accentSoft text-white text-xs font-semibold px-3.5 rounded-lg transition">
+                Post
+              </button>
+            </form>
+          </Card>
+        </div>
       </div>
     </>
   );

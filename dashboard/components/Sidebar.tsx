@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Users, ListTodo, Brain, FileText, BookOpen,
   Activity, Key, Settings, Menu, X, BarChart3, Package, Bell, Search,
   Rocket, Code2, MessageSquare, TerminalSquare, ShieldCheck, ScrollText,
-  LogOut, CreditCard,
+  LogOut, CreditCard, Zap,
 } from "lucide-react";
 
 const NAV = [
@@ -34,6 +34,7 @@ const NAV = [
   { href: "/code", label: "Code", icon: Code2 },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/api-keys", label: "API Keys", icon: Key },
+  { href: "/playground", label: "Playground", icon: Zap },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

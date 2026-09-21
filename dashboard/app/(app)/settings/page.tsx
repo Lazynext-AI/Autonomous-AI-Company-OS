@@ -186,6 +186,29 @@ export default function SettingsPage() {
         <Card>
           <h2 className="text-sm font-semibold mb-3">More</h2>
           <div className="space-y-2.5">
+            <button
+              onClick={async () => {
+                const tables = ["company_brain", "agent_memories", "task_log", "milestone_log", "knowledge_chunks"];
+                const dump: Record<string, unknown[]> = {};
+                for (const t of tables) {
+                  const r = await fetch("/api/query", {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({ sql: `SELECT * FROM ${t} LIMIT 500`, params: [] }),
+                  });
+                  const d = await r.json();
+                  dump[t] = d.results || [];
+                }
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(new Blob([JSON.stringify(dump, null, 2)], { type: "application/json" }));
+                a.download = `lazynext-export-${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                toast("Export downloaded");
+              }}
+              className="block text-sm text-accentSoft hover:underline"
+            >
+              Export data →
+            </button>
             <Link href="/webhooks" className="block text-sm text-accentSoft hover:underline">
               Webhooks →
             </Link>

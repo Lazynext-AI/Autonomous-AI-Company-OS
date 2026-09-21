@@ -5,6 +5,7 @@ import { queryApi, parseJson } from "@/lib/api";
 import Link from "next/link";
 import { PageHeader, Card, StatusBadge, Empty, timeAgo } from "@/components/ui";
 import AssignTaskModal from "@/components/AssignTaskModal";
+import { LayoutList, KanbanSquare } from "lucide-react";
 
 interface Task {
   task_id: string;
@@ -24,6 +25,7 @@ const FILTERS = ["all", "pending", "in_progress", "completed", "failed"];
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filter, setFilter] = useState("all");
+  const [view, setView] = useState<"list" | "board">("list");
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
@@ -65,6 +67,22 @@ export default function TasksPage() {
               </button>
             ))}
           </div>
+          <div className="flex gap-1 bg-input rounded-lg p-1">
+            <button
+              onClick={() => setView("list")}
+              aria-label="List view"
+              className={`p-1.5 rounded-md transition ${view === "list" ? "bg-accent text-white" : "text-muted hover:text-fg"}`}
+            >
+              <LayoutList className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setView("board")}
+              aria-label="Board view"
+              className={`p-1.5 rounded-md transition ${view === "board" ? "bg-accent text-white" : "text-muted hover:text-fg"}`}
+            >
+              <KanbanSquare className="w-4 h-4" />
+            </button>
+          </div>
           <AssignTaskModal onDone={load} />
         </div>
       </PageHeader>
@@ -74,6 +92,37 @@ export default function TasksPage() {
         title={filter === "all" ? "No tasks yet" : `No ${filter.replace("_", " ")} tasks`}
         hint="Tasks appear when agents start working."
       />
+      ) : view === "board" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          {["pending", "in_progress", "completed", "failed"].map((col) => (
+            <div key={col}>
+              <div className="flex items-center justify-between mb-3 px-1">
+                <span className="text-xs font-semibold capitalize text-muted">{col.replace("_", " ")}</span>
+                <span className="text-xs text-muted">{tasks.filter((t) => t.status === col).length}</span>
+              </div>
+              <div className="space-y-3">
+                {tasks.filter((t) => t.status === col).map((t) => (
+                  <Link key={t.task_id} href={`/tasks/${t.task_id}`}>
+                    <Card className="p-4 hover:border-accentDim transition">
+                      <div className="text-sm text-fg line-clamp-2">{t.description}</div>
+                      <div className="text-xs text-muted mt-2">
+                        {t.agent_id.replace(/_/g, " ")} · {timeAgo(t.created_at)}
+                      </div>
+                      {t.performance_score != null && (
+                        <div className="text-xs text-accentSoft font-semibold mt-2">{t.performance_score.toFixed(0)} pts</div>
+                      )}
+                    </Card>
+                  </Link>
+                ))}
+                {tasks.filter((t) => t.status === col).length === 0 && (
+                  <div className="border border-dashed border-border rounded-xl p-6 text-center text-xs text-muted">
+                    empty
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
         <Card className="p-0 overflow-hidden">
           {filtered.map((t) => (

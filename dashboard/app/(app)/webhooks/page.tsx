@@ -103,9 +103,27 @@ export default function WebhooksPage() {
                     {e.active ? "on" : "off"}
                   </span>
                   {e.active ? (
-                    <button onClick={() => del(e.id)} className="text-xs text-bad hover:underline ml-2">
-                      disable
-                    </button>
+                    <>
+                      <button
+                        onClick={async () => {
+                          const r = await fetch("/api/publish", {
+                            method: "POST",
+                            headers: { "content-type": "application/json" },
+                            body: JSON.stringify({
+                              channel: e.channels.split(",")[0].trim(),
+                              payload: { type: "webhook_test", by: "founder", at: new Date().toISOString() },
+                            }),
+                          });
+                          toast(r.ok ? "Test fired — check deliveries" : "Test failed");
+                        }}
+                        className="text-xs text-accentSoft hover:underline ml-2"
+                      >
+                        test
+                      </button>
+                      <button onClick={() => del(e.id)} className="text-xs text-bad hover:underline ml-2">
+                        disable
+                      </button>
+                    </>
                   ) : null}
                 </div>
                 <div className="text-xs text-muted mt-1">
