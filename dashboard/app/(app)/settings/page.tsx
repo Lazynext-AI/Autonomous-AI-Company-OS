@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { PageHeader, Card } from "@/components/ui";
+import { toast } from "@/components/Toast";
 import Link from "next/link";
 import {
   GitBranch, Mail, TerminalSquare, Globe, Database, Palette, Cpu,
@@ -47,6 +48,8 @@ export default function SettingsPage() {
     const next = !flags[key];
     setFlags((f) => ({ ...f, [key]: next }));
     await kv("put", key, String(next));
+    const label = FLAGS.find((f) => f.key === key)?.label;
+    toast(`${label} ${next ? "enabled" : "disabled"}`);
   };
 
   return (
