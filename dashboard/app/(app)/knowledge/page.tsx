@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { queryApi } from "@/lib/api";
 import { PageHeader, Card, Empty, timeAgo } from "@/components/ui";
+import { toast } from "@/components/Toast";
+import { Plus, X } from "lucide-react";
 
 interface Chunk {
   id: string;
@@ -16,9 +18,33 @@ interface Chunk {
 export default function KnowledgePage() {
   const [chunks, setChunks] = useState<Chunk[]>([]);
   const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState(false);
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("founder_notes");
+  const [content, setContent] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
+  const add = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    const r = await fetch("/api/query", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        sql: "INSERT INTO knowledge_chunks (id, filename, category, chunk_index, content) VALUES (lower(hex(randomblob(16))), ?, ?, 0, ?)",
+        params: [title.trim() || "untitled.md", category, content],
+      }),
+    });
+    setBusy(false);
+    if (r.ok) {
+      toast("Knowledge added");
+      setModal(false);
+      setTitle(""); setContent("");
+      load();
+    } else toast("Add failed");
+  };
+
+  const load = async () => {
       try {
         setChunks(
           await queryApi<Chunk>(
@@ -29,7 +55,9 @@ export default function KnowledgePage() {
       } catch {
         setLoading(false);
       }
-    };
+  };
+
+  useEffect(() => {
     load();
     const t = setInterval(load, 15000);
     return () => clearInterval(t);
@@ -47,7 +75,14 @@ export default function KnowledgePage() {
       <PageHeader
         title="Knowledge"
         subtitle={`${chunks.length} chunks · ${Object.keys(files).length} documents · embedded to Vectorize`}
-      />
+      >
+        <button
+          onClick={() => setModal(true)}
+          className="inline-flex items-center gap-2 bg-accent hover:bg-accentSoft text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition"
+        >
+          <Plus className="w-4 h-4" /> Add knowledge
+        </button>
+      </PageHeader>
 
       {categories.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-6">
@@ -79,6 +114,64 @@ export default function KnowledgePage() {
               <p className="text-xs text-muted line-clamp-2">{list[0].content}</p>
             </Card>
           ))}
+        </div>
+      )}
+
+      {modal && (
+        <div
+          className="fixed inset-0 z-[150] bg-bg/70 backdrop-blur-sm flex items-center justify-center px-4"
+          onClick={() => setModal(false)}
+        >
+          <form
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={add}
+            className="w-full max-w-md bg-card border border-border rounded-[14px] p-6 relative"
+          >
+            <button type="button" onClick={() => setModal(false)} className="absolute top-4 right-4 text-muted hover:text-fg" aria-label="Close">
+              <X className="w-4 h-4" />
+            </button>
+            <h2 className="text-lg font-bold text-fg mb-1">Add knowledge</h2>
+            <p className="text-xs text-muted mb-5">Agents RAG over this — company facts, decisions, specs.</p>
+            <label className="text-xs text-muted">Title</label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              placeholder="launchdeck-spec.md"
+              className="mt-1.5 mb-4 w-full bg-input border border-border rounded-lg px-3.5 py-2.5 text-sm text-fg outline-none focus:border-accent"
+            />
+            <label className="text-xs text-muted">Category</label>
+            <div className="flex flex-wrap gap-2 mt-1.5 mb-4">
+              {["founder_notes", "product", "market", "engineering"].map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setCategory(c)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                    category === c ? "bg-accent text-white" : "bg-input text-muted border border-border"
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+            <label className="text-xs text-muted">Content</label>
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              required
+              rows={6}
+              placeholder="Paste the knowledge agents should know…"
+              className="mt-1.5 mb-5 w-full bg-input border border-border rounded-lg px-3.5 py-2.5 text-sm text-fg outline-none focus:border-accent resize-none"
+            />
+            <button
+              type="submit"
+              disabled={busy || !content.trim()}
+              className="w-full bg-accent hover:bg-accentSoft disabled:opacity-50 text-white text-sm font-semibold py-2.5 rounded-lg transition"
+            >
+              {busy ? "Adding…" : "Add to knowledge base"}
+            </button>
+          </form>
         </div>
       )}
     </>
