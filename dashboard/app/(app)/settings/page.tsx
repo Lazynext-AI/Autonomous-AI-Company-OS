@@ -150,6 +150,38 @@ export default function SettingsPage() {
           </div>
         </Card>
 
+        <Card className="border-badDim">
+          <h2 className="text-sm font-semibold mb-1 text-bad">Danger zone</h2>
+          <p className="text-xs text-muted mb-4">
+            Seeded demo rows (agents, tasks, product, messages) — clear before Atlas goes live.
+          </p>
+          <button
+            onClick={async () => {
+              if (!confirm("Delete all demo data? Agents, tasks, product info, and demo bus messages will be removed.")) return;
+              const stmts = [
+                "DELETE FROM task_log WHERE task_id LIKE 'demo-%'",
+                "DELETE FROM agent_memories",
+                "DELETE FROM bus_messages WHERE payload LIKE '%demo%'",
+                "DELETE FROM milestone_log WHERE description LIKE '%demo%'",
+                "UPDATE company_brain SET product_name = NULL, product_description = NULL, shipped_features = '[]', live_urls = '{}', agent_statuses = '{}'",
+              ];
+              let ok = true;
+              for (const sql of stmts) {
+                const r = await fetch("/api/query", {
+                  method: "POST",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify({ sql, params: [] }),
+                });
+                if (!r.ok) ok = false;
+              }
+              toast(ok ? "Demo data cleared" : "Some deletions failed");
+            }}
+            className="bg-badBg hover:bg-bad hover:text-white text-bad text-sm font-semibold px-4 py-2.5 rounded-lg transition"
+          >
+            Clear demo data
+          </button>
+        </Card>
+
         <Card>
           <h2 className="text-sm font-semibold mb-3">More</h2>
           <div className="space-y-2.5">
