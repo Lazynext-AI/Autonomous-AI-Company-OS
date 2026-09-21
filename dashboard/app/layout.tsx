@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Sidebar from "@/components/Sidebar";
 
 export const metadata: Metadata = {
   title: "Lazynext",
@@ -28,10 +27,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className="antialiased bg-bg">
-        <Sidebar />
-        <main className="ml-60 min-h-screen px-10 py-8">{children}</main>
-      </body>
+      <body className="antialiased bg-bg">{children}</body>
     </html>
   );
 }

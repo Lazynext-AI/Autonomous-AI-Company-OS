@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Changelog — Lazynext</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%238B5CF6'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif'>◆</text></svg>"/>
+<style>
+:root{--bg:#0A0A0B;--card:#141419;--border:#26262E;--accent:#8B5CF6;--accentSoft:#A78BFA;--accentBg:#1E1B2E;--text:#FAFAFA;--muted:#9C9CAA;--ok:#22C55E}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,sans-serif}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding:0 24px}
+nav{display:flex;justify-content:space-between;align-items:center;padding:28px 0;border-bottom:1px solid var(--border)}
+.logo{font-size:20px;font-weight:700}.logo span{color:var(--accentSoft)}
+nav a.btn{padding:9px 18px;border-radius:10px;border:1.5px solid var(--border);font-size:13px;font-weight:700}
+header{padding:48px 0 24px}
+h1{font-size:34px;font-weight:800;margin-bottom:10px}
+.sub{color:var(--muted);font-size:15px}
+.entry{display:flex;gap:24px;padding:28px 0;border-bottom:1px solid var(--border)}
+.date{font-family:ui-monospace,monospace;font-size:12px;color:var(--muted);width:100px;flex-shrink:0;padding-top:3px}
+.body h3{font-size:16px;font-weight:700;margin-bottom:8px}
+.tag{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;margin-right:8px}
+.tag.new{background:var(--accentBg);color:var(--accentSoft)}
+.tag.fix{background:#0E2A1E;color:var(--ok)}
+.body p{font-size:14px;color:var(--muted);line-height:1.7}
+footer{border-top:1px solid var(--border);padding:28px 0;color:var(--muted);font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav>
+  <a class="logo" href="/"><span>◆</span> Lazynext</a>
+  <a class="btn" href="https://dashboard.lazynext.com">Dashboard →</a>
+</nav>
+<header>
+  <h1>Changelog</h1>
+  <p class="sub">Everything new in the platform.</p>
+</header>
+
+<div class="entry"><div class="date">2026-09-21</div><div class="body">
+  <span class="tag new">New</span><h3>Public launch surface</h3>
+  <p>Marketing site live at lazynext.com — landing, docs, status. Dashboard rebuilt to the full design system with 9-section sidebar, login gate and custom 404.</p>
+</div></div>
+
+<div class="entry"><div class="date">2026-09-21</div><div class="body">
+  <span class="tag new">New</span><h3>Design system v1</h3>
+  <p>132-board Penpot blueprint — every screen, modal, email, breakpoint and component, wired into a 367-interaction clickable prototype. Machine-readable tokens.json ships with the repo.</p>
+</div></div>
+
+<div class="entry"><div class="date">2026-09-20</div><div class="body">
+  <span class="tag new">New</span><h3>Public API + MCP</h3>
+  <p>REST /api/v1 with lzk_* hashed keys, scopes and per-key rate limits. MCP server (protocol 2026-07-28) with 8 tools. Python SDK, CLI, signed webhooks and OpenAPI docs.</p>
+</div></div>
+
+<div class="entry"><div class="date">2026-09-20</div><div class="body">
+  <span class="tag fix">Fix</span><h3>Migration to Atlas + Cloudflare</h3>
+  <p>LLM moved to Atlas Cloud; persistence to D1, KV and Vectorize; hosting to Workers + Pages. Supabase, Redis, Anthropic, Vercel and Railway fully removed.</p>
+</div></div>
+
+<footer>◆ Lazynext · Changelog · <a href="/" style="color:var(--accentSoft)">lazynext.com</a></footer>
+</div>
+</body>
+</html>
