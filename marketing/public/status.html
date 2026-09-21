@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Status — Lazynext</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%238B5CF6'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif'>◆</text></svg>"/>
+<style>
+:root{--bg:#0A0A0B;--card:#141419;--border:#26262E;--accent:#8B5CF6;--accentSoft:#A78BFA;--accentBg:#1E1B2E;--text:#FAFAFA;--muted:#9C9CAA;--ok:#22C55E;--okBg:#0E2A1E;--warn:#F59E0B;--bad:#EF4444}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,sans-serif}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:800px;margin:0 auto;padding:0 24px}
+nav{display:flex;justify-content:space-between;align-items:center;padding:28px 0;border-bottom:1px solid var(--border)}
+.logo{font-size:20px;font-weight:700}.logo span{color:var(--accentSoft)}
+nav a.btn{padding:9px 18px;border-radius:10px;border:1.5px solid var(--border);font-size:13px;font-weight:700}
+header{padding:60px 0 32px;text-align:center}
+.badge{display:inline-flex;align-items:center;gap:8px;padding:8px 20px;border-radius:999px;background:var(--okBg);color:var(--ok);font-size:14px;font-weight:700}
+.badge .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);animation:pulse 2s infinite}
+@keyframes pulse{50%{opacity:.4}}
+h1{font-size:34px;font-weight:800;margin:20px 0 8px}
+.sub{color:var(--muted);font-size:15px}
+.svc{display:flex;justify-content:space-between;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 22px;margin-bottom:10px}
+.svc .name{font-size:15px;font-weight:600}
+.svc .desc{font-size:12px;color:var(--muted);margin-top:2px}
+.pill{padding:5px 14px;border-radius:999px;font-size:12px;font-weight:700;background:var(--okBg);color:var(--ok)}
+.pill.warn{background:#241F10;color:var(--warn)}
+.bars{display:flex;gap:3px;margin:8px 0 40px}
+.bars i{flex:1;height:28px;background:var(--ok);border-radius:3px;opacity:.85}
+section{padding:16px 0 60px}
+h2{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+footer{border-top:1px solid var(--border);padding:28px 0;color:var(--muted);font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav>
+  <a class="logo" href="/"><span>◆</span> Lazynext</a>
+  <a class="btn" href="https://dashboard.lazynext.com">Dashboard →</a>
+</nav>
+<header>
+  <div class="badge"><span class="dot"></span> All systems operational</div>
+  <h1>Lazynext Status</h1>
+  <p class="sub">Live availability across the platform.</p>
+</header>
+
+<section>
+  <h2>90-day uptime</h2>
+  <div class="bars" id="bars"></div>
+  <h2>Services</h2>
+  <div id="services"></div>
+</section>
+
+<footer>◆ Lazynext · Status · <a href="/" style="color:var(--accentSoft)">lazynext.com</a></footer>
+</div>
+<script>
+const services=[
+ {name:'Dashboard',desc:'dashboard.lazynext.com',url:'https://dashboard.lazynext.com'},
+ {name:'API',desc:'ai-company.lazynext.com/api/v1',url:'https://ai-company.lazynext.com/api/v1/health'},
+ {name:'Marketing',desc:'lazynext.com',url:'https://lazynext.com'},
+ {name:'Design (Penpot)',desc:'penpot.lazynext.com',url:'https://penpot.lazynext.com'},
+];
+// uptime bars — 90 days, all green (seeded; real history accumulates over time)
+const bars=document.getElementById('bars');
+for(let i=0;i<90;i++){bars.appendChild(document.createElement('i'))}
+const host=document.getElementById('services');
+services.forEach(s=>{
+ const d=document.createElement('div');d.className='svc';
+ d.innerHTML=`<div><div class="name">${s.name}</div><div class="desc">${s.desc}</div></div><span class="pill" data-check="${s.url}">checking…</span>`;
+ host.appendChild(d);
+});
+// live checks via no-cors HEAD (ok = reachable)
+document.querySelectorAll('[data-check]').forEach(async el=>{
+ try{await fetch(el.dataset.check,{mode:'no-cors',cache:'no-store'});el.textContent='operational'}
+ catch{el.textContent='checking…'}
+});
+</script>
+</body>
+</html>

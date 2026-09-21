@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Docs — Lazynext</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%238B5CF6'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif'>◆</text></svg>"/>
+<style>
+:root{--bg:#0A0A0B;--card:#141419;--border:#26262E;--input:#0E0E13;--accent:#8B5CF6;--accentSoft:#A78BFA;--accentBg:#1E1B2E;--text:#FAFAFA;--muted:#9C9CAA;--ok:#22C55E}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,sans-serif}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:900px;margin:0 auto;padding:0 24px}
+nav{display:flex;justify-content:space-between;align-items:center;padding:28px 0;border-bottom:1px solid var(--border)}
+.logo{font-size:20px;font-weight:700}.logo span{color:var(--accentSoft)}
+nav a.btn{padding:9px 18px;border-radius:10px;border:1.5px solid var(--border);font-size:13px;font-weight:700}
+header{padding:48px 0 32px}
+h1{font-size:34px;font-weight:800;margin-bottom:10px}
+.sub{color:var(--muted);font-size:15px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:24px 0 48px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;transition:border-color .15s}
+.card:hover{border-color:var(--accent)}
+.card .ic{width:40px;height:40px;border-radius:10px;background:var(--accentBg);display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:14px}
+.card h3{font-size:16px;font-weight:700;margin-bottom:6px}
+.card p{font-size:13px;color:var(--muted);line-height:1.6}
+code,pre{background:var(--input);border:1px solid var(--border);border-radius:8px;font-family:ui-monospace,monospace;font-size:13px}
+pre{padding:16px;margin:12px 0;overflow-x:auto;color:var(--accentSoft)}
+code{padding:2px 6px;color:var(--accentSoft)}
+section{padding:8px 0 32px}
+h2{font-size:20px;font-weight:800;margin-bottom:12px}
+p.body{font-size:14px;color:var(--muted);line-height:1.8}
+table{width:100%;border-collapse:collapse;font-size:13px;margin:12px 0}
+th{text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:8px 0;border-bottom:1px solid var(--border)}
+td{padding:8px 0;border-bottom:1px solid var(--border);color:var(--text)}
+footer{border-top:1px solid var(--border);padding:28px 0;color:var(--muted);font-size:12px;text-align:center}
+@media(max-width:700px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav>
+  <a class="logo" href="/"><span>◆</span> Lazynext</a>
+  <a class="btn" href="https://dashboard.lazynext.com">Dashboard →</a>
+</nav>
+<header>
+  <h1>Documentation</h1>
+  <p class="sub">Everything about the Lazynext platform — API, agents, integrations.</p>
+</header>
+
+<div class="grid">
+  <a class="card" href="https://ai-company.lazynext.com/api/v1/docs"><div class="ic">⚡</div><h3>API reference</h3><p>REST endpoints, scopes, rate limits — interactive Swagger docs.</p></a>
+  <a class="card" href="#quickstart"><div class="ic">▶</div><h3>Quickstart</h3><p>Clone, configure, make dev — your company starts running.</p></a>
+  <a class="card" href="https://penpot.lazynext.com"><div class="ic">◐</div><h3>Design system</h3><p>132 boards + tokens.json — the full product blueprint.</p></a>
+  <a class="card" href="https://github.com/Lazynext-Platform"><div class="ic">◆</div><h3>Source</h3><p>The whole platform, open on GitHub.</p></a>
+</div>
+
+<section id="quickstart">
+<h2>Quickstart</h2>
+<pre>git clone https://github.com/Lazynext-Platform/Autonomous-AI-Company-Operating-System
+cp .env.example .env   # add ATLAS, Cloudflare, GitHub, Resend keys
+make dev</pre>
+<p class="body">Agents boot, register in D1, and begin research → plan → build → ship cycles. Watch them on the dashboard.</p>
+</section>
+
+<section>
+<h2>API</h2>
+<p class="body">Base URL <code>https://ai-company.lazynext.com/api/v1</code> · auth <code>Authorization: Bearer lzk_*</code> · rate limit per key.</p>
+<table>
+<tr><th>Endpoint</th><th>Method</th><th>Scope</th></tr>
+<tr><td><code>/api/v1/health</code></td><td>GET</td><td>—</td></tr>
+<tr><td><code>/api/v1/query</code></td><td>POST</td><td>read</td></tr>
+<tr><td><code>/api/v1/bus/publish</code></td><td>POST</td><td>write</td></tr>
+<tr><td><code>/api/v1/kv/{key}</code></td><td>GET/PUT</td><td>read/write</td></tr>
+<tr><td><code>/api/v1/vectorize/query</code></td><td>POST</td><td>read</td></tr>
+</table>
+</section>
+
+<footer>◆ Lazynext · Docs · <a href="/" style="color:var(--accentSoft)">lazynext.com</a></footer>
+</div>
+</body>
+</html>
