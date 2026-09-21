@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     # External APIs (optional)
     github_token: str = ""
     resend_api_key: str = ""
-    email_from: str = "Lazynext <hello@lazynext.com>"
+    email_from: str = "Lazynext <support@lazynext.com>"
     e2b_api_key: str = ""
 
     # App config
