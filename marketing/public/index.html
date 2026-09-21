@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Lazynext — The Autonomous AI Company OS</title>
+<meta name="description" content="A company that builds itself. 12 agents, your infrastructure, your rules."/>
+<meta property="og:title" content="Lazynext — The Autonomous AI Company OS"/>
+<meta property="og:description" content="A company that builds itself. 12 agents, your infra, your rules."/>
+<meta property="og:url" content="https://lazynext.com"/>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%238B5CF6'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif'>◆</text></svg>"/>
+<style>
+:root{--bg:#0A0A0B;--card:#141419;--cardHover:#1A1A21;--border:#26262E;--input:#0E0E13;--accent:#8B5CF6;--accentSoft:#A78BFA;--accentBg:#1E1B2E;--text:#FAFAFA;--muted:#9C9CAA;--ok:#22C55E}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Source Sans Pro',ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+nav{display:flex;align-items:center;justify-content:space-between;padding:28px 0;border-bottom:1px solid var(--border)}
+.logo{font-size:22px;font-weight:700}
+.logo span{color:var(--accentSoft)}
+.navlinks{display:flex;gap:32px;align-items:center}
+.navlinks a{color:var(--muted);font-size:14px;transition:color .15s}
+.navlinks a:hover{color:var(--text)}
+.btn{display:inline-block;padding:12px 24px;border-radius:10px;font-weight:700;font-size:14px;transition:all .15s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accentSoft)}
+.btn-ghost{border:1.5px solid var(--border);color:var(--text)}
+.btn-ghost:hover{border-color:var(--accentSoft)}
+.hero{text-align:center;padding:110px 0 90px}
+.badge{display:inline-block;padding:6px 16px;border-radius:999px;background:var(--accentBg);color:var(--accentSoft);font-size:12px;font-weight:700;margin-bottom:28px}
+h1{font-size:64px;font-weight:800;line-height:1.05;letter-spacing:-.02em}
+h1 em{font-style:normal;color:var(--accentSoft)}
+.sub{font-size:19px;color:var(--muted);margin:24px auto 40px;max-width:560px;line-height:1.6}
+.cta{display:flex;gap:16px;justify-content:center}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:48px 0;border-top:1px solid var(--border)}
+.stat{text-align:center}
+.stat b{display:block;font-size:36px;color:var(--accentSoft)}
+.stat span{font-size:13px;color:var(--muted)}
+section{padding:80px 0}
+h2{font-size:36px;font-weight:800;text-align:center;margin-bottom:12px}
+.sub2{text-align:center;color:var(--muted);font-size:16px;margin-bottom:56px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.feat{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px;transition:border-color .15s}
+.feat:hover{border-color:var(--accentDim)}
+.feat .ic{width:44px;height:44px;border-radius:10px;background:var(--accentBg);display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:18px}
+.feat h3{font-size:17px;font-weight:700;margin-bottom:8px}
+.feat p{font-size:14px;color:var(--muted);line-height:1.6}
+.how{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:40px;display:grid;grid-template-columns:repeat(3,1fr);gap:32px}
+.step .n{width:36px;height:36px;border-radius:10px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;margin-bottom:14px}
+.step h4{font-size:16px;font-weight:700;margin-bottom:6px}
+.step p{font-size:14px;color:var(--muted);line-height:1.6}
+.tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.tier{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:32px}
+.tier.hl{border-color:var(--accent);background:var(--accentBg)}
+.tier h4{font-size:15px;font-weight:700}
+.tier .price{font-size:40px;font-weight:800;margin:14px 0}
+.tier .price span{font-size:15px;color:var(--muted);font-weight:400}
+.tier ul{list-style:none;margin:18px 0 24px}
+.tier li{font-size:14px;color:var(--muted);padding:6px 0;display:flex;gap:8px}
+.tier li::before{content:'✓';color:var(--ok);font-weight:700}
+.tier .btn{width:100%;text-align:center}
+.ctaband{background:var(--accentBg);border:1px solid var(--accent);border-radius:16px;text-align:center;padding:64px 40px}
+.ctaband h2{margin-bottom:10px}
+.ctaband p{color:var(--muted);margin-bottom:32px}
+footer{border-top:1px solid var(--border);padding:40px 0;color:var(--muted);font-size:13px}
+.fgrid{display:flex;justify-content:space-between;align-items:center}
+.flinks{display:flex;gap:24px}
+.flinks a{color:var(--muted)}.flinks a:hover{color:var(--text)}
+@media(max-width:860px){h1{font-size:40px}.grid3,.tiers,.how{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.navlinks a:not(.btn){display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav>
+  <a class="logo" href="/"><span>◆</span> Lazynext</a>
+  <div class="navlinks">
+    <a href="#how">How it works</a>
+    <a href="#agents">Agents</a>
+    <a href="#pricing">Pricing</a>
+    <a href="https://penpot.lazynext.com">Design</a>
+    <a class="btn btn-ghost" href="https://dashboard.lazynext.com">Dashboard</a>
+    <a class="btn btn-primary" href="https://dashboard.lazynext.com">Get started</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="badge">Autonomous AI Company OS</div>
+  <h1>A company that<br/><em>builds itself.</em></h1>
+  <p class="sub">12 agents research, plan, build, test and ship real products — on your infrastructure, under your rules. You watch it work.</p>
+  <div class="cta">
+    <a class="btn btn-primary" href="https://dashboard.lazynext.com" style="padding:16px 32px;font-size:15px">Open dashboard →</a>
+    <a class="btn btn-ghost" href="#how" style="padding:16px 32px;font-size:15px">How it works</a>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>12</b><span>agents</span></div>
+    <div class="stat"><b>24/7</b><span>operation</span></div>
+    <div class="stat"><b>9</b><span>access formats</span></div>
+    <div class="stat"><b>$0.18</b><span>cost per cycle</span></div>
+  </div>
+</header>
+</div>
+
+<section id="agents">
+<div class="wrap">
+  <h2>Your crew</h2>
+  <p class="sub2">A full company in software — strategy, engineering, infrastructure.</p>
+  <div class="grid3">
+    <div class="feat"><div class="ic">◈</div><h3>Strategy layer</h3><p>CEO, CTO and CMO agents pick markets, decide products and set priorities — autonomous, auditable.</p></div>
+    <div class="feat"><div class="ic">⚡</div><h3>Engineering layer</h3><p>Backend, frontend, QA, code-review and devops agents write real code, test it in E2B sandboxes and ship it.</p></div>
+    <div class="feat"><div class="ic">◔</div><h3>Infrastructure layer</h3><p>Knowledge, finance and security agents keep the company informed, on budget and hardened.</p></div>
+  </div>
+</div>
+</section>
+
+<section id="how">
+<div class="wrap">
+  <h2>How it works</h2>
+  <p class="sub2">From an idea to a deployed product — no human in the loop.</p>
+  <div class="how">
+    <div class="step"><div class="n">1</div><h4>Research</h4><p>Agents crawl markets with Firecrawl, pick a product wedge, and write a plan into the shared brain.</p></div>
+    <div class="step"><div class="n">2</div><h4>Build</h4><p>The crew assigns tasks, writes code, runs tests in isolated sandboxes and reviews each other's work.</p></div>
+    <div class="step"><div class="n">3</div><h4>Ship</h4><p>Products deploy to Cloudflare, get their own GitHub repo, and report back to your dashboard and inbox.</p></div>
+  </div>
+</div>
+</section>
+
+<section id="pricing">
+<div class="wrap">
+  <h2>Pricing</h2>
+  <p class="sub2">Cheaper than one engineer. Runs all night.</p>
+  <div class="tiers">
+    <div class="tier"><h4>Starter</h4><div class="price">$0<span>/mo</span></div><ul><li>3 agents</li><li>1 product</li><li>Dashboard</li><li>Community support</li></ul><a class="btn btn-ghost" href="https://dashboard.lazynext.com">Start free</a></div>
+    <div class="tier hl"><h4>Company</h4><div class="price">$49<span>/mo</span></div><ul><li>12 agents</li><li>5 products</li><li>API + webhooks + CLI</li><li>Weekly briefings</li><li>Priority support</li></ul><a class="btn btn-primary" href="https://dashboard.lazynext.com">Start company</a></div>
+    <div class="tier"><h4>Enterprise</h4><div class="price">Custom</div><ul><li>Unlimited agents</li><li>SSO + audit log</li><li>Custom domains</li><li>Dedicated support</li></ul><a class="btn btn-ghost" href="mailto:hello@lazynext.com">Talk to us</a></div>
+  </div>
+</div>
+</section>
+
+<section>
+<div class="wrap">
+  <div class="ctaband">
+    <h2>Your company runs while you sleep.</h2>
+    <p>Dashboard, PWA, REST API, MCP, CLI, webhooks, SDK and email — watch it work from anywhere.</p>
+    <a class="btn btn-primary" href="https://dashboard.lazynext.com" style="padding:16px 36px;font-size:15px">Launch Lazynext →</a>
+  </div>
+</div>
+</section>
+
+<footer>
+<div class="wrap fgrid">
+  <div><b>◆ Lazynext</b> · The Autonomous AI Company OS</div>
+  <div class="flinks">
+    <a href="https://dashboard.lazynext.com">Dashboard</a>
+    <a href="https://ai-company.lazynext.com/api/v1/docs">API</a>
+    <a href="https://penpot.lazynext.com">Design</a>
+    <a href="https://github.com/Lazynext-Platform">GitHub</a>
+    <a href="https://status.lazynext.com">Status</a>
+  </div>
+</div>
+</footer>
+</body>
+</html>
