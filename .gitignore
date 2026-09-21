@@ -52,7 +52,10 @@ tsconfig.tsbuildinfo
 Thumbs.db
 
 # Product repos (one per product in company brain)
-products/
+/products/
 backups/
+
+# (dashboard/app/(app)/products/ is a dashboard page, not a repo clone)
+!dashboard/app/(app)/products/
 
 .health_state.json
