@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { queryApi, parseJson } from "@/lib/api";
+import Link from "next/link";
 import { PageHeader, Card, StatusBadge, Empty, timeAgo } from "@/components/ui";
 import { CheckCircle2, AlertCircle } from "lucide-react";
 
@@ -66,7 +67,8 @@ export default function AgentsPage() {
             const failed = Array.isArray(a.tasks_failed) ? a.tasks_failed.length : 0;
             const rate = done + failed > 0 ? Math.round((done / (done + failed)) * 100) : 0;
             return (
-              <Card key={a.agent_id} className="hover:border-accentDim transition">
+              <Link key={a.agent_id} href={`/agents/${a.agent_id}`} className="block">
+              <Card className="hover:border-accentDim transition h-full">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-[10px] bg-accentDim flex items-center justify-center text-accentSoft font-bold text-sm">
@@ -105,6 +107,7 @@ export default function AgentsPage() {
                   </div>
                 )}
               </Card>
+              </Link>
             );
           })}
         </div>
