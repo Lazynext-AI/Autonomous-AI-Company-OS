@@ -35,8 +35,10 @@ footer{border-top:1px solid var(--border);padding:28px 0;color:var(--muted);font
 </nav>
 <header>
   <h1>Changelog</h1>
-  <p class="sub">Everything new in the platform.</p>
+  <p class="sub">Everything new in the platform — live from the repo.</p>
 </header>
+
+<div id="live"></div>
 
 <div class="entry"><div class="date">2026-09-21</div><div class="body">
   <span class="tag new">New</span><h3>Public launch surface</h3>
@@ -60,5 +62,28 @@ footer{border-top:1px solid var(--border);padding:28px 0;color:var(--muted);font
 
 <footer>◆ Lazynext · Changelog · <a href="/" style="color:var(--accentSoft)">lazynext.com</a></footer>
 </div>
+<script>
+// Live commits from the public repo — newest first, deduped against the
+// static milestones below.
+fetch("https://api.github.com/repos/Lazynext-Platform/Autonomous-AI-Company-Operating-System/commits?per_page=15")
+  .then(r => r.json())
+  .then(commits => {
+    if (!Array.isArray(commits)) return;
+    const host = document.getElementById("live");
+    commits.forEach(c => {
+      const msg = c.commit.message.split("\n")[0];
+      const date = c.commit.author.date.slice(0, 10);
+      const tag = /fix|bug|patch/i.test(msg) ? '<span class="tag fix">Fix</span>' : '<span class="tag new">New</span>';
+      const el = document.createElement("div");
+      el.className = "entry";
+      el.innerHTML =
+        `<div class="date">${date}</div><div class="body">` +
+        `${tag}<h3 style="display:inline">${msg.replace(/</g,"&lt;")}</h3>` +
+        `<p><a href="${c.html_url}" style="color:var(--accentSoft)">${c.sha.slice(0,7)}</a> · ${c.commit.author.name.replace(/</g,"&lt;")}</p></div>`;
+      host.appendChild(el);
+    });
+  })
+  .catch(() => {});
+</script>
 </body>
 </html>
