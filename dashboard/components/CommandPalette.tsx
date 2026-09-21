@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   LayoutDashboard, Users, ListTodo, Brain, FileText, BookOpen,
-  Activity, Key, Settings, Search,
+  Activity, Key, Settings, Search, Zap, TerminalSquare, Moon, LogOut,
 } from "lucide-react";
+import { toast } from "@/components/Toast";
 
 const ITEMS = [
   { href: "/", label: "Overview", icon: LayoutDashboard, hint: "Dashboard home" },
@@ -32,6 +33,47 @@ const ITEMS = [
   { href: "/settings", label: "Settings", icon: Settings, hint: "Integrations + links" },
 ];
 
+const ACTIONS: { label: string; hint: string; icon: any; run: () => Promise<string> | string }[] = [
+  {
+    label: "Agent tick",
+    hint: "One agent generates a message on the bus",
+    icon: Zap,
+    run: async () => {
+      const r = await fetch("/api/tick", { method: "POST" });
+      return r.ok ? "Agent ticked" : "Tick failed";
+    },
+  },
+  {
+    label: "New sandbox",
+    hint: "Spin up a live E2B sandbox",
+    icon: TerminalSquare,
+    run: async () => {
+      const r = await fetch("/api/sandbox", { method: "POST" });
+      return r.ok ? "Sandbox created" : "Create failed";
+    },
+  },
+  {
+    label: "Toggle theme",
+    hint: "Switch dark / light",
+    icon: Moon,
+    run: () => {
+      document.documentElement.classList.toggle("light");
+      localStorage.setItem("lz_theme", document.documentElement.classList.contains("light") ? "light" : "dark");
+      return "Theme toggled";
+    },
+  },
+  {
+    label: "Sign out",
+    hint: "End the dashboard session",
+    icon: LogOut,
+    run: async () => {
+      await fetch("/api/logout", { method: "POST" });
+      location.href = "/login";
+      return "";
+    },
+  },
+];
+
 export default function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -39,13 +81,23 @@ export default function CommandPalette() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const qLower = q.toLowerCase();
   const results = q
     ? ITEMS.filter(
         (i) =>
-          i.label.toLowerCase().includes(q.toLowerCase()) ||
-          i.hint.toLowerCase().includes(q.toLowerCase())
+          i.label.toLowerCase().includes(qLower) ||
+          i.hint.toLowerCase().includes(qLower)
       )
     : ITEMS;
+  const actions = q
+    ? ACTIONS.filter(
+        (a) =>
+          a.label.toLowerCase().includes(qLower) ||
+          a.hint.toLowerCase().includes(qLower)
+      )
+    : [];
+  const all = [...results.map((r) => ({ ...r, action: null as any })),
+               ...actions.map((a) => ({ href: null as any, label: a.label, hint: a.hint, icon: a.icon, action: a }))];
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -65,9 +117,14 @@ export default function CommandPalette() {
     if (open) setTimeout(() => inputRef.current?.focus(), 30);
   }, [open]);
 
-  const go = (href: string) => {
-    router.push(href);
+  const go = async (item: (typeof all)[number]) => {
     setOpen(false);
+    if (item.href) {
+      router.push(item.href);
+    } else if (item.action) {
+      const msg = await item.action.run();
+      if (msg) toast(msg);
+    }
   };
 
   if (!open) return null;
@@ -88,9 +145,9 @@ export default function CommandPalette() {
             value={q}
             onChange={(e) => { setQ(e.target.value); setSel(0); }}
             onKeyDown={(e) => {
-              if (e.key === "ArrowDown") { e.preventDefault(); setSel((s) => Math.min(s + 1, results.length - 1)); }
+              if (e.key === "ArrowDown") { e.preventDefault(); setSel((s) => Math.min(s + 1, all.length - 1)); }
               if (e.key === "ArrowUp") { e.preventDefault(); setSel((s) => Math.max(s - 1, 0)); }
-              if (e.key === "Enter" && results[sel]) go(results[sel].href);
+              if (e.key === "Enter" && all[sel]) go(all[sel]);
             }}
             placeholder="Go to…"
             className="flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-muted"
@@ -98,12 +155,12 @@ export default function CommandPalette() {
           <kbd className="text-[10px] text-muted bg-input px-1.5 py-0.5 rounded">esc</kbd>
         </div>
         <div className="max-h-80 overflow-y-auto p-2">
-          {results.map((item, i) => {
+          {all.map((item, i) => {
             const Icon = item.icon;
             return (
               <button
-                key={item.href}
-                onClick={() => go(item.href)}
+                key={item.href ?? item.label}
+                onClick={() => go(item)}
                 onMouseEnter={() => setSel(i)}
                 className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-[10px] text-left transition ${
                   i === sel ? "bg-accentBg" : ""
@@ -119,7 +176,7 @@ export default function CommandPalette() {
               </button>
             );
           })}
-          {results.length === 0 && (
+          {all.length === 0 && (
             <div className="py-8 text-center text-sm text-muted">No matches</div>
           )}
         </div>
