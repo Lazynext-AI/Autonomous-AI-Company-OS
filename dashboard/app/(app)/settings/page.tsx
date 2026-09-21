@@ -37,12 +37,21 @@ function kv(action: string, key: string, value?: string) {
 export default function SettingsPage() {
   const [flags, setFlags] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
+  const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
 
   useEffect(() => {
     Promise.all(FLAGS.map((f) => kv("get", f.key).then((r) => [f.key, r.value === "true"])))
       .then((pairs) => setFlags(Object.fromEntries(pairs as [string, boolean][])))
       .finally(() => setLoading(false));
+    const d = (localStorage.getItem("lz_density") as "compact") || "comfortable";
+    setDensity(d);
   }, []);
+
+  const setD = (d: "comfortable" | "compact") => {
+    setDensity(d);
+    localStorage.setItem("lz_density", d);
+    document.documentElement.dataset.density = d;
+  };
 
   const toggle = async (key: string) => {
     const next = !flags[key];
@@ -122,6 +131,23 @@ export default function SettingsPage() {
           <p className="px-5 py-3 text-xs text-muted">
             Stored in Cloudflare KV — agents read these at runtime via kv_get.
           </p>
+        </Card>
+
+        <Card>
+          <h2 className="text-sm font-semibold mb-3">Density</h2>
+          <div className="flex gap-2">
+            {(["comfortable", "compact"] as const).map((d) => (
+              <button
+                key={d}
+                onClick={() => setD(d)}
+                className={`px-3.5 py-2 rounded-lg text-xs font-medium capitalize transition ${
+                  density === d ? "bg-accent text-white" : "bg-input text-muted border border-border"
+                }`}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
         </Card>
 
         <Card>

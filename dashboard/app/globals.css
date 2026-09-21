@@ -54,6 +54,12 @@
   }
 }
 
+/* Compact density */
+[data-density="compact"] .p-5 { padding: 0.875rem; }
+[data-density="compact"] .px-5 { padding-left: 0.875rem; padding-right: 0.875rem; }
+[data-density="compact"] .py-3\.5 { padding-top: 0.625rem; padding-bottom: 0.625rem; }
+[data-density="compact"] .gap-5 { gap: 0.875rem; }
+
 @keyframes slideUp {
   from { transform: translateY(8px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
