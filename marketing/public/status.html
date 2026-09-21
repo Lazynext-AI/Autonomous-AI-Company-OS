@@ -69,10 +69,22 @@ services.forEach(s=>{
  d.innerHTML=`<div><div class="name">${s.name}</div><div class="desc">${s.desc}</div></div><span class="pill" data-check="${s.url}">checking…</span>`;
  host.appendChild(d);
 });
-// live checks via no-cors HEAD (ok = reachable)
+// live checks — CORS mode first (detects real errors); fall back to
+// no-cors reachability. Shows latency.
 document.querySelectorAll('[data-check]').forEach(async el=>{
- try{await fetch(el.dataset.check,{mode:'no-cors',cache:'no-store'});el.textContent='operational'}
- catch{el.textContent='checking…'}
+ const url=el.dataset.check;
+ const t0=performance.now();
+ try{
+  const r=await fetch(url,{mode:'cors',cache:'no-store'});
+  const ms=Math.round(performance.now()-t0);
+  el.textContent=r.ok?`operational · ${ms}ms`:`degraded · ${r.status}`;
+  if(!r.ok)el.classList.add('warn');
+ }catch{
+  try{
+   await fetch(url,{mode:'no-cors',cache:'no-store'});
+   el.textContent=`operational · ${Math.round(performance.now()-t0)}ms`;
+  }catch{el.textContent='down';el.classList.add('warn')}
+ }
 });
 </script>
 </body>
