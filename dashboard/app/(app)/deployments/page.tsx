@@ -13,7 +13,7 @@ export default function DeploymentsPage() {
     const load = async () => {
       try {
         const rows = await queryApi<any>(
-          "SELECT id, milestone_type, description, created_at FROM milestone_log WHERE milestone_type LIKE '%deploy%' OR milestone_type LIKE '%ship%' ORDER BY id DESC LIMIT 50"
+          "SELECT id, milestone_type, description, achieved_at AS created_at FROM milestone_log WHERE milestone_type LIKE '%deploy%' OR milestone_type LIKE '%ship%' ORDER BY achieved_at DESC LIMIT 50"
         );
         setDeploys(rows.map((r) => ({ ...r, description: parseJson(r.description, r.description) })));
         setLoading(false);

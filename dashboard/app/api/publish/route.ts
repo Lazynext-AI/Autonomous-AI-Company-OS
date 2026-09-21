@@ -8,5 +8,8 @@ export async function POST(req: NextRequest) {
   if (!channel || !payload) {
     return NextResponse.json({ error: "channel + payload required" }, { status: 400 });
   }
-  return workerFetch("/bus/publish", { channel, payload });
+  return workerFetch("/bus/publish", {
+    channel,
+    payload: typeof payload === "string" ? payload : JSON.stringify(payload),
+  });
 }
