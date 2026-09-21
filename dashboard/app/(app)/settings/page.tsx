@@ -37,6 +37,7 @@ function kv(action: string, key: string, value?: string) {
 
 export default function SettingsPage() {
   const [flags, setFlags] = useState<Record<string, boolean>>({});
+  const [integration, setIntegration] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
 
@@ -81,9 +82,52 @@ export default function SettingsPage() {
               <span className={`text-xs font-semibold ${i.ok ? "text-ok" : "text-warn"}`}>
                 {i.ok ? "connected" : "needs credits"}
               </span>
+              <button
+                onClick={() => setIntegration(i.name)}
+                className="text-xs text-accentSoft hover:underline"
+              >
+                configure
+              </button>
             </div>
           ))}
         </Card>
+
+        {integration && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setIntegration(null)}>
+            <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+              <h2 className="text-lg font-bold text-fg mb-1">{integration} config</h2>
+              <p className="text-xs text-muted mb-5">Set via environment variables in `.env` — stored server-side.</p>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted">Status</span>
+                  <span className="text-ok font-semibold">
+                    {INTEGRATIONS.find((i) => i.name === integration)?.ok ? "connected" : "needs credits"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted">Credential</span>
+                  <span className="text-fg font-mono text-xs">
+                    {integration === "GitHub" && "GITHUB_TOKEN"}
+                    {integration === "Resend" && "RESEND_API_KEY"}
+                    {integration === "E2B" && "E2B_API_KEY"}
+                    {integration === "Firecrawl" && "FIRECRAWL_API_KEY"}
+                    {integration === "Atlas Cloud" && "ATLASCLOUD_API_KEY"}
+                    {integration === "Cloudflare" && "CLOUDFLARE_DEPLOY_TOKEN"}
+                    {integration === "Penpot" && "penpot.lazynext.com"}
+                  </span>
+                </div>
+                <p className="text-xs text-muted pt-2 border-t border-border">
+                  {integration === "Atlas Cloud"
+                    ? "Add credits at atlascloud.ai — the client auto-uses Atlas once funded."
+                    : `Rotate by updating ${integration.toUpperCase().replace(" ", "_")} env vars, then redeploy.`}
+                </p>
+              </div>
+              <button onClick={() => setIntegration(null)} className="mt-5 w-full bg-input text-muted hover:text-fg text-sm font-medium py-2.5 rounded-lg transition">
+                Close
+              </button>
+            </div>
+          </div>
+        )}
 
         <Card>
           <h2 className="text-sm font-semibold mb-3">Company</h2>

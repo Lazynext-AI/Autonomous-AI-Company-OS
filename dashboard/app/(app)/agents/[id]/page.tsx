@@ -5,13 +5,16 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { queryApi, parseJson } from "@/lib/api";
 import { PageHeader, Card, StatusBadge, Empty, timeAgo } from "@/components/ui";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Settings2 } from "lucide-react";
+import { toast } from "@/components/Toast";
 
 export default function AgentDetailPage() {
   const { id } = useParams();
   const [agent, setAgent] = useState<any>(null);
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [configOpen, setConfigOpen] = useState(false);
+  const [cfg, setCfg] = useState({ model: "", interval: "300", prompt: "" });
 
   useEffect(() => {
     const load = async () => {
@@ -72,8 +75,71 @@ export default function AgentDetailPage() {
           </h1>
           <p className="text-sm text-muted mt-1">{agent.agent_id}</p>
         </div>
-        <StatusBadge status={agent.status || "active"} />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setConfigOpen(true)}
+            className="inline-flex items-center gap-2 bg-card hover:bg-cardHover border border-border text-sm font-medium px-4 py-2 rounded-lg transition"
+          >
+            <Settings2 className="w-4 h-4" /> Configure
+          </button>
+          <StatusBadge status={agent.status || "active"} />
+        </div>
       </div>
+
+      {configOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setConfigOpen(false)}>
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-fg mb-1">Agent config</h2>
+            <p className="text-xs text-muted mb-5">Saved to KV — agents read these on the next tick.</p>
+            <label className="text-xs text-muted">Model override</label>
+            <input
+              value={cfg.model}
+              onChange={(e) => setCfg({ ...cfg, model: e.target.value })}
+              placeholder="auto (Atlas default)"
+              className="mt-1.5 mb-4 w-full bg-input border border-border rounded-lg px-3.5 py-2.5 text-sm text-fg outline-none focus:border-accent"
+            />
+            <label className="text-xs text-muted">Loop interval (seconds)</label>
+            <input
+              type="number"
+              min={30}
+              value={cfg.interval}
+              onChange={(e) => setCfg({ ...cfg, interval: e.target.value })}
+              className="mt-1.5 mb-4 w-full bg-input border border-border rounded-lg px-3.5 py-2.5 text-sm text-fg outline-none focus:border-accent"
+            />
+            <label className="text-xs text-muted">System prompt addition</label>
+            <textarea
+              value={cfg.prompt}
+              onChange={(e) => setCfg({ ...cfg, prompt: e.target.value })}
+              rows={3}
+              placeholder="Extra instructions for this agent…"
+              className="mt-1.5 mb-5 w-full bg-input border border-border rounded-lg px-3.5 py-2.5 text-sm text-fg outline-none focus:border-accent resize-none"
+            />
+            <div className="flex gap-2.5">
+              <button
+                onClick={async () => {
+                  const r = await fetch("/api/kv", {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({
+                      action: "put",
+                      key: `agent_config:${agent.agent_id}`,
+                      value: JSON.stringify({ model: cfg.model || "auto", interval: +cfg.interval || 300, prompt: cfg.prompt }),
+                    }),
+                  });
+                  if (r.ok) { toast("Config saved"); setConfigOpen(false); }
+                  else toast("Save failed");
+                }}
+                className="flex-1 bg-accent hover:bg-accentSoft text-white text-sm font-semibold py-2.5 rounded-lg transition"
+              >
+                Save
+              </button>
+              <button onClick={() => setConfigOpen(false)} className="px-4 py-2.5 bg-input text-muted hover:text-fg text-sm font-medium rounded-lg transition">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card><div className="text-xs text-muted">Score</div><div className="text-2xl font-bold mt-1">{score.toFixed(0)}</div></Card>

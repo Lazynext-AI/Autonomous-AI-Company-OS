@@ -49,6 +49,8 @@ footer{border-top:1px solid var(--border);padding:28px 0;color:var(--muted);font
   <div class="bars" id="bars"></div>
   <h2>Services</h2>
   <div id="services"></div>
+  <h2>Recent changes</h2>
+  <div id="history"></div>
 </section>
 
 <footer>◆ Lazynext · Status · <a href="/" style="color:var(--accentSoft)">lazynext.com</a></footer>
@@ -86,6 +88,18 @@ document.querySelectorAll('[data-check]').forEach(async el=>{
   }catch{el.textContent='down';el.classList.add('warn')}
  }
 });
+// status history — real recent platform changes from the public repo
+fetch("https://api.github.com/repos/Lazynext-Platform/Autonomous-AI-Company-Operating-System/commits?per_page=5")
+ .then(r=>r.json()).then(cs=>{
+  const h=document.getElementById('history');
+  (Array.isArray(cs)?cs:[]).forEach(c=>{
+   const d=document.createElement('div');d.className='svc';
+   d.innerHTML=`<div><div class="name">${c.commit.message.split("\n")[0].replace(/</g,"&lt;")}</div>
+    <div class="desc">${c.commit.author.date.slice(0,10)} · <a href="${c.html_url}" style="color:var(--accentSoft)">${c.sha.slice(0,7)}</a></div></div>
+    <span class="pill">shipped</span>`;
+   h.appendChild(d);
+  });
+ }).catch(()=>{});
 </script>
 </body>
 </html>

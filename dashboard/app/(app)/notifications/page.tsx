@@ -18,6 +18,7 @@ const READ_KEY = "lz_notifications_read";
 export default function NotificationsPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [read, setRead] = useState<Set<string>>(new Set());
+  const [open, setOpen] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -117,7 +118,13 @@ export default function NotificationsPage() {
                 <div className="w-8 h-8 rounded-lg bg-input flex items-center justify-center shrink-0 mt-0.5" onClick={() => markRead(n.id)}>
                   {icon(n.kind)}
                 </div>
-                <div className="flex-1 min-w-0" onClick={() => markRead(n.id)}>
+                <div
+                  className="flex-1 min-w-0"
+                  onClick={() => {
+                    markRead(n.id);
+                    setOpen((o) => (o === n.id ? null : n.id));
+                  }}
+                >
                   <div className="flex items-center gap-2">
                     {isUnread && <span className="w-2 h-2 rounded-full bg-accent shrink-0" />}
                     <div className={`text-sm font-semibold truncate ${isUnread ? "text-fg" : "text-muted"}`}>
@@ -125,7 +132,19 @@ export default function NotificationsPage() {
                     </div>
                     <span className="text-xs text-muted shrink-0 ml-auto">{timeAgo(n.at)}</span>
                   </div>
-                  <div className="text-xs text-muted mt-0.5 line-clamp-2">{n.body}</div>
+                  {open === n.id ? (
+                    <pre className="text-xs text-fg/80 mt-2 bg-input rounded-lg p-3 whitespace-pre-wrap font-mono max-h-64 overflow-auto">
+                      {(() => {
+                        try {
+                          return JSON.stringify(JSON.parse(n.body), null, 2);
+                        } catch {
+                          return n.body;
+                        }
+                      })()}
+                    </pre>
+                  ) : (
+                    <div className="text-xs text-muted mt-0.5 line-clamp-2">{n.body}</div>
+                  )}
                 </div>
               </Card>
             );

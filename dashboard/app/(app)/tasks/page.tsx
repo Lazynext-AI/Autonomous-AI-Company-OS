@@ -26,7 +26,9 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filter, setFilter] = useState("all");
   const [view, setView] = useState<"list" | "board">("list");
+  const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
+  const PAGE_SIZE = 25;
 
   const load = async () => {
     try {
@@ -47,6 +49,8 @@ export default function TasksPage() {
   }, []);
 
   const filtered = filter === "all" ? tasks : tasks.filter((t) => t.status === filter);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   return (
     <>
@@ -56,7 +60,7 @@ export default function TasksPage() {
             {FILTERS.map((f) => (
               <button
                 key={f}
-                onClick={() => setFilter(f)}
+                onClick={() => { setFilter(f); setPage(0); }}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition ${
                   filter === f
                     ? "bg-accent text-white"
@@ -125,7 +129,7 @@ export default function TasksPage() {
         </div>
       ) : (
         <Card className="p-0 overflow-hidden">
-          {filtered.map((t) => (
+          {paged.map((t) => (
             <Link
               key={t.task_id}
               href={`/tasks/${t.task_id}`}
@@ -158,6 +162,29 @@ export default function TasksPage() {
               )}
             </Link>
           ))}
+          {pageCount > 1 && (
+            <div className="flex items-center justify-between px-5 py-3 border-t border-border">
+              <span className="text-xs text-muted">
+                Page {page + 1} of {pageCount} · {filtered.length} tasks
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  className="px-3 py-1.5 rounded-lg text-xs bg-input text-fg disabled:opacity-40 hover:bg-cardHover transition"
+                >
+                  ← Prev
+                </button>
+                <button
+                  onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                  disabled={page >= pageCount - 1}
+                  className="px-3 py-1.5 rounded-lg text-xs bg-input text-fg disabled:opacity-40 hover:bg-cardHover transition"
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          )}
         </Card>
       )}
     </>
