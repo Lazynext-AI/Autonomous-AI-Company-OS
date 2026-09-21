@@ -24,6 +24,7 @@ const FLAGS = [
   { key: "flag:knowledge_ingestion", label: "Knowledge ingestion", desc: "Firecrawl + RAG on new sources" },
   { key: "flag:webhook_alerts", label: "Webhook alerts", desc: "Signed events on deploys + failures" },
   { key: "flag:auto_code_review", label: "Auto code review", desc: "Review agent scores every PR" },
+  { key: "flag:maintenance", label: "Maintenance mode", desc: "Show the maintenance screen across the dashboard" },
 ];
 
 function kv(action: string, key: string, value?: string) {

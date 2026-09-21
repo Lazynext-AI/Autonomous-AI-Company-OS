@@ -23,6 +23,7 @@ async function publish(payload: any) {
 
 export default function ApprovalsPage() {
   const [items, setItems] = useState<Approval[]>([]);
+  const [history, setHistory] = useState<Approval[]>([]);
   const [decided, setDecided] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
 
@@ -33,6 +34,18 @@ export default function ApprovalsPage() {
         "SELECT id, channel, payload, created_at FROM bus_messages WHERE channel = 'approvals' AND payload LIKE '%needs_approval%' ORDER BY id DESC LIMIT 50"
       );
       setItems(rows.map((r) => ({ ...r, payload: parseJson(r.payload, {}) })));
+      // decided approvals = approval_decision events
+      const hist = await queryApi<Approval>(
+        "SELECT id, channel, payload, created_at FROM bus_messages WHERE channel = 'approvals' AND payload LIKE '%approval_decision%' ORDER BY id DESC LIMIT 20"
+      );
+      setHistory(hist.map((r) => ({ ...r, payload: parseJson(r.payload, {}) })));
+      // mark already-decided refs
+      const d: Record<number, string> = {};
+      hist.forEach((h) => {
+        const p = parseJson<any>(h.payload, {});
+        if (p.ref) d[p.ref] = p.decision;
+      });
+      setDecided((prev) => ({ ...d, ...prev }));
     } catch {}
     setLoading(false);
   };
@@ -109,6 +122,30 @@ export default function ApprovalsPage() {
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {history.length > 0 && (
+        <div className="mt-8 max-w-3xl">
+          <h2 className="text-sm font-semibold text-fg mb-3">History</h2>
+          <Card className="p-0 overflow-hidden">
+            {history.map((h) => {
+              const p = h.payload;
+              return (
+                <div key={h.id} className="flex items-center gap-3 px-5 py-3 border-b border-border last:border-0">
+                  <span
+                    className={`text-xs font-semibold ${
+                      p.decision === "approved" ? "text-ok" : "text-bad"
+                    }`}
+                  >
+                    {p.decision}
+                  </span>
+                  <span className="text-xs text-muted">request #{p.ref}</span>
+                  <span className="text-xs text-muted ml-auto">{timeAgo(h.created_at)}</span>
+                </div>
+              );
+            })}
+          </Card>
         </div>
       )}
     </>
