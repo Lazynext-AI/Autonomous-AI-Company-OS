@@ -6,24 +6,26 @@ these are snapshots for design-to-code and reference.
 
 ## Marketing
 landing-page · pricing · signup · login · forgot-password · verify-email ·
-docs-landing · status-page · 404 · og-card (social share) · brand (logo/usage)
+docs-landing · status-page · 404 · 500 · legal · og-card · brand ·
+cookie-banner · changelog
 
 ## Onboarding
-onboarding-1..3 — connect accounts → pick product → launch
+onboarding-1..3
 
 ## App (dashboard surfaces)
 dashboard · products · product-detail · agents · agent-detail · tasks ·
 task-detail · empty-tasks · brain · briefings · knowledge · feed ·
-api-keys · webhooks · billing · settings · notifications
+api-keys · webhooks · billing · settings · notifications · command-palette
+
+## Modals
+modal-create-task · modal-create-api-key (shown-once) · modal-create-webhook
 
 ## Mobile
-mobile (home) · mobile-nav (drawer) · mobile-briefing (reader) ·
-tablet (dashboard @768)
+mobile · mobile-nav · mobile-briefing · mobile-tasks · tablet
 
 ## Emails
-email-briefing (weekly) · email-alert (health) · email-welcome (post-signup)
+email-briefing · email-alert · email-welcome · email-reset
 
 ## Design system
-design-system — 8 colors, 7 type styles, 5 components + input/toggle states
-ui-states — toasts, skeletons, error panels, badges
-terminal — lazynext CLI mockup
+design-system (8 colors, 7 type styles, 5 components + input/toggle) ·
+ui-states · terminal · site-map (index of all boards)

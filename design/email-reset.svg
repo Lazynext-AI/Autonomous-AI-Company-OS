@@ -1,0 +1,322 @@
+<svg width="600" xmlns="http://www.w3.org/2000/svg" height="460" viewBox="5500 4300 600 460" style="-webkit-print-color-adjust::exact" xmlns:xlink="http://www.w3.org/1999/xlink" fill="none" version="1.1">
+  <style>
+  </style>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba0b792f629">
+    <defs>
+      <clipPath id="frame-clip-8a7393f4-edd8-8078-8008-aba0b792f629-render-8734" class="frame-clip frame-clip-def">
+        <rect rx="0" ry="0" x="5500" y="4300" width="600" height="460" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)">
+        </rect>
+      </clipPath>
+    </defs>
+    <g class="frame-container-wrapper">
+      <g class="frame-container-blur">
+        <g class="frame-container-shadows">
+          <g clip-path="url(#frame-clip-8a7393f4-edd8-8078-8008-aba0b792f629-render-8734)" fill="none">
+            <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba0b792f629">
+              <rect rx="0" ry="0" x="5500" y="4300" width="600" height="460" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="frame-background" style="fill:#0e0e13">
+              </rect>
+            </g>
+            <g class="frame-children">
+              <g id="shape-8a7393f4-edd8-8078-8008-aba0b79da6e9">
+                <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba0b79da6e9">
+                  <rect rx="0" ry="0" x="5500" y="4300" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="600" height="80" style="fill:#141419">
+                  </rect>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba0b7a792d9">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="5536" y="4328" width="93" height="24" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="92.578125" height="26" id="fill-0-render-8736-0">
+                      <g>
+                        <rect width="92.578125" height="26" style="fill:#fafafa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba0b7a792d9">
+                    <text x="5536" y="4353" dominant-baseline="ideographic" textLength="92.578125" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:20px;text-decoration:none;direction:ltr;fill:#fafafa">◆ Lazynext</text>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba0b7b23863">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="5536" y="4415" width="191" height="27" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="190.109375" height="28.5" id="fill-0-render-8737-0">
+                      <g>
+                        <rect width="190.109375" height="28.5" style="fill:#fafafa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba0b7b23863">
+                    <text x="5536" y="4442" dominant-baseline="ideographic" textLength="190.109375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:22px;text-decoration:none;direction:ltr;fill:#fafafa">Reset your password</text>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba0b7bc4709">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="5536" y="4455" width="520" height="50" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="250.59375" height="32.59375" id="fill-0-render-8738-0">
+                      <g>
+                        <rect width="250.59375" height="32.59375" style="fill:#9c9caa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="250.59375" height="32.59375" id="fill-1-render-8738-0">
+                      <g>
+                        <rect width="250.59375" height="32.59375" style="fill:#9c9caa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba0b7bc4709">
+                    <text x="5536" y="4471" dominant-baseline="ideographic" textLength="250.59375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#9c9caa">Someone asked to reset the password for your</text>
+                  </g>
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="250.59375" height="32.59375" id="fill-0-render-8738-1">
+                      <g>
+                        <rect width="250.59375" height="32.59375" style="fill:#9c9caa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="250.59375" height="32.59375" id="fill-1-render-8738-1">
+                      <g>
+                        <rect width="250.59375" height="32.59375" style="fill:#9c9caa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba0b7bc4709">
+                    <text x="5536" y="4486.59375" dominant-baseline="ideographic" textLength="182.6484375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#9c9caa">Lazynext account. If that was you:</text>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba0b7cae899">
+                <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba0b7cae899">
+                  <rect rx="10" ry="10" x="5536" y="4530" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="528" height="52" style="fill:#8b5cf6">
+                  </rect>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba0b7d7eabc">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="5725" y="4546" width="117" height="18" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="116.1875" height="19.5" id="fill-0-render-8740-0">
+                      <g>
+                        <rect width="116.1875" height="19.5" style="fill:#fff">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba0b7d7eabc">
+                    <text x="5725" y="4564.5" dominant-baseline="ideographic" textLength="116.1875" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:15px;text-decoration:none;direction:ltr;fill:#fff">Reset password →</text>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba0b7e2523e">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="5536" y="4610" width="259" height="29" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="258.5859375" height="29.8984375" id="fill-0-render-8741-0">
+                      <g>
+                        <rect width="258.5859375" height="29.8984375" style="fill:#9c9caa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="258.5859375" height="29.8984375" id="fill-1-render-8741-0">
+                      <g>
+                        <rect width="258.5859375" height="29.8984375" style="fill:#9c9caa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba0b7e2523e">
+                    <text x="5536" y="4624.5" dominant-baseline="ideographic" textLength="258.5859375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#9c9caa">Link expires in 1 hour. Didn&#x27;t ask? Ignore this — your</text>
+                  </g>
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="258.5859375" height="29.8984375" id="fill-0-render-8741-1">
+                      <g>
+                        <rect width="258.5859375" height="29.8984375" style="fill:#9c9caa">
+                        </rect>
+                      </g>
+                    </pattern>
+                    <pattern patternUnits="objectBoundingBox" width="258.5859375" height="29.8984375" id="fill-1-render-8741-1">
+                      <g>
+                        <rect width="258.5859375" height="29.8984375" style="fill:#9c9caa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba0b7e2523e">
+                    <text x="5536" y="4638.8984375" dominant-baseline="ideographic" textLength="76.5234375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#9c9caa">account is safe.</text>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba0b7ecd6a7">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="5536" y="4700" width="155" height="14" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="154.3984375" height="14.5" id="fill-0-render-8742-0">
+                      <g>
+                        <rect width="154.3984375" height="14.5" style="fill:#9c9caa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba0b7ecd6a7">
+                    <text x="5536" y="4713.5" dominant-baseline="ideographic" textLength="154.3984375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:11px;text-decoration:none;direction:ltr;fill:#9c9caa">Lazynext · support@lazynext.com</text>
+                  </g>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba0b79da6e9">
+    <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba0b79da6e9">
+      <rect rx="0" ry="0" x="5500" y="4300" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="600" height="80" style="fill:#141419">
+      </rect>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba0b7a792d9">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="5536" y="4328" width="93" height="24" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="92.578125" height="26" id="fill-0-render-8744-0">
+          <g>
+            <rect width="92.578125" height="26" style="fill:#fafafa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba0b7a792d9">
+        <text x="5536" y="4353" dominant-baseline="ideographic" textLength="92.578125" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:20px;text-decoration:none;direction:ltr;fill:#fafafa">◆ Lazynext</text>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba0b7b23863">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="5536" y="4415" width="191" height="27" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="190.109375" height="28.5" id="fill-0-render-8745-0">
+          <g>
+            <rect width="190.109375" height="28.5" style="fill:#fafafa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba0b7b23863">
+        <text x="5536" y="4442" dominant-baseline="ideographic" textLength="190.109375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:22px;text-decoration:none;direction:ltr;fill:#fafafa">Reset your password</text>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba0b7bc4709">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="5536" y="4455" width="520" height="50" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="250.59375" height="32.59375" id="fill-0-render-8746-0">
+          <g>
+            <rect width="250.59375" height="32.59375" style="fill:#9c9caa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="250.59375" height="32.59375" id="fill-1-render-8746-0">
+          <g>
+            <rect width="250.59375" height="32.59375" style="fill:#9c9caa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba0b7bc4709">
+        <text x="5536" y="4471" dominant-baseline="ideographic" textLength="250.59375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#9c9caa">Someone asked to reset the password for your</text>
+      </g>
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="250.59375" height="32.59375" id="fill-0-render-8746-1">
+          <g>
+            <rect width="250.59375" height="32.59375" style="fill:#9c9caa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="250.59375" height="32.59375" id="fill-1-render-8746-1">
+          <g>
+            <rect width="250.59375" height="32.59375" style="fill:#9c9caa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba0b7bc4709">
+        <text x="5536" y="4486.59375" dominant-baseline="ideographic" textLength="182.6484375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#9c9caa">Lazynext account. If that was you:</text>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba0b7cae899">
+    <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba0b7cae899">
+      <rect rx="10" ry="10" x="5536" y="4530" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="528" height="52" style="fill:#8b5cf6">
+      </rect>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba0b7d7eabc">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="5725" y="4546" width="117" height="18" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="116.1875" height="19.5" id="fill-0-render-8748-0">
+          <g>
+            <rect width="116.1875" height="19.5" style="fill:#fff">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba0b7d7eabc">
+        <text x="5725" y="4564.5" dominant-baseline="ideographic" textLength="116.1875" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:15px;text-decoration:none;direction:ltr;fill:#fff">Reset password →</text>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba0b7e2523e">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="5536" y="4610" width="259" height="29" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="258.5859375" height="29.8984375" id="fill-0-render-8749-0">
+          <g>
+            <rect width="258.5859375" height="29.8984375" style="fill:#9c9caa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="258.5859375" height="29.8984375" id="fill-1-render-8749-0">
+          <g>
+            <rect width="258.5859375" height="29.8984375" style="fill:#9c9caa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba0b7e2523e">
+        <text x="5536" y="4624.5" dominant-baseline="ideographic" textLength="258.5859375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#9c9caa">Link expires in 1 hour. Didn&#x27;t ask? Ignore this — your</text>
+      </g>
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="258.5859375" height="29.8984375" id="fill-0-render-8749-1">
+          <g>
+            <rect width="258.5859375" height="29.8984375" style="fill:#9c9caa">
+            </rect>
+          </g>
+        </pattern>
+        <pattern patternUnits="objectBoundingBox" width="258.5859375" height="29.8984375" id="fill-1-render-8749-1">
+          <g>
+            <rect width="258.5859375" height="29.8984375" style="fill:#9c9caa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba0b7e2523e">
+        <text x="5536" y="4638.8984375" dominant-baseline="ideographic" textLength="76.5234375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#9c9caa">account is safe.</text>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba0b7ecd6a7">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="5536" y="4700" width="155" height="14" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="154.3984375" height="14.5" id="fill-0-render-8750-0">
+          <g>
+            <rect width="154.3984375" height="14.5" style="fill:#9c9caa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba0b7ecd6a7">
+        <text x="5536" y="4713.5" dominant-baseline="ideographic" textLength="154.3984375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:11px;text-decoration:none;direction:ltr;fill:#9c9caa">Lazynext · support@lazynext.com</text>
+      </g>
+    </g>
+  </g>
+</svg>
