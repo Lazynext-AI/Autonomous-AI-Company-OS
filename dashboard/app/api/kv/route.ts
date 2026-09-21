@@ -1,25 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { workerFetch } from "@/lib/worker";
 
 export const dynamic = "force-dynamic";
-
-async function workerFetch(path: string, body: unknown) {
-  try {
-    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
-    const { env } = await getCloudflareContext({ async: true });
-    const svc = (env as any).COMPANY_API;
-    const res = await svc.fetch(`https://worker.internal${path}`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${(env as any).WORKER_API_TOKEN}`,
-      },
-      body: JSON.stringify(body),
-    });
-    return NextResponse.json(await res.json(), { status: res.status });
-  } catch {
-    return NextResponse.json({ error: "unavailable" }, { status: 503 });
-  }
-}
 
 export async function POST(req: NextRequest) {
   const { action, key, value } = await req.json();

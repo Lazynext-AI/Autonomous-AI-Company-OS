@@ -10,6 +10,26 @@ async function workerEnv(): Promise<Record<string, string | undefined>> {
   }
 }
 
+export async function workerFetch(path: string, body: unknown, method = "POST") {
+  const env = await workerEnv();
+  const url = env.CLOUDFLARE_API_URL || process.env.CLOUDFLARE_API_URL;
+  const token = env.CLOUDFLARE_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
+  if (!url || !token) {
+    return NextResponse.json({ error: "worker not configured" }, { status: 503 });
+  }
+  const init = {
+    method,
+    headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  };
+  const svc = env.COMPANY_API as { fetch: typeof fetch } | undefined;
+  const res = svc?.fetch
+    ? await svc.fetch(`${url.replace(/\/$/, "")}${path}`, init)
+    : await fetch(`${url.replace(/\/$/, "")}${path}`, { ...init, cache: "no-store" });
+  const data = await res.json();
+  return NextResponse.json(data, { status: res.status });
+}
+
 export async function queryWorker(sql: string, params: unknown[] = []) {
   const env = await workerEnv();
   const url = env.CLOUDFLARE_API_URL || process.env.CLOUDFLARE_API_URL;
