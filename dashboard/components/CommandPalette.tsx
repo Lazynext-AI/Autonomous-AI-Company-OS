@@ -18,6 +18,7 @@ const ITEMS = [
   { href: "/briefings", label: "Briefings", icon: FileText, hint: "Company reports" },
   { href: "/knowledge", label: "Knowledge", icon: BookOpen, hint: "Ingested docs" },
   { href: "/feed", label: "Feed", icon: Activity, hint: "Live bus messages" },
+  { href: "/conversations", label: "Conversations", icon: Activity, hint: "Agent-to-agent threads" },
   { href: "/analytics", label: "Analytics", icon: Activity, hint: "Tasks + scores over time" },
   { href: "/deployments", label: "Deployments", icon: Activity, hint: "Shipped products" },
   { href: "/code", label: "Code", icon: Activity, hint: "GitHub repos" },

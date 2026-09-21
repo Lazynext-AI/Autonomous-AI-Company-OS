@@ -7,7 +7,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import {
   LayoutDashboard, Users, ListTodo, Brain, FileText, BookOpen,
   Activity, Key, Settings, Menu, X, BarChart3, Package, Bell, Search,
-  Rocket, Code2,
+  Rocket, Code2, MessageSquare,
 } from "lucide-react";
 
 const NAV = [
@@ -21,6 +21,7 @@ const NAV = [
   { href: "/briefings", label: "Briefings", icon: FileText },
   { href: "/knowledge", label: "Knowledge", icon: BookOpen },
   { href: "/feed", label: "Feed", icon: Activity },
+  { href: "/conversations", label: "Conversations", icon: MessageSquare },
   { href: "/deployments", label: "Deployments", icon: Rocket },
   { href: "/code", label: "Code", icon: Code2 },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
