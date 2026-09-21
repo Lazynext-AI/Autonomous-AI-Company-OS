@@ -20,5 +20,9 @@ index_name = "company-knowledge"
 [ai]
 binding = "AI"
 
+# Continuous agent loop — cron fires agentTick every 10 minutes.
+[triggers]
+crons = ["*/10 * * * *"]
+
 # Shared bearer token between Python agents/dashboard and this Worker.
 # Set with: npx wrangler secret put API_TOKEN

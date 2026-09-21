@@ -140,32 +140,9 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
       return handleBusPoll(env, await readBody(req));
 
     case "/agent/tick": {
-      // Stand-in brain: free-tier Workers AI Llama generates a real agent
-      // message until Atlas Cloud is funded.
-      if (!env.AI) return json({ error: "AI binding not configured" }, 503);
-      const AGENTS = [
-        { id: "ceo_agent", persona: "the CEO prioritising the product sprint" },
-        { id: "builder_agent", persona: "an engineer who just shipped a feature" },
-        { id: "market_researcher_agent", persona: "a researcher with fresh competitor intel" },
-        { id: "marketing_agent", persona: "a growth lead planning a Product Hunt launch" },
-      ];
-      const a = AGENTS[Math.floor(Math.random() * AGENTS.length)];
-      const res = await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are an agent inside an autonomous AI company building a product called LaunchDeck (AI landing-page generator on Cloudflare). Reply with ONE short status line, first person, under 25 words. No prefix, no quotes.",
-          },
-          { role: "user", content: `You are ${a.persona}. What are you doing right now?` },
-        ],
-        max_tokens: 60,
-      });
-      const text = (res as { response?: string }).response?.trim() ?? "";
-      if (!text) return json({ error: "empty model response" }, 502);
-      const payload = JSON.stringify({ from: a.id, agent: a.id, text, model: "workers-ai/llama-3.1-8b", demo: true });
-      const id = await publishToBus(env, ctx, "conversations", payload);
-      return json({ id, agent: a.id, text });
+      const out = await agentTick(env, ctx);
+      if ("error" in out) return json(out, 502);
+      return json(out);
     }
 
     case "/agent/generate": {
@@ -291,4 +268,40 @@ export default {
       return json({ error: e instanceof Error ? e.message : String(e) }, 500);
     }
   },
+
+  // Continuous agent loop: a Cloudflare cron tick makes agents act
+  // autonomously on a schedule until the Atlas runtime takes over.
+  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(agentTick(env, ctx).then(() => undefined).catch(() => {}));
+  },
 };
+
+// Stand-in brain: free-tier Workers AI Llama generates a real agent
+// message until Atlas Cloud is funded.
+const TICK_AGENTS = [
+  { id: "ceo_agent", persona: "the CEO prioritising the product sprint" },
+  { id: "builder_agent", persona: "an engineer who just shipped a feature" },
+  { id: "market_researcher_agent", persona: "a researcher with fresh competitor intel" },
+  { id: "marketing_agent", persona: "a growth lead planning a Product Hunt launch" },
+];
+
+async function agentTick(env: Env, ctx: ExecutionContext) {
+  if (!env.AI) return { error: "AI binding not configured" };
+  const a = TICK_AGENTS[Math.floor(Math.random() * TICK_AGENTS.length)];
+  const res = await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are an agent inside an autonomous AI company building a product called LaunchDeck (AI landing-page generator on Cloudflare). Reply with ONE short status line, first person, under 25 words. No prefix, no quotes.",
+      },
+      { role: "user", content: `You are ${a.persona}. What are you doing right now?` },
+    ],
+    max_tokens: 60,
+  });
+  const text = (res as { response?: string }).response?.trim() ?? "";
+  if (!text) return { error: "empty model response" };
+  const payload = JSON.stringify({ from: a.id, agent: a.id, text, model: "workers-ai/llama-3.3-70b", demo: true });
+  const id = await publishToBus(env, ctx, "conversations", payload);
+  return { id, agent: a.id, text };
+}
