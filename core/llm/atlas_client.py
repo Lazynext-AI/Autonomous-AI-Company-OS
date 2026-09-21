@@ -175,8 +175,15 @@ class AtlasClient:
                     raise RuntimeError(f"Atlas API error: {response.status_code} - {err[:200]}")
 
                 data = response.json()
+                # Atlas returns error envelopes (e.g. {"code":402,"msg":"insufficient
+                # balance"}) — sometimes with HTTP 200. Treat those as failures.
+                if data.get("code") and data.get("code") != 200:
+                    raise RuntimeError(f"Atlas error: {data.get('code')} {data.get('msg')}")
                 choices = data.get("choices", [])
                 if not choices:
+                    if self._fallback_available():
+                        logger.warning("atlas_empty_choices_fallback")
+                        return await self._workers_ai_fallback(messages, system_prompt, max_tokens)
                     return ""
                 message = choices[0].get("message", {})
                 content = message.get("content", "")
@@ -189,8 +196,45 @@ class AtlasClient:
                 return str(content)
             except Exception as e:
                 logger.error("atlas_chat_failed", model=model, error=str(e))
+                # Stand-in brain: if Atlas is unfunded/erroring, fall back to
+                # the company Worker's /agent/generate (Workers AI Llama) so
+                # `make dev` still runs the real agent loop. Delete this once
+                # Atlas has credits.
+                if self._fallback_available():
+                    logger.warning("atlas_fallback_to_workers_ai")
+                    return await self._workers_ai_fallback(messages, system_prompt, max_tokens)
                 raise
         raise RuntimeError(
             "Atlas Cloud: rate limit (429) exceeded after 5 retries. "
             "Check quota at atlascloud.ai or reduce CEO_LOOP_INTERVAL / CTO_LOOP_INTERVAL."
         )
+
+    def _fallback_available(self) -> bool:
+        return bool(
+            self._settings.cloudflare_api_url and self._settings.cloudflare_api_token
+        )
+
+    async def _workers_ai_fallback(
+        self,
+        messages: list[dict[str, str]],
+        system_prompt: str | None,
+        max_tokens: int,
+    ) -> str:
+        """Call the company Worker's /agent/generate (Workers AI Llama) as a
+        stand-in brain until Atlas Cloud is funded."""
+        client = await self._get_client()
+        prompt = "\n".join(
+            m.get("content", "") for m in messages if m.get("role") != "system"
+        ).strip() or "Respond."
+        r = await client.post(
+            f"{self._settings.cloudflare_api_url.rstrip('/')}/agent/generate",
+            headers={"authorization": f"Bearer {self._settings.cloudflare_api_token}"},
+            json={
+                "system": system_prompt or "You are an agent inside an autonomous AI company.",
+                "prompt": prompt,
+                "max_tokens": min(max_tokens, 2048),
+            },
+        )
+        if r.status_code != 200:
+            raise RuntimeError(f"workers-ai fallback failed: {r.status_code} {r.text[:200]}")
+        return r.json().get("text", "")

@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 from functools import lru_cache
-from pydantic import field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -25,8 +25,13 @@ class Settings(BaseSettings):
     cloudflare_api_token: str = ""
 
     # Atlas Cloud LLM API (OpenAI-compatible)
-    atlas_api_key: str = ""
-    atlas_base_url: str = "https://api.atlascloud.ai/v1"
+    atlas_api_key: str = Field(
+        "", validation_alias=AliasChoices("ATLAS_API_KEY", "ATLASCLOUD_API_KEY")
+    )
+    atlas_base_url: str = Field(
+        "https://api.atlascloud.ai/v1",
+        validation_alias=AliasChoices("ATLAS_BASE_URL", "ATLASCLOUD_BASE_URL"),
+    )
     atlas_model: str = "deepseek-ai/DeepSeek-V3.1-Terminus"
 
     # Cloudflare account credentials (wrangler / deployments / resource management)

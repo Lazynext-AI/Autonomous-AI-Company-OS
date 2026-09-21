@@ -156,7 +156,9 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
         ],
         max_tokens: b.max_tokens ?? 2048,
       });
-      const text = (res as { response?: string }).response?.trim() ?? "";
+      const raw = (res as { response?: unknown }).response;
+      const text =
+        (typeof raw === "string" ? raw : raw == null ? "" : JSON.stringify(raw)).trim();
       if (!text) return json({ error: "empty model response" }, 502);
       return json({ text });
     }
