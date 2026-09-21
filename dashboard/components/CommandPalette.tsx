@@ -9,6 +9,7 @@ import {
 
 const ITEMS = [
   { href: "/", label: "Overview", icon: LayoutDashboard, hint: "Dashboard home" },
+  { href: "/products", label: "Products", icon: Activity, hint: "What the company shipped" },
   { href: "/agents", label: "Agents", icon: Users, hint: "Crew status + scores" },
   { href: "/tasks", label: "Tasks", icon: ListTodo, hint: "Queued, working, done" },
   { href: "/brain", label: "Brain", icon: Brain, hint: "Mission, stack, blockers" },
