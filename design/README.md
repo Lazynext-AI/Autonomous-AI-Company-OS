@@ -5,27 +5,28 @@ file via MCP (`penpot.lazynext.com`). Source of truth is the Penpot file;
 these are snapshots for design-to-code and reference.
 
 ## Marketing
-landing-page · pricing · signup · login · forgot-password · verify-email ·
-docs-landing · status-page · 404 · 500 · legal · og-card · brand ·
-cookie-banner · changelog
+landing-page · pricing · pricing-table · signup · login · forgot-password ·
+verify-email · two-factor · docs-landing · status-page · 404 · 429 · 500 ·
+legal · og-card · brand · cookie-banner · changelog
 
 ## Onboarding
-onboarding-1..3
+onboarding-1..3 · onboarding-success
 
 ## App (dashboard surfaces)
 dashboard · products · product-detail · agents · agent-detail · tasks ·
-task-detail · empty-tasks · brain · briefings · knowledge · feed ·
-api-keys · webhooks · billing · settings · notifications · command-palette
+task-detail · empty-tasks · empty-states · brain · briefings · knowledge ·
+feed · api-keys · webhooks · billing · settings · account · integrations ·
+notifications · command-palette · search
 
 ## Modals
-modal-create-task · modal-create-api-key (shown-once) · modal-create-webhook
+modal-create-task · modal-create-api-key · modal-create-webhook
 
 ## Mobile
-mobile · mobile-nav · mobile-briefing · mobile-tasks · tablet
+mobile · mobile-nav · mobile-briefing · mobile-tasks · mobile-agents ·
+tablet
 
 ## Emails
-email-briefing · email-alert · email-welcome · email-reset
+email-briefing · email-alert · email-welcome · email-reset · email-invoice
 
 ## Design system
-design-system (8 colors, 7 type styles, 5 components + input/toggle) ·
-ui-states · terminal · site-map (index of all boards)
+design-system · ui-states · terminal · site-map
