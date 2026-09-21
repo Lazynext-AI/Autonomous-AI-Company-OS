@@ -8,7 +8,7 @@ these are snapshots for design-to-code and reference.
 landing-page · pricing · pricing-table · signup · login · forgot-password ·
 verify-email · two-factor · docs-landing · docs-detail · status-page ·
 status-history · 404 · 429 · 500 · legal · help-center · changelog · waitlist ·
-vs-hiring · og-card · brand · cookie-banner · maintenance-banner
+vs-hiring · og-card · ad-creative · brand · cookie-banner · maintenance-banner
 
 ## Onboarding
 onboarding-1..3 · onboarding-success
@@ -21,7 +21,8 @@ account · integrations · team · audit-log · domains · notifications ·
 command-palette · search · avatar-menu · shortcuts ·
 deploy-detail · sandbox · logs · code-review · task-comments ·
 webhook-delivery · email-prefs · feature-flags · analytics ·
-product-switcher · notification-detail · tasks-kanban
+product-switcher · notification-detail · tasks-kanban ·
+code-viewer · agent-conversation · knowledge-file · bus-channel
 
 ## Modals
 modal-create-task · modal-create-api-key · modal-create-webhook ·
@@ -38,7 +39,7 @@ email-briefing · email-alert · email-welcome · email-reset · email-invoice
 ## Design system
 design-system · ui-states · terminal · site-map ·
 buttons · inputs · icons · spacing-grid · motion · accessibility ·
-cards · tables · form-elements · charts
+cards · tables · form-elements · charts · light-theme
 
 ## Tokens
 tokens.json — machine-readable design tokens (colors, type, space,
