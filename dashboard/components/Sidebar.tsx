@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Users, ListTodo, Brain, FileText, BookOpen,
   Activity, Key, Settings, Menu, X, BarChart3, Package, Bell, Search,
   Rocket, Code2, MessageSquare, TerminalSquare, ShieldCheck, ScrollText,
-  LogOut,
+  LogOut, CreditCard,
 } from "lucide-react";
 
 const NAV = [
@@ -26,6 +26,9 @@ const NAV = [
   { href: "/logs", label: "Logs", icon: TerminalSquare },
   { href: "/approvals", label: "Approvals", icon: ShieldCheck },
   { href: "/audit", label: "Audit", icon: ScrollText },
+  { href: "/sandbox", label: "Sandbox", icon: TerminalSquare },
+  { href: "/team", label: "Team", icon: Users },
+  { href: "/billing", label: "Billing", icon: CreditCard },
   { href: "/deployments", label: "Deployments", icon: Rocket },
   { href: "/code", label: "Code", icon: Code2 },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
