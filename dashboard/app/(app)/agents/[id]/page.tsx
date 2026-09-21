@@ -30,6 +30,8 @@ export default function AgentDetailPage() {
             episodic_memory: parseJson(mem.episodic_memory, []),
             semantic_memory: parseJson(mem.semantic_memory, {}),
             skills: parseJson(mem.skills, []),
+            patterns_learned: parseJson(mem.patterns_learned, []),
+            reward_history: parseJson(mem.reward_history, []),
           });
         }
         setTasks(t);
@@ -106,6 +108,41 @@ export default function AgentDetailPage() {
             </div>
           ) : (
             <p className="text-sm text-muted">Episodic memory builds over time.</p>
+          )}
+        </Card>
+
+        <Card>
+          <h2 className="text-sm font-semibold mb-4">Patterns learned</h2>
+          {(agent.patterns_learned || []).length ? (
+            <div className="space-y-2.5">
+              {agent.patterns_learned.slice(-8).reverse().map((p: any, i: number) => (
+                <div key={i} className="text-xs text-fg/80 bg-input rounded-lg px-3 py-2">
+                  {typeof p === "string" ? p : p.pattern || JSON.stringify(p)}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted">Strategies the agent discovers appear here.</p>
+          )}
+        </Card>
+
+        <Card>
+          <h2 className="text-sm font-semibold mb-4">Reward history</h2>
+          {(agent.reward_history || []).length ? (
+            <div className="space-y-2">
+              {agent.reward_history.slice(-8).reverse().map((r: any, i: number) => (
+                <div key={i} className="flex items-center gap-3 text-xs">
+                  <span className={`font-mono font-bold ${r.reward >= 0 ? "text-ok" : "text-bad"}`}>
+                    {r.reward >= 0 ? "+" : ""}{r.reward}
+                  </span>
+                  <span className="text-fg/80 flex-1 truncate">
+                    {r.reason || r.task || "task outcome"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted">Scored outcomes accumulate as the agent works.</p>
           )}
         </Card>
 
