@@ -65,7 +65,7 @@ export default function AgentDetailPage() {
 
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-50 capitalize">
+          <h1 className="text-2xl font-bold text-fg capitalize">
             {(agent.role || agent.agent_id).replace(/_/g, " ")}
           </h1>
           <p className="text-sm text-muted mt-1">{agent.agent_id}</p>
@@ -99,7 +99,7 @@ export default function AgentDetailPage() {
           {episodes.length ? (
             <div className="space-y-2.5">
               {episodes.map((e: any, i: number) => (
-                <div key={i} className="text-xs text-zinc-50/80 bg-input rounded-lg px-3 py-2">
+                <div key={i} className="text-xs text-fg/80 bg-input rounded-lg px-3 py-2">
                   {typeof e === "string" ? e : e.event || JSON.stringify(e)}
                 </div>
               ))}
@@ -118,7 +118,7 @@ export default function AgentDetailPage() {
               <Link key={t.task_id} href={`/tasks/${t.task_id}`}
                 className="flex items-center gap-3 px-5 py-3 border-b border-border last:border-0 hover:bg-cardHover transition">
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm text-zinc-50 truncate">{t.description}</div>
+                  <div className="text-sm text-fg truncate">{t.description}</div>
                   <div className="text-xs text-muted">{timeAgo(t.created_at)}</div>
                 </div>
                 {t.performance_score != null && (

@@ -79,7 +79,7 @@ export default function NotificationsPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <div className="text-sm font-semibold text-zinc-50 truncate">{n.title}</div>
+                  <div className="text-sm font-semibold text-fg truncate">{n.title}</div>
                   <span className="text-xs text-muted shrink-0 ml-auto">{timeAgo(n.at)}</span>
                 </div>
                 <div className="text-xs text-muted mt-0.5 line-clamp-2">{n.body}</div>

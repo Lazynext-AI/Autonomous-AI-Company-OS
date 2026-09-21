@@ -75,7 +75,7 @@ export default function AgentsPage() {
                       {(a.role || a.agent_id)[0].toUpperCase()}
                     </div>
                     <div>
-                      <div className="text-sm font-semibold text-zinc-50 capitalize">
+                      <div className="text-sm font-semibold text-fg capitalize">
                         {(a.role || a.agent_id).replace(/_/g, " ")}
                       </div>
                       <div className="text-xs text-muted">{a.agent_id}</div>

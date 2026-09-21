@@ -86,7 +86,7 @@ export default function CommandPalette() {
               if (e.key === "Enter" && results[sel]) go(results[sel].href);
             }}
             placeholder="Go to…"
-            className="flex-1 bg-transparent text-sm text-zinc-50 outline-none placeholder:text-muted"
+            className="flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-muted"
           />
           <kbd className="text-[10px] text-muted bg-input px-1.5 py-0.5 rounded">esc</kbd>
         </div>
@@ -104,7 +104,7 @@ export default function CommandPalette() {
               >
                 <Icon className={`w-4 h-4 ${i === sel ? "text-accentSoft" : "text-muted"}`} />
                 <div>
-                  <div className={`text-sm font-medium ${i === sel ? "text-accentSoft" : "text-zinc-50"}`}>
+                  <div className={`text-sm font-medium ${i === sel ? "text-accentSoft" : "text-fg"}`}>
                     {item.label}
                   </div>
                   <div className="text-xs text-muted">{item.hint}</div>

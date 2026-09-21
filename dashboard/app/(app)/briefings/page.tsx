@@ -53,13 +53,13 @@ export default function BriefingsPage() {
                   {ICONS[b.kind] || <FileText className="w-4 h-4 text-muted" />}
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm font-semibold text-zinc-50">{b.subject}</div>
+                  <div className="text-sm font-semibold text-fg">{b.subject}</div>
                   <div className="text-xs text-muted capitalize">
                     {b.kind.replace(/_/g, " ")} · {timeAgo(b.created_at)}
                   </div>
                 </div>
               </div>
-              <div className="text-sm text-zinc-50/80 whitespace-pre-wrap leading-relaxed">
+              <div className="text-sm text-fg/80 whitespace-pre-wrap leading-relaxed">
                 {b.content}
               </div>
             </Card>

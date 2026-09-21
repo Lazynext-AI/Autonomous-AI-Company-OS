@@ -70,7 +70,7 @@ export default function KnowledgePage() {
                   📄
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-zinc-50 truncate">{file}</div>
+                  <div className="text-sm font-semibold text-fg truncate">{file}</div>
                   <div className="text-xs text-muted">
                     {list.length} chunk{list.length > 1 ? "s" : ""} · {list[0].category} · {timeAgo(list[0].ingested_at)}
                   </div>

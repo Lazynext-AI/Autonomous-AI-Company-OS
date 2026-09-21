@@ -2,12 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Design tokens — dark (default) */
+:root {
+  --bg: #0A0A0B;
+  --card: #141419;
+  --cardHover: #1A1A21;
+  --border: #26262E;
+  --input: #0E0E13;
+  --accent: #8B5CF6;
+  --accentSoft: #A78BFA;
+  --accentDim: #3B2A5E;
+  --accentBg: #1E1B2E;
+  --muted: #9C9CAA;
+  --ok: #22C55E;
+  --okBg: #0E2A1E;
+  --warn: #F59E0B;
+  --warnBg: #241F10;
+  --bad: #EF4444;
+  --badBg: #2A1215;
+  --text: #FAFAFA;
+}
+
+/* Light theme — matches Penpot Light Theme spec */
+[data-theme="light"] {
+  --bg: #FAFAFA;
+  --card: #FFFFFF;
+  --cardHover: #F4F4F5;
+  --border: #E4E4E7;
+  --input: #F4F4F5;
+  --accent: #7C3AED;
+  --accentSoft: #6D28D9;
+  --accentDim: #DDD6FE;
+  --accentBg: #EDE9FE;
+  --muted: #71717A;
+  --ok: #16A34A;
+  --okBg: #DCFCE7;
+  --warn: #D97706;
+  --warnBg: #FEF3C7;
+  --bad: #DC2626;
+  --badBg: #FEE2E2;
+  --text: #18181B;
+}
+
 @layer base {
   * {
     @apply border-border;
   }
   body {
-    @apply bg-bg text-zinc-50;
+    @apply bg-bg;
+    color: var(--text);
   }
 }
 

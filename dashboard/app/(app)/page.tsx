@@ -82,7 +82,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
         <Card>
-          <h2 className="text-sm font-semibold text-zinc-50 mb-4 flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-fg mb-4 flex items-center gap-2">
             <Zap className="w-4 h-4 text-accentSoft" /> Task pipeline
           </h2>
           {[
@@ -98,7 +98,7 @@ export default function DashboardPage() {
           ))}
         </Card>
         <Card>
-          <h2 className="text-sm font-semibold text-zinc-50 mb-4 flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-fg mb-4 flex items-center gap-2">
             <Clock className="w-4 h-4 text-accentSoft" /> Agents
           </h2>
           {agentList.length === 0 ? (
@@ -106,24 +106,24 @@ export default function DashboardPage() {
           ) : (
             agentList.slice(0, 6).map(([id, s]) => (
               <div key={id} className="flex justify-between py-1.5 text-sm">
-                <span className="text-zinc-50">{id.replace(/_/g, " ")}</span>
+                <span className="text-fg">{id.replace(/_/g, " ")}</span>
                 <StatusBadge status={s?.status || "idle"} />
               </div>
             ))
           )}
         </Card>
         <Card>
-          <h2 className="text-sm font-semibold text-zinc-50 mb-4 flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-fg mb-4 flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-accentSoft" /> Company
           </h2>
           <div className="space-y-3 text-sm">
             <div>
               <div className="text-muted text-xs">Mission</div>
-              <div className="text-zinc-50 mt-0.5">{brain?.mission || "—"}</div>
+              <div className="text-fg mt-0.5">{brain?.mission || "—"}</div>
             </div>
             <div>
               <div className="text-muted text-xs">Deploys</div>
-              <div className="text-zinc-50 mt-0.5">{metrics.deploy_count ?? 0}</div>
+              <div className="text-fg mt-0.5">{metrics.deploy_count ?? 0}</div>
             </div>
           </div>
         </Card>
@@ -151,7 +151,7 @@ export default function DashboardPage() {
                 <Clock className="w-4 h-4 text-warn shrink-0" />
               )}
               <div className="flex-1 min-w-0">
-                <div className="text-sm text-zinc-50 truncate">{t.description}</div>
+                <div className="text-sm text-fg truncate">{t.description}</div>
                 <div className="text-xs text-muted mt-0.5">
                   {t.agent_id.replace(/_/g, " ")} · {timeAgo(t.created_at)}
                 </div>

@@ -47,7 +47,7 @@ export default function SearchPage() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search tasks, agents, docs…"
-          className="w-full bg-card border border-border rounded-[14px] pl-11 pr-4 py-3.5 text-sm text-zinc-50 outline-none focus:border-accent transition"
+          className="w-full bg-card border border-border rounded-[14px] pl-11 pr-4 py-3.5 text-sm text-fg outline-none focus:border-accent transition"
         />
       </div>
 
@@ -69,7 +69,7 @@ export default function SearchPage() {
                   <Link key={t.task_id} href={`/tasks/${t.task_id}`}
                     className="flex items-center gap-3 px-4 py-3 border-b border-border last:border-0 hover:bg-cardHover transition">
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm text-zinc-50 truncate">{t.description}</div>
+                      <div className="text-sm text-fg truncate">{t.description}</div>
                       <div className="text-xs text-muted">{t.agent_id} · {timeAgo(t.created_at)}</div>
                     </div>
                     <StatusBadge status={t.status} />
@@ -91,7 +91,7 @@ export default function SearchPage() {
                       {(a.role || a.agent_id)[0].toUpperCase()}
                     </div>
                     <div className="flex-1">
-                      <div className="text-sm text-zinc-50 capitalize">{(a.role || a.agent_id).replace(/_/g, " ")}</div>
+                      <div className="text-sm text-fg capitalize">{(a.role || a.agent_id).replace(/_/g, " ")}</div>
                       <div className="text-xs text-muted">{a.agent_id}</div>
                     </div>
                     <span className="text-xs text-muted">score {a.performance_score?.toFixed(0)}</span>
@@ -109,7 +109,7 @@ export default function SearchPage() {
                 {hits.docs.map((d) => (
                   <Link key={d.id} href="/knowledge"
                     className="block px-4 py-3 border-b border-border last:border-0 hover:bg-cardHover transition">
-                    <div className="text-sm text-zinc-50">{d.filename}</div>
+                    <div className="text-sm text-fg">{d.filename}</div>
                     <div className="text-xs text-muted line-clamp-1">{d.content}</div>
                   </Link>
                 ))}

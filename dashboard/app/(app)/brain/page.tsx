@@ -52,7 +52,7 @@ export default function BrainPage() {
             {[["Name", brain?.product_name], ["Mission", brain?.mission], ["Description", brain?.product_description]].map(([k, v]) => (
               <div key={k}>
                 <div className="text-xs text-muted">{k}</div>
-                <div className="text-zinc-50 mt-0.5">{v || "—"}</div>
+                <div className="text-fg mt-0.5">{v || "—"}</div>
               </div>
             ))}
           </div>
@@ -71,7 +71,7 @@ export default function BrainPage() {
             ].map(([l, v]) => (
               <div key={l}>
                 <div className="text-xs text-muted">{l}</div>
-                <div className="text-lg font-semibold text-zinc-50">{v}</div>
+                <div className="text-lg font-semibold text-fg">{v}</div>
               </div>
             ))}
           </div>
@@ -85,7 +85,7 @@ export default function BrainPage() {
             Object.entries(techStack).map(([k, v]) => (
               <div key={k} className="flex justify-between py-1.5 text-sm">
                 <span className="text-muted capitalize">{k}</span>
-                <span className="text-zinc-50">{String(v)}</span>
+                <span className="text-fg">{String(v)}</span>
               </div>
             ))
           )}
@@ -98,7 +98,7 @@ export default function BrainPage() {
               <p className="text-sm text-muted">Nothing shipped yet.</p>
             ) : (
               shipped.map((f: any, i: number) => (
-                <div key={i} className="bg-input rounded-lg px-3 py-2 text-xs text-zinc-50">
+                <div key={i} className="bg-input rounded-lg px-3 py-2 text-xs text-fg">
                   {typeof f === "string" ? f : f.description || JSON.stringify(f)}
                 </div>
               ))
@@ -113,7 +113,7 @@ export default function BrainPage() {
               <p className="text-sm text-muted">None open.</p>
             ) : (
               bugs.map((b: any, i: number) => (
-                <div key={i} className="bg-badBg rounded-lg px-3 py-2 text-xs text-zinc-50">
+                <div key={i} className="bg-badBg rounded-lg px-3 py-2 text-xs text-fg">
                   <span className="text-bad font-semibold">{b.severity || "BUG"}</span>{" "}
                   {typeof b === "string" ? b : b.description || JSON.stringify(b)}
                 </div>
@@ -129,7 +129,7 @@ export default function BrainPage() {
               <p className="text-sm text-muted">Clear — nothing blocking.</p>
             ) : (
               blockers.map((b: any, i: number) => (
-                <div key={i} className="bg-warnBg rounded-lg px-3 py-2 text-xs text-zinc-50">
+                <div key={i} className="bg-warnBg rounded-lg px-3 py-2 text-xs text-fg">
                   {typeof b === "string" ? b : b.description || JSON.stringify(b)}
                 </div>
               ))

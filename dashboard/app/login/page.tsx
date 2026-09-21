@@ -47,7 +47,7 @@ export default function LoginPage() {
               value={pass}
               onChange={(e) => setPass(e.target.value)}
               autoFocus
-              className="mt-1.5 w-full bg-input border border-border rounded-lg px-3.5 py-2.5 text-sm text-zinc-50 outline-none focus:border-accent transition"
+              className="mt-1.5 w-full bg-input border border-border rounded-lg px-3.5 py-2.5 text-sm text-fg outline-none focus:border-accent transition"
               placeholder="••••••••"
             />
           </div>

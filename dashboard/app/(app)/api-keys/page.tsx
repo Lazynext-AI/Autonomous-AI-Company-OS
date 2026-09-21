@@ -60,7 +60,7 @@ export default function ApiKeysPage() {
               <div className="flex items-center gap-2.5 min-w-0">
                 <Key className="w-3.5 h-3.5 text-accentSoft shrink-0" />
                 <div className="min-w-0">
-                  <div className="text-sm text-zinc-50 font-mono truncate">{k.key_prefix}…</div>
+                  <div className="text-sm text-fg font-mono truncate">{k.key_prefix}…</div>
                   <div className="text-xs text-muted truncate">{k.name}</div>
                 </div>
               </div>

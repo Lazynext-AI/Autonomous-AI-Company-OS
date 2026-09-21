@@ -57,7 +57,7 @@ export default function WebhooksPage() {
               <div key={e.id} className="px-5 py-3.5 border-b border-border last:border-0">
                 <div className="flex items-center gap-2">
                   <Webhook className="w-3.5 h-3.5 text-accentSoft" />
-                  <span className="text-sm text-zinc-50 font-mono truncate">{e.url}</span>
+                  <span className="text-sm text-fg font-mono truncate">{e.url}</span>
                   <span className={`ml-auto text-xs font-semibold ${e.active ? "text-ok" : "text-muted"}`}>
                     {e.active ? "on" : "off"}
                   </span>

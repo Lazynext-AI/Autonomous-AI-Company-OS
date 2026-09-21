@@ -30,7 +30,7 @@ export default function SettingsPage() {
                 <i.icon className="w-4 h-4 text-accentSoft" />
               </div>
               <div className="flex-1">
-                <div className="text-sm font-semibold text-zinc-50">{i.name}</div>
+                <div className="text-sm font-semibold text-fg">{i.name}</div>
                 <div className="text-xs text-muted">{i.desc}</div>
               </div>
               <span className={`text-xs font-semibold ${i.ok ? "text-ok" : "text-warn"}`}>
@@ -45,11 +45,11 @@ export default function SettingsPage() {
           <div className="space-y-3 text-sm">
             <div>
               <div className="text-xs text-muted">Platform</div>
-              <div className="text-zinc-50">Lazynext — The Autonomous AI Company OS</div>
+              <div className="text-fg">Lazynext — The Autonomous AI Company OS</div>
             </div>
             <div>
               <div className="text-xs text-muted">Runtime</div>
-              <div className="text-zinc-50">Local agents → Cloudflare Workers/D1</div>
+              <div className="text-fg">Local agents → Cloudflare Workers/D1</div>
             </div>
             <div>
               <div className="text-xs text-muted">API</div>

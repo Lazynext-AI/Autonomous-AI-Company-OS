@@ -23,7 +23,7 @@ export default function SetupChecklist({ agentsActive }: { agentsActive: number 
     <div className="bg-accentBg border border-accent/30 rounded-[14px] p-5 mb-6">
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h2 className="text-sm font-bold text-zinc-50">Set up your company</h2>
+          <h2 className="text-sm font-bold text-fg">Set up your company</h2>
           <p className="text-xs text-muted mt-0.5">4 steps to a running company</p>
         </div>
         <button
@@ -31,7 +31,7 @@ export default function SetupChecklist({ agentsActive }: { agentsActive: number 
             localStorage.setItem("lz_setup_dismissed", "1");
             setDismissed(true);
           }}
-          className="text-muted hover:text-zinc-50"
+          className="text-muted hover:text-fg"
           aria-label="Dismiss"
         >
           <X className="w-4 h-4" />
@@ -44,7 +44,7 @@ export default function SetupChecklist({ agentsActive }: { agentsActive: number 
               {i + 1}
             </div>
             <div>
-              <div className="text-sm font-medium text-zinc-50">{s.label}</div>
+              <div className="text-sm font-medium text-fg">{s.label}</div>
               <div className="text-xs text-muted">{s.detail}</div>
             </div>
           </div>

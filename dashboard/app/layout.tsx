@@ -26,7 +26,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" data-theme="dark" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{document.documentElement.dataset.theme=localStorage.getItem('lz_theme')||'dark'}catch(e){}`,
+          }}
+        />
+      </head>
       <body className="antialiased bg-bg">{children}</body>
     </html>
   );

@@ -72,7 +72,7 @@ export default function TaskDetailPage() {
 
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-xl font-bold text-zinc-50 max-w-2xl">{task.description}</h1>
+          <h1 className="text-xl font-bold text-fg max-w-2xl">{task.description}</h1>
           <p className="text-sm text-muted mt-1">{task.agent_id.replace(/_/g, " ")}</p>
         </div>
         <StatusBadge status={task.status} />
@@ -82,7 +82,7 @@ export default function TaskDetailPage() {
         <Card className="lg:col-span-2">
           <h2 className="text-sm font-semibold mb-3">Result</h2>
           {task.result ? (
-            <pre className="bg-input rounded-lg p-4 text-xs text-zinc-50/80 whitespace-pre-wrap overflow-x-auto">
+            <pre className="bg-input rounded-lg p-4 text-xs text-fg/80 whitespace-pre-wrap overflow-x-auto">
               {task.result}
             </pre>
           ) : (
@@ -104,7 +104,7 @@ export default function TaskDetailPage() {
             {meta.map(([k, v]) => (
               <div key={k} className="flex justify-between text-sm">
                 <span className="text-muted">{k}</span>
-                <span className="text-zinc-50 text-right">{v}</span>
+                <span className="text-fg text-right">{v}</span>
               </div>
             ))}
           </div>

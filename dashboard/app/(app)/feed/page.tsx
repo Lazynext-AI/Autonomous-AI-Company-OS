@@ -65,7 +65,7 @@ export default function FeedPage() {
                 <span className="text-xs font-semibold text-accentSoft shrink-0">
                   {m.channel}
                 </span>
-                <span className="text-sm text-zinc-50/80 truncate">{m.payload}</span>
+                <span className="text-sm text-fg/80 truncate">{m.payload}</span>
               </div>
             </Card>
           ))}

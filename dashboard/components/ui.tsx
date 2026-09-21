@@ -12,7 +12,7 @@ export function PageHeader({
   return (
     <div className="flex items-start justify-between mb-8">
       <div>
-        <h1 className="text-2xl font-bold text-zinc-50">{title}</h1>
+        <h1 className="text-2xl font-bold text-fg">{title}</h1>
         {subtitle && <p className="text-sm text-muted mt-1">{subtitle}</p>}
       </div>
       {children}
@@ -50,7 +50,7 @@ export function StatCard({
     <Card>
       <div className="text-xs text-muted">{label}</div>
       <div className="flex items-baseline gap-3 mt-2">
-        <div className="text-2xl font-bold text-zinc-50">{value}</div>
+        <div className="text-2xl font-bold text-fg">{value}</div>
         {delta && (
           <div className={`text-xs font-medium ${up ? "text-ok" : "text-muted"}`}>
             {delta}
@@ -93,7 +93,7 @@ export function Empty({ title, hint }: { title: string; hint?: string }) {
   return (
     <div className="border border-dashed border-border rounded-[14px] py-16 text-center">
       <div className="text-3xl mb-3">◌</div>
-      <div className="text-zinc-50 font-medium">{title}</div>
+      <div className="text-fg font-medium">{title}</div>
       {hint && <div className="text-sm text-muted mt-1">{hint}</div>}
     </div>
   );

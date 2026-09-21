@@ -55,7 +55,7 @@ export default function TasksPage() {
               className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition ${
                 filter === f
                   ? "bg-accent text-white"
-                  : "bg-card text-muted hover:text-zinc-50 border border-border"
+                  : "bg-card text-muted hover:text-fg border border-border"
               }`}
             >
               {f.replace("_", " ")}
@@ -79,7 +79,7 @@ export default function TasksPage() {
             >
               <div className="flex items-center gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm text-zinc-50">{t.description}</div>
+                  <div className="text-sm text-fg">{t.description}</div>
                   <div className="text-xs text-muted mt-1">
                     {t.agent_id.replace(/_/g, " ")} · {t.task_id} · {timeAgo(t.created_at)}
                     {t.attempts > 1 && ` · ${t.attempts} attempts`}
