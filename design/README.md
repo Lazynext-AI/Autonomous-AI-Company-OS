@@ -21,7 +21,7 @@ account · integrations · team · audit-log · domains · notifications ·
 command-palette · search · avatar-menu · shortcuts ·
 deploy-detail · sandbox · logs · code-review · task-comments ·
 webhook-delivery · email-prefs · feature-flags · analytics ·
-product-switcher · notification-detail
+product-switcher · notification-detail · tasks-kanban
 
 ## Modals
 modal-create-task · modal-create-api-key · modal-create-webhook ·
@@ -37,7 +37,8 @@ email-briefing · email-alert · email-welcome · email-reset · email-invoice
 
 ## Design system
 design-system · ui-states · terminal · site-map ·
-buttons · inputs · icons · spacing-grid · motion · accessibility
+buttons · inputs · icons · spacing-grid · motion · accessibility ·
+cards · tables · form-elements · charts
 
 ## Tokens
 tokens.json — machine-readable design tokens (colors, type, space,
