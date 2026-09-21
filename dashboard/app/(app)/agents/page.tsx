@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { queryApi, parseJson } from "@/lib/api";
 import Link from "next/link";
 import { PageHeader, Card, StatusBadge, Empty, timeAgo } from "@/components/ui";
-import { CheckCircle2, AlertCircle } from "lucide-react";
+import { CheckCircle2, AlertCircle, Zap } from "lucide-react";
+import { toast } from "@/components/Toast";
 
 interface AgentMemory {
   agent_id: string;
@@ -21,6 +22,16 @@ export default function AgentsPage() {
   const [agents, setAgents] = useState<AgentMemory[]>([]);
   const [statuses, setStatuses] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
+  const [ticking, setTicking] = useState(false);
+
+  const tick = async () => {
+    setTicking(true);
+    const r = await fetch("/api/tick", { method: "POST" });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok) toast(`${d.agent}: "${d.text}"`);
+    else toast("Tick failed");
+    setTicking(false);
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -52,7 +63,15 @@ export default function AgentsPage() {
 
   return (
     <>
-      <PageHeader title="Agents" subtitle="Your crew — status, scores, current work." />
+      <PageHeader title="Agents" subtitle="Your crew — status, scores, current work.">
+        <button
+          onClick={tick}
+          disabled={ticking}
+          className="inline-flex items-center gap-2 bg-accent hover:bg-accentSoft disabled:opacity-50 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition"
+        >
+          <Zap className="w-4 h-4" /> {ticking ? "Ticking…" : "Agent tick"}
+        </button>
+      </PageHeader>
 
       {agents.length === 0 && !loading ? (
         <Empty

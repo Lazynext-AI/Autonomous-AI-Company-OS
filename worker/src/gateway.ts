@@ -8,6 +8,7 @@ export interface Env {
   DB: D1Database;
   EPHEMERAL: KVNamespace;
   VECTORS: VectorizeIndex;
+  AI?: Ai;
   API_TOKEN?: string;
 }
 

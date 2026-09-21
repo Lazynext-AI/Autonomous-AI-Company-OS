@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { PageHeader, Card, Empty, timeAgo } from "@/components/ui";
 import { toast } from "@/components/Toast";
-import { TerminalSquare, Plus, Trash2 } from "lucide-react";
+import { TerminalSquare, Plus, Trash2, FolderOpen, FileText, ChevronDown, ChevronRight } from "lucide-react";
 
 interface Sandbox {
   sandboxID: string;
@@ -50,6 +50,23 @@ export default function SandboxPage() {
     load();
   };
 
+  const [open, setOpen] = useState<string | null>(null);
+  const [files, setFiles] = useState<Record<string, any[]>>({});
+  const [fileContent, setFileContent] = useState<{ path: string; content: string } | null>(null);
+
+  const browse = async (id: string, path = "/home/user") => {
+    const r = await fetch(`/api/sandbox/files?id=${id}&path=${encodeURIComponent(path)}`);
+    const d = await r.json();
+    setFiles((f) => ({ ...f, [id]: d.entries ?? [] }));
+    setOpen(id);
+  };
+
+  const readFile = async (id: string, path: string) => {
+    const r = await fetch(`/api/sandbox/files?id=${id}&file=${encodeURIComponent(path)}`);
+    const d = await r.json();
+    setFileContent({ path, content: d.content ?? "(empty)" });
+  };
+
   return (
     <>
       <PageHeader
@@ -89,12 +106,61 @@ export default function SandboxPage() {
                   <div className="text-xs text-muted">up {timeAgo(s.startedAt)}</div>
                 )}
               </div>
-              <button onClick={() => kill(s.sandboxID)} className="text-muted hover:text-bad transition shrink-0" aria-label="Kill">
-                <Trash2 className="w-4 h-4" />
-              </button>
+              <div className="flex gap-1 shrink-0">
+                <button
+                  onClick={() => (open === s.sandboxID ? setOpen(null) : browse(s.sandboxID))}
+                  className="text-muted hover:text-accentSoft transition"
+                  aria-label="Browse files"
+                >
+                  <FolderOpen className="w-4 h-4" />
+                </button>
+                <button onClick={() => kill(s.sandboxID)} className="text-muted hover:text-bad transition" aria-label="Kill">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </Card>
           ))}
         </div>
+      )}
+
+      {/* live file browser — reads the real sandbox filesystem via envd */}
+      {open && (
+        <Card className="mt-4 max-w-4xl p-0 overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-border flex items-center gap-2">
+            <FolderOpen className="w-4 h-4 text-accentSoft" />
+            <span className="text-sm font-semibold font-mono">/home/user</span>
+            <span className="text-xs text-muted ml-auto font-mono">{open}</span>
+          </div>
+          <div className="max-h-64 overflow-y-auto">
+            {(files[open] ?? []).length === 0 ? (
+              <p className="px-5 py-4 text-xs text-muted">Empty directory</p>
+            ) : (
+              (files[open] ?? []).map((e: any) => (
+                <button
+                  key={e.path}
+                  onClick={() => (e.type === "FILE_TYPE_DIRECTORY" ? browse(open, e.path) : readFile(open, e.path))}
+                  className="w-full flex items-center gap-2.5 px-5 py-2.5 text-left hover:bg-cardHover transition border-b border-border last:border-0"
+                >
+                  {e.type === "FILE_TYPE_DIRECTORY" ? (
+                    <FolderOpen className="w-3.5 h-3.5 text-accentSoft shrink-0" />
+                  ) : (
+                    <FileText className="w-3.5 h-3.5 text-muted shrink-0" />
+                  )}
+                  <span className="text-xs font-mono text-fg truncate">{e.name}</span>
+                  <span className="text-[10px] text-muted ml-auto">{e.size}b</span>
+                </button>
+              ))
+            )}
+          </div>
+          {fileContent && (
+            <div className="border-t border-border">
+              <div className="px-5 py-2.5 text-xs font-mono text-muted border-b border-border">{fileContent.path}</div>
+              <pre className="px-5 py-4 text-xs font-mono text-fg whitespace-pre-wrap max-h-48 overflow-y-auto">
+                {fileContent.content}
+              </pre>
+            </div>
+          )}
+        </Card>
       )}
 
       <p className="text-xs text-muted mt-5 max-w-4xl">
