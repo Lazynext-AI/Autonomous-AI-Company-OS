@@ -4,5 +4,19 @@ SVG exports of the Lazynext design system, generated from the live Penpot
 file via MCP (`penpot.lazynext.com`). Source of truth is the Penpot file;
 these are snapshots for design-to-code and reference.
 
-Boards: landing-page, pricing, onboarding-1..3, login, dashboard,
-mobile, api-keys, email-briefing, design-system.
+## Marketing
+landing-page · pricing · signup · login · docs-landing · status-page · 404
+
+## Onboarding
+onboarding-1..3 — connect accounts → pick product → launch
+
+## App (dashboard surfaces)
+dashboard (overview) · agents · tasks · task-detail · brain · briefings ·
+knowledge · feed · api-keys · settings · mobile
+
+## Emails
+email-briefing (weekly founder report) · email-alert (health alerts)
+
+## Design system
+design-system — 8 color tokens, 7 type styles, 5 components
+(Button/Primary, Card/Default, Badge/Status, Input, Toggle)

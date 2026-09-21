@@ -3,7 +3,7 @@
   </style>
   <g id="shape-437b15bb-5405-8047-8008-ab8ed2279f6d">
     <defs>
-      <clipPath id="frame-clip-437b15bb-5405-8047-8008-ab8ed2279f6d-render-2495" class="frame-clip frame-clip-def">
+      <clipPath id="frame-clip-437b15bb-5405-8047-8008-ab8ed2279f6d-render-1996" class="frame-clip frame-clip-def">
         <rect rx="0" ry="0" x="-1500" y="0" width="1100" height="1050" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)">
         </rect>
       </clipPath>
@@ -11,7 +11,7 @@
     <g class="frame-container-wrapper">
       <g class="frame-container-blur">
         <g class="frame-container-shadows">
-          <g clip-path="url(#frame-clip-437b15bb-5405-8047-8008-ab8ed2279f6d-render-2495)" fill="none">
+          <g clip-path="url(#frame-clip-437b15bb-5405-8047-8008-ab8ed2279f6d-render-1996)" fill="none">
             <g class="fills" id="fills-437b15bb-5405-8047-8008-ab8ed2279f6d">
               <rect rx="0" ry="0" x="-1500" y="0" width="1100" height="1050" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="frame-background" style="fill:#0a0a0b">
               </rect>
@@ -20,7 +20,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed22b82f0">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="40" width="321" height="39" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="320.171875" height="41.5" id="fill-0-render-2496-0">
+                    <pattern patternUnits="objectBoundingBox" width="320.171875" height="41.5" id="fill-0-render-1997-0">
                       <g>
                         <rect width="320.171875" height="41.5" style="fill:#fafafa">
                         </rect>
@@ -35,7 +35,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed22ec789">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="85" width="289" height="17" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="288.96875" height="18.5" id="fill-0-render-2497-0">
+                    <pattern patternUnits="objectBoundingBox" width="288.96875" height="18.5" id="fill-0-render-1998-0">
                       <g>
                         <rect width="288.96875" height="18.5" style="fill:#9c9caa">
                         </rect>
@@ -50,7 +50,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed231b33e">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="140" width="54" height="24" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="53.3125" height="26" id="fill-0-render-2498-0">
+                    <pattern patternUnits="objectBoundingBox" width="53.3125" height="26" id="fill-0-render-1999-0">
                       <g>
                         <rect width="53.3125" height="26" style="fill:#fafafa">
                         </rect>
@@ -67,7 +67,7 @@
                   <rect rx="10" ry="10" x="-1452" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:#0a0a0b">
                   </rect>
                 </g>
-                <g id="strokes-437b15bb-5405-8047-8008-ab903bdba45e-437b15bb-5405-8047-8008-ab8ed2349d0b" class="strokes">
+                <g id="strokes-8a7393f4-edd8-8078-8008-ab9908f3875f-437b15bb-5405-8047-8008-ab8ed2349d0b" class="strokes">
                   <g class="stroke-shape">
                     <rect rx="10" ry="10" x="-1452" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
                     </rect>
@@ -77,7 +77,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed237eac3">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="255" width="13" height="15" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="12.703125" height="15.5" id="fill-0-render-2500-0">
+                    <pattern patternUnits="objectBoundingBox" width="12.703125" height="15.5" id="fill-0-render-2001-0">
                       <g>
                         <rect width="12.703125" height="15.5" style="fill:#9c9caa">
                         </rect>
@@ -92,7 +92,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed23abde4">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="272" width="37" height="12" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="36.625" height="13" id="fill-0-render-2501-0">
+                    <pattern patternUnits="objectBoundingBox" width="36.625" height="13" id="fill-0-render-2002-0">
                       <g>
                         <rect width="36.625" height="13" style="fill:#9c9caa">
                         </rect>
@@ -109,7 +109,7 @@
                   <rect rx="10" ry="10" x="-1327" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:#141419">
                   </rect>
                 </g>
-                <g id="strokes-437b15bb-5405-8047-8008-ab903bdba461-437b15bb-5405-8047-8008-ab8ed23d8959" class="strokes">
+                <g id="strokes-8a7393f4-edd8-8078-8008-ab9908f38762-437b15bb-5405-8047-8008-ab8ed23d8959" class="strokes">
                   <g class="stroke-shape">
                     <rect rx="10" ry="10" x="-1327" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
                     </rect>
@@ -119,7 +119,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed2412699">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1327" y="255" width="37" height="15" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="36.28125" height="15.5" id="fill-0-render-2503-0">
+                    <pattern patternUnits="objectBoundingBox" width="36.28125" height="15.5" id="fill-0-render-2004-0">
                       <g>
                         <rect width="36.28125" height="15.5" style="fill:#9c9caa">
                         </rect>
@@ -134,7 +134,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed243ef7b">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1327" y="272" width="35" height="12" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="34.765625" height="13" id="fill-0-render-2504-0">
+                    <pattern patternUnits="objectBoundingBox" width="34.765625" height="13" id="fill-0-render-2005-0">
                       <g>
                         <rect width="34.765625" height="13" style="fill:#9c9caa">
                         </rect>
@@ -151,7 +151,7 @@
                   <rect rx="10" ry="10" x="-1202" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:#26262e">
                   </rect>
                 </g>
-                <g id="strokes-437b15bb-5405-8047-8008-ab903bdba464-437b15bb-5405-8047-8008-ab8ed246436b" class="strokes">
+                <g id="strokes-8a7393f4-edd8-8078-8008-ab9908f3d959-437b15bb-5405-8047-8008-ab8ed246436b" class="strokes">
                   <g class="stroke-shape">
                     <rect rx="10" ry="10" x="-1202" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
                     </rect>
@@ -161,7 +161,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed2499db1">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1202" y="255" width="34" height="15" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="33.96875" height="15.5" id="fill-0-render-2506-0">
+                    <pattern patternUnits="objectBoundingBox" width="33.96875" height="15.5" id="fill-0-render-2007-0">
                       <g>
                         <rect width="33.96875" height="15.5" style="fill:#9c9caa">
                         </rect>
@@ -176,7 +176,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed24c4007">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1202" y="272" width="36" height="12" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="35.0703125" height="13" id="fill-0-render-2507-0">
+                    <pattern patternUnits="objectBoundingBox" width="35.0703125" height="13" id="fill-0-render-2008-0">
                       <g>
                         <rect width="35.0703125" height="13" style="fill:#9c9caa">
                         </rect>
@@ -193,7 +193,7 @@
                   <rect rx="10" ry="10" x="-1077" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:#8b5cf6">
                   </rect>
                 </g>
-                <g id="strokes-437b15bb-5405-8047-8008-ab903bdba467-437b15bb-5405-8047-8008-ab8ed24f2a55" class="strokes">
+                <g id="strokes-8a7393f4-edd8-8078-8008-ab9908f3d95c-437b15bb-5405-8047-8008-ab8ed24f2a55" class="strokes">
                   <g class="stroke-shape">
                     <rect rx="10" ry="10" x="-1077" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
                     </rect>
@@ -203,7 +203,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed25251e2">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1077" y="255" width="34" height="15" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="33.140625" height="15.5" id="fill-0-render-2509-0">
+                    <pattern patternUnits="objectBoundingBox" width="33.140625" height="15.5" id="fill-0-render-2010-0">
                       <g>
                         <rect width="33.140625" height="15.5" style="fill:#9c9caa">
                         </rect>
@@ -218,7 +218,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed2551ba0">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1077" y="272" width="37" height="12" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="36.390625" height="13" id="fill-0-render-2510-0">
+                    <pattern patternUnits="objectBoundingBox" width="36.390625" height="13" id="fill-0-render-2011-0">
                       <g>
                         <rect width="36.390625" height="13" style="fill:#9c9caa">
                         </rect>
@@ -235,7 +235,7 @@
                   <rect rx="10" ry="10" x="-952" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:#a78bfa">
                   </rect>
                 </g>
-                <g id="strokes-437b15bb-5405-8047-8008-ab903bdbe174-437b15bb-5405-8047-8008-ab8ed257bb6c" class="strokes">
+                <g id="strokes-8a7393f4-edd8-8078-8008-ab9908f3d95f-437b15bb-5405-8047-8008-ab8ed257bb6c" class="strokes">
                   <g class="stroke-shape">
                     <rect rx="10" ry="10" x="-952" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
                     </rect>
@@ -245,7 +245,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed25ac974">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-952" y="255" width="56" height="15" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="55.640625" height="15.5" id="fill-0-render-2512-0">
+                    <pattern patternUnits="objectBoundingBox" width="55.640625" height="15.5" id="fill-0-render-2013-0">
                       <g>
                         <rect width="55.640625" height="15.5" style="fill:#9c9caa">
                         </rect>
@@ -260,7 +260,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed25da713">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-952" y="272" width="37" height="12" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="36.2265625" height="13" id="fill-0-render-2513-0">
+                    <pattern patternUnits="objectBoundingBox" width="36.2265625" height="13" id="fill-0-render-2014-0">
                       <g>
                         <rect width="36.2265625" height="13" style="fill:#9c9caa">
                         </rect>
@@ -277,7 +277,7 @@
                   <rect rx="10" ry="10" x="-827" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105.00000000000011" height="70" style="fill:#fafafa">
                   </rect>
                 </g>
-                <g id="strokes-437b15bb-5405-8047-8008-ab903bdbe177-437b15bb-5405-8047-8008-ab8ed260733f" class="strokes">
+                <g id="strokes-8a7393f4-edd8-8078-8008-ab9908f3d962-437b15bb-5405-8047-8008-ab8ed260733f" class="strokes">
                   <g class="stroke-shape">
                     <rect rx="10" ry="10" x="-827" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105.00000000000011" height="70" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
                     </rect>
@@ -287,7 +287,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed2634304">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-827" y="255" width="20" height="15" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="19.2109375" height="15.5" id="fill-0-render-2515-0">
+                    <pattern patternUnits="objectBoundingBox" width="19.2109375" height="15.5" id="fill-0-render-2016-0">
                       <g>
                         <rect width="19.2109375" height="15.5" style="fill:#9c9caa">
                         </rect>
@@ -302,7 +302,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed2663e47">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-827" y="272" width="35" height="12" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="34.984375" height="13" id="fill-0-render-2516-0">
+                    <pattern patternUnits="objectBoundingBox" width="34.984375" height="13" id="fill-0-render-2017-0">
                       <g>
                         <rect width="34.984375" height="13" style="fill:#9c9caa">
                         </rect>
@@ -319,7 +319,7 @@
                   <rect rx="10" ry="10" x="-702" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:#9c9caa">
                   </rect>
                 </g>
-                <g id="strokes-437b15bb-5405-8047-8008-ab903bdbe17a-437b15bb-5405-8047-8008-ab8ed26887db" class="strokes">
+                <g id="strokes-8a7393f4-edd8-8078-8008-ab9908f3d965-437b15bb-5405-8047-8008-ab8ed26887db" class="strokes">
                   <g class="stroke-shape">
                     <rect rx="10" ry="10" x="-702" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
                     </rect>
@@ -329,7 +329,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed26bf8ab">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-702" y="255" width="34" height="15" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="33.015625" height="15.5" id="fill-0-render-2518-0">
+                    <pattern patternUnits="objectBoundingBox" width="33.015625" height="15.5" id="fill-0-render-2019-0">
                       <g>
                         <rect width="33.015625" height="15.5" style="fill:#9c9caa">
                         </rect>
@@ -344,7 +344,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed26e6f57">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-702" y="272" width="38" height="12" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="37.1953125" height="13" id="fill-0-render-2519-0">
+                    <pattern patternUnits="objectBoundingBox" width="37.1953125" height="13" id="fill-0-render-2020-0">
                       <g>
                         <rect width="37.1953125" height="13" style="fill:#9c9caa">
                         </rect>
@@ -361,7 +361,7 @@
                   <rect rx="10" ry="10" x="-577" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:#34d399">
                   </rect>
                 </g>
-                <g id="strokes-437b15bb-5405-8047-8008-ab903bdbe17d-437b15bb-5405-8047-8008-ab8ed271255e" class="strokes">
+                <g id="strokes-8a7393f4-edd8-8078-8008-ab9908f427f5-437b15bb-5405-8047-8008-ab8ed271255e" class="strokes">
                   <g class="stroke-shape">
                     <rect rx="10" ry="10" x="-577" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
                     </rect>
@@ -371,7 +371,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed2740eb8">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-577" y="255" width="38" height="15" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="37.9921875" height="15.5" id="fill-0-render-2521-0">
+                    <pattern patternUnits="objectBoundingBox" width="37.9921875" height="15.5" id="fill-0-render-2022-0">
                       <g>
                         <rect width="37.9921875" height="15.5" style="fill:#9c9caa">
                         </rect>
@@ -386,7 +386,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed2769eb6">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-577" y="272" width="36" height="12" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="35.9453125" height="13" id="fill-0-render-2522-0">
+                    <pattern patternUnits="objectBoundingBox" width="35.9453125" height="13" id="fill-0-render-2023-0">
                       <g>
                         <rect width="35.9453125" height="13" style="fill:#9c9caa">
                         </rect>
@@ -401,7 +401,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed2791420">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="330" width="41" height="24" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="40.390625" height="26" id="fill-0-render-2523-0">
+                    <pattern patternUnits="objectBoundingBox" width="40.390625" height="26" id="fill-0-render-2024-0">
                       <g>
                         <rect width="40.390625" height="26" style="fill:#fafafa">
                         </rect>
@@ -416,7 +416,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed27c105a">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="370" width="261" height="68" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="260.53125" height="72.5" id="fill-0-render-2524-0">
+                    <pattern patternUnits="objectBoundingBox" width="260.53125" height="72.5" id="fill-0-render-2025-0">
                       <g>
                         <rect width="260.53125" height="72.5" style="fill:#fafafa">
                         </rect>
@@ -431,7 +431,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed27e992a">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-900" y="378" width="253" height="24" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="252.046875" height="26" id="fill-0-render-2525-0">
+                    <pattern patternUnits="objectBoundingBox" width="252.046875" height="26" id="fill-0-render-2026-0">
                       <g>
                         <rect width="252.046875" height="26" style="fill:#9c9caa">
                         </rect>
@@ -446,7 +446,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed2811db7">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="460" width="86" height="39" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="85.9375" height="41.5" id="fill-0-render-2526-0">
+                    <pattern patternUnits="objectBoundingBox" width="85.9375" height="41.5" id="fill-0-render-2027-0">
                       <g>
                         <rect width="85.9375" height="41.5" style="fill:#fafafa">
                         </rect>
@@ -461,7 +461,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed283c2b9">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-900" y="468" width="253" height="24" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="252.046875" height="26" id="fill-0-render-2527-0">
+                    <pattern patternUnits="objectBoundingBox" width="252.046875" height="26" id="fill-0-render-2028-0">
                       <g>
                         <rect width="252.046875" height="26" style="fill:#9c9caa">
                         </rect>
@@ -476,7 +476,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed28675cd">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="526" width="65" height="29" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="64.453125" height="31" id="fill-0-render-2528-0">
+                    <pattern patternUnits="objectBoundingBox" width="64.453125" height="31" id="fill-0-render-2029-0">
                       <g>
                         <rect width="64.453125" height="31" style="fill:#fafafa">
                         </rect>
@@ -491,7 +491,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed288c697">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-900" y="534" width="253" height="24" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="252.046875" height="26" id="fill-0-render-2529-0">
+                    <pattern patternUnits="objectBoundingBox" width="252.046875" height="26" id="fill-0-render-2030-0">
                       <g>
                         <rect width="252.046875" height="26" style="fill:#9c9caa">
                         </rect>
@@ -506,7 +506,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed28b8ebb">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="584" width="49" height="22" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="48.34375" height="23" id="fill-0-render-2530-0">
+                    <pattern patternUnits="objectBoundingBox" width="48.34375" height="23" id="fill-0-render-2031-0">
                       <g>
                         <rect width="48.34375" height="23" style="fill:#fafafa">
                         </rect>
@@ -521,7 +521,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed28e0acc">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-900" y="592" width="227" height="22" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="226.84375" height="23" id="fill-0-render-2531-0">
+                    <pattern patternUnits="objectBoundingBox" width="226.84375" height="23" id="fill-0-render-2032-0">
                       <g>
                         <rect width="226.84375" height="23" style="fill:#9c9caa">
                         </rect>
@@ -536,7 +536,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed290bff6">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="636" width="53" height="17" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="52.6875" height="18.5" id="fill-0-render-2532-0">
+                    <pattern patternUnits="objectBoundingBox" width="52.6875" height="18.5" id="fill-0-render-2033-0">
                       <g>
                         <rect width="52.6875" height="18.5" style="fill:#fafafa">
                         </rect>
@@ -551,7 +551,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed292e28b">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-900" y="644" width="177" height="17" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="176.4296875" height="18.5" id="fill-0-render-2533-0">
+                    <pattern patternUnits="objectBoundingBox" width="176.4296875" height="18.5" id="fill-0-render-2034-0">
                       <g>
                         <rect width="176.4296875" height="18.5" style="fill:#9c9caa">
                         </rect>
@@ -566,7 +566,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed295321e">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="684" width="58" height="15" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="57.9609375" height="15.5" id="fill-0-render-2534-0">
+                    <pattern patternUnits="objectBoundingBox" width="57.9609375" height="15.5" id="fill-0-render-2035-0">
                       <g>
                         <rect width="57.9609375" height="15.5" style="fill:#fafafa">
                         </rect>
@@ -581,7 +581,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed29769ae">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-900" y="692" width="152" height="15" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="151.2265625" height="15.5" id="fill-0-render-2535-0">
+                    <pattern patternUnits="objectBoundingBox" width="151.2265625" height="15.5" id="fill-0-render-2036-0">
                       <g>
                         <rect width="151.2265625" height="15.5" style="fill:#9c9caa">
                         </rect>
@@ -596,7 +596,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab8ed29a2fd7">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="778" width="108" height="24" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="107.6875" height="26" id="fill-0-render-2536-0">
+                    <pattern patternUnits="objectBoundingBox" width="107.6875" height="26" id="fill-0-render-2037-0">
                       <g>
                         <rect width="107.6875" height="26" style="fill:#fafafa">
                         </rect>
@@ -617,7 +617,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab900d592220">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1416" y="834" width="70" height="18" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="69.203125" height="19.5" id="fill-0-render-2538-0">
+                    <pattern patternUnits="objectBoundingBox" width="69.203125" height="19.5" id="fill-0-render-2039-0">
                       <g>
                         <rect width="69.203125" height="19.5" style="fill:#fff">
                         </rect>
@@ -632,7 +632,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab900d5d6dfe">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="876" width="77" height="14" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="76.7890625" height="14.5" id="fill-0-render-2539-0">
+                    <pattern patternUnits="objectBoundingBox" width="76.7890625" height="14.5" id="fill-0-render-2040-0">
                       <g>
                         <rect width="76.7890625" height="14.5" style="fill:#9c9caa">
                         </rect>
@@ -649,7 +649,7 @@
                   <rect rx="10" ry="10" x="-1240" y="818" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="160" height="48">
                   </rect>
                 </g>
-                <g id="strokes-437b15bb-5405-8047-8008-ab903bdc0433-437b15bb-5405-8047-8008-ab900d617b4d" class="strokes">
+                <g id="strokes-8a7393f4-edd8-8078-8008-ab9908f46342-437b15bb-5405-8047-8008-ab900d617b4d" class="strokes">
                   <g class="stroke-shape">
                     <rect rx="10" ry="10" x="-1240" y="818" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="160" height="48" style="fill:none;fill-opacity:none;stroke-width:1.5;stroke:#26262e">
                     </rect>
@@ -659,7 +659,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab900d66fb1d">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1210" y="834" width="78" height="18" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="77.0859375" height="19.5" id="fill-0-render-2541-0">
+                    <pattern patternUnits="objectBoundingBox" width="77.0859375" height="19.5" id="fill-0-render-2042-0">
                       <g>
                         <rect width="77.0859375" height="19.5" style="fill:#fafafa">
                         </rect>
@@ -674,7 +674,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab900d6ace6f">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1240" y="876" width="68" height="14" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="67.09375" height="14.5" id="fill-0-render-2542-0">
+                    <pattern patternUnits="objectBoundingBox" width="67.09375" height="14.5" id="fill-0-render-2043-0">
                       <g>
                         <rect width="67.09375" height="14.5" style="fill:#9c9caa">
                         </rect>
@@ -691,7 +691,7 @@
                   <rect rx="14" ry="14" x="-1030" y="818" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="240" height="110" style="fill:#141419">
                   </rect>
                 </g>
-                <g id="strokes-437b15bb-5405-8047-8008-ab903bdc7c33-437b15bb-5405-8047-8008-ab900d6ea6d3" class="strokes">
+                <g id="strokes-8a7393f4-edd8-8078-8008-ab9908f46345-437b15bb-5405-8047-8008-ab900d6ea6d3" class="strokes">
                   <g class="stroke-shape">
                     <rect rx="14" ry="14" x="-1030" y="818" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="240" height="110" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
                     </rect>
@@ -701,7 +701,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab900d73dfb8">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1008" y="842" width="62" height="20" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="61.5625" height="20.5" id="fill-0-render-2544-0">
+                    <pattern patternUnits="objectBoundingBox" width="61.5625" height="20.5" id="fill-0-render-2045-0">
                       <g>
                         <rect width="61.5625" height="20.5" style="fill:#fafafa">
                         </rect>
@@ -716,7 +716,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab900d77aa42">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1008" y="874" width="102" height="15" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="101.0859375" height="15.5" id="fill-0-render-2545-0">
+                    <pattern patternUnits="objectBoundingBox" width="101.0859375" height="15.5" id="fill-0-render-2046-0">
                       <g>
                         <rect width="101.0859375" height="15.5" style="fill:#9c9caa">
                         </rect>
@@ -731,7 +731,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab900d7b71e2">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1030" y="938" width="64" height="14" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="63.3359375" height="14.5" id="fill-0-render-2546-0">
+                    <pattern patternUnits="objectBoundingBox" width="63.3359375" height="14.5" id="fill-0-render-2047-0">
                       <g>
                         <rect width="63.3359375" height="14.5" style="fill:#9c9caa">
                         </rect>
@@ -752,7 +752,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab900d8472c4">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-724" y="826" width="28" height="15" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="27.1796875" height="15.5" id="fill-0-render-2548-0">
+                    <pattern patternUnits="objectBoundingBox" width="27.1796875" height="15.5" id="fill-0-render-2049-0">
                       <g>
                         <rect width="27.1796875" height="15.5" style="fill:#34d399">
                         </rect>
@@ -767,7 +767,7 @@
               <g id="shape-437b15bb-5405-8047-8008-ab900d887bb2">
                 <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-740" y="858" width="67" height="14" rx="0" ry="0">
                   <defs>
-                    <pattern patternUnits="objectBoundingBox" width="66.5859375" height="14.5" id="fill-0-render-2549-0">
+                    <pattern patternUnits="objectBoundingBox" width="66.5859375" height="14.5" id="fill-0-render-2050-0">
                       <g>
                         <rect width="66.5859375" height="14.5" style="fill:#9c9caa">
                         </rect>
@@ -788,7 +788,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed22b82f0">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="40" width="321" height="39" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="320.171875" height="41.5" id="fill-0-render-2550-0">
+        <pattern patternUnits="objectBoundingBox" width="320.171875" height="41.5" id="fill-0-render-2051-0">
           <g>
             <rect width="320.171875" height="41.5" style="fill:#fafafa">
             </rect>
@@ -803,7 +803,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed22ec789">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="85" width="289" height="17" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="288.96875" height="18.5" id="fill-0-render-2551-0">
+        <pattern patternUnits="objectBoundingBox" width="288.96875" height="18.5" id="fill-0-render-2052-0">
           <g>
             <rect width="288.96875" height="18.5" style="fill:#9c9caa">
             </rect>
@@ -818,7 +818,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed231b33e">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="140" width="54" height="24" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="53.3125" height="26" id="fill-0-render-2552-0">
+        <pattern patternUnits="objectBoundingBox" width="53.3125" height="26" id="fill-0-render-2053-0">
           <g>
             <rect width="53.3125" height="26" style="fill:#fafafa">
             </rect>
@@ -835,7 +835,7 @@
       <rect rx="10" ry="10" x="-1452" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:#0a0a0b">
       </rect>
     </g>
-    <g id="strokes-437b15bb-5405-8047-8008-ab903bdc7c3e-437b15bb-5405-8047-8008-ab8ed2349d0b" class="strokes">
+    <g id="strokes-8a7393f4-edd8-8078-8008-ab9908f4929f-437b15bb-5405-8047-8008-ab8ed2349d0b" class="strokes">
       <g class="stroke-shape">
         <rect rx="10" ry="10" x="-1452" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
         </rect>
@@ -845,7 +845,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed237eac3">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="255" width="13" height="15" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="12.703125" height="15.5" id="fill-0-render-2554-0">
+        <pattern patternUnits="objectBoundingBox" width="12.703125" height="15.5" id="fill-0-render-2055-0">
           <g>
             <rect width="12.703125" height="15.5" style="fill:#9c9caa">
             </rect>
@@ -860,7 +860,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed23abde4">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="272" width="37" height="12" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="36.625" height="13" id="fill-0-render-2555-0">
+        <pattern patternUnits="objectBoundingBox" width="36.625" height="13" id="fill-0-render-2056-0">
           <g>
             <rect width="36.625" height="13" style="fill:#9c9caa">
             </rect>
@@ -877,7 +877,7 @@
       <rect rx="10" ry="10" x="-1327" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:#141419">
       </rect>
     </g>
-    <g id="strokes-437b15bb-5405-8047-8008-ab903bdc9f19-437b15bb-5405-8047-8008-ab8ed23d8959" class="strokes">
+    <g id="strokes-8a7393f4-edd8-8078-8008-ab9908f492a2-437b15bb-5405-8047-8008-ab8ed23d8959" class="strokes">
       <g class="stroke-shape">
         <rect rx="10" ry="10" x="-1327" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
         </rect>
@@ -887,7 +887,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed2412699">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1327" y="255" width="37" height="15" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="36.28125" height="15.5" id="fill-0-render-2557-0">
+        <pattern patternUnits="objectBoundingBox" width="36.28125" height="15.5" id="fill-0-render-2058-0">
           <g>
             <rect width="36.28125" height="15.5" style="fill:#9c9caa">
             </rect>
@@ -902,7 +902,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed243ef7b">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1327" y="272" width="35" height="12" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="34.765625" height="13" id="fill-0-render-2558-0">
+        <pattern patternUnits="objectBoundingBox" width="34.765625" height="13" id="fill-0-render-2059-0">
           <g>
             <rect width="34.765625" height="13" style="fill:#9c9caa">
             </rect>
@@ -919,7 +919,7 @@
       <rect rx="10" ry="10" x="-1202" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:#26262e">
       </rect>
     </g>
-    <g id="strokes-437b15bb-5405-8047-8008-ab903bdc9f1c-437b15bb-5405-8047-8008-ab8ed246436b" class="strokes">
+    <g id="strokes-8a7393f4-edd8-8078-8008-ab9908f492a5-437b15bb-5405-8047-8008-ab8ed246436b" class="strokes">
       <g class="stroke-shape">
         <rect rx="10" ry="10" x="-1202" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
         </rect>
@@ -929,7 +929,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed2499db1">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1202" y="255" width="34" height="15" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="33.96875" height="15.5" id="fill-0-render-2560-0">
+        <pattern patternUnits="objectBoundingBox" width="33.96875" height="15.5" id="fill-0-render-2061-0">
           <g>
             <rect width="33.96875" height="15.5" style="fill:#9c9caa">
             </rect>
@@ -944,7 +944,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed24c4007">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1202" y="272" width="36" height="12" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="35.0703125" height="13" id="fill-0-render-2561-0">
+        <pattern patternUnits="objectBoundingBox" width="35.0703125" height="13" id="fill-0-render-2062-0">
           <g>
             <rect width="35.0703125" height="13" style="fill:#9c9caa">
             </rect>
@@ -961,7 +961,7 @@
       <rect rx="10" ry="10" x="-1077" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:#8b5cf6">
       </rect>
     </g>
-    <g id="strokes-437b15bb-5405-8047-8008-ab903bdc9f1f-437b15bb-5405-8047-8008-ab8ed24f2a55" class="strokes">
+    <g id="strokes-8a7393f4-edd8-8078-8008-ab9908f492a8-437b15bb-5405-8047-8008-ab8ed24f2a55" class="strokes">
       <g class="stroke-shape">
         <rect rx="10" ry="10" x="-1077" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
         </rect>
@@ -971,7 +971,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed25251e2">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1077" y="255" width="34" height="15" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="33.140625" height="15.5" id="fill-0-render-2563-0">
+        <pattern patternUnits="objectBoundingBox" width="33.140625" height="15.5" id="fill-0-render-2064-0">
           <g>
             <rect width="33.140625" height="15.5" style="fill:#9c9caa">
             </rect>
@@ -986,7 +986,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed2551ba0">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1077" y="272" width="37" height="12" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="36.390625" height="13" id="fill-0-render-2564-0">
+        <pattern patternUnits="objectBoundingBox" width="36.390625" height="13" id="fill-0-render-2065-0">
           <g>
             <rect width="36.390625" height="13" style="fill:#9c9caa">
             </rect>
@@ -1003,7 +1003,7 @@
       <rect rx="10" ry="10" x="-952" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:#a78bfa">
       </rect>
     </g>
-    <g id="strokes-437b15bb-5405-8047-8008-ab903bdc9f22-437b15bb-5405-8047-8008-ab8ed257bb6c" class="strokes">
+    <g id="strokes-8a7393f4-edd8-8078-8008-ab9908f4c025-437b15bb-5405-8047-8008-ab8ed257bb6c" class="strokes">
       <g class="stroke-shape">
         <rect rx="10" ry="10" x="-952" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
         </rect>
@@ -1013,7 +1013,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed25ac974">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-952" y="255" width="56" height="15" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="55.640625" height="15.5" id="fill-0-render-2566-0">
+        <pattern patternUnits="objectBoundingBox" width="55.640625" height="15.5" id="fill-0-render-2067-0">
           <g>
             <rect width="55.640625" height="15.5" style="fill:#9c9caa">
             </rect>
@@ -1028,7 +1028,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed25da713">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-952" y="272" width="37" height="12" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="36.2265625" height="13" id="fill-0-render-2567-0">
+        <pattern patternUnits="objectBoundingBox" width="36.2265625" height="13" id="fill-0-render-2068-0">
           <g>
             <rect width="36.2265625" height="13" style="fill:#9c9caa">
             </rect>
@@ -1045,7 +1045,7 @@
       <rect rx="10" ry="10" x="-827" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105.00000000000011" height="70" style="fill:#fafafa">
       </rect>
     </g>
-    <g id="strokes-437b15bb-5405-8047-8008-ab903bdc9f25-437b15bb-5405-8047-8008-ab8ed260733f" class="strokes">
+    <g id="strokes-8a7393f4-edd8-8078-8008-ab9908f4c028-437b15bb-5405-8047-8008-ab8ed260733f" class="strokes">
       <g class="stroke-shape">
         <rect rx="10" ry="10" x="-827" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105.00000000000011" height="70" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
         </rect>
@@ -1055,7 +1055,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed2634304">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-827" y="255" width="20" height="15" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="19.2109375" height="15.5" id="fill-0-render-2569-0">
+        <pattern patternUnits="objectBoundingBox" width="19.2109375" height="15.5" id="fill-0-render-2070-0">
           <g>
             <rect width="19.2109375" height="15.5" style="fill:#9c9caa">
             </rect>
@@ -1070,7 +1070,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed2663e47">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-827" y="272" width="35" height="12" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="34.984375" height="13" id="fill-0-render-2570-0">
+        <pattern patternUnits="objectBoundingBox" width="34.984375" height="13" id="fill-0-render-2071-0">
           <g>
             <rect width="34.984375" height="13" style="fill:#9c9caa">
             </rect>
@@ -1087,7 +1087,7 @@
       <rect rx="10" ry="10" x="-702" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:#9c9caa">
       </rect>
     </g>
-    <g id="strokes-437b15bb-5405-8047-8008-ab903bdc9f28-437b15bb-5405-8047-8008-ab8ed26887db" class="strokes">
+    <g id="strokes-8a7393f4-edd8-8078-8008-ab9908f4c02b-437b15bb-5405-8047-8008-ab8ed26887db" class="strokes">
       <g class="stroke-shape">
         <rect rx="10" ry="10" x="-702" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
         </rect>
@@ -1097,7 +1097,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed26bf8ab">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-702" y="255" width="34" height="15" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="33.015625" height="15.5" id="fill-0-render-2572-0">
+        <pattern patternUnits="objectBoundingBox" width="33.015625" height="15.5" id="fill-0-render-2073-0">
           <g>
             <rect width="33.015625" height="15.5" style="fill:#9c9caa">
             </rect>
@@ -1112,7 +1112,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed26e6f57">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-702" y="272" width="38" height="12" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="37.1953125" height="13" id="fill-0-render-2573-0">
+        <pattern patternUnits="objectBoundingBox" width="37.1953125" height="13" id="fill-0-render-2074-0">
           <g>
             <rect width="37.1953125" height="13" style="fill:#9c9caa">
             </rect>
@@ -1129,7 +1129,7 @@
       <rect rx="10" ry="10" x="-577" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:#34d399">
       </rect>
     </g>
-    <g id="strokes-437b15bb-5405-8047-8008-ab903bdce3d0-437b15bb-5405-8047-8008-ab8ed271255e" class="strokes">
+    <g id="strokes-8a7393f4-edd8-8078-8008-ab9908f4c02e-437b15bb-5405-8047-8008-ab8ed271255e" class="strokes">
       <g class="stroke-shape">
         <rect rx="10" ry="10" x="-577" y="175" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="105" height="70" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
         </rect>
@@ -1139,7 +1139,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed2740eb8">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-577" y="255" width="38" height="15" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="37.9921875" height="15.5" id="fill-0-render-2575-0">
+        <pattern patternUnits="objectBoundingBox" width="37.9921875" height="15.5" id="fill-0-render-2076-0">
           <g>
             <rect width="37.9921875" height="15.5" style="fill:#9c9caa">
             </rect>
@@ -1154,7 +1154,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed2769eb6">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-577" y="272" width="36" height="12" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="35.9453125" height="13" id="fill-0-render-2576-0">
+        <pattern patternUnits="objectBoundingBox" width="35.9453125" height="13" id="fill-0-render-2077-0">
           <g>
             <rect width="35.9453125" height="13" style="fill:#9c9caa">
             </rect>
@@ -1169,7 +1169,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed2791420">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="330" width="41" height="24" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="40.390625" height="26" id="fill-0-render-2577-0">
+        <pattern patternUnits="objectBoundingBox" width="40.390625" height="26" id="fill-0-render-2078-0">
           <g>
             <rect width="40.390625" height="26" style="fill:#fafafa">
             </rect>
@@ -1184,7 +1184,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed27c105a">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="370" width="261" height="68" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="260.53125" height="72.5" id="fill-0-render-2578-0">
+        <pattern patternUnits="objectBoundingBox" width="260.53125" height="72.5" id="fill-0-render-2079-0">
           <g>
             <rect width="260.53125" height="72.5" style="fill:#fafafa">
             </rect>
@@ -1199,7 +1199,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed27e992a">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-900" y="378" width="253" height="24" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="252.046875" height="26" id="fill-0-render-2579-0">
+        <pattern patternUnits="objectBoundingBox" width="252.046875" height="26" id="fill-0-render-2080-0">
           <g>
             <rect width="252.046875" height="26" style="fill:#9c9caa">
             </rect>
@@ -1214,7 +1214,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed2811db7">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="460" width="86" height="39" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="85.9375" height="41.5" id="fill-0-render-2580-0">
+        <pattern patternUnits="objectBoundingBox" width="85.9375" height="41.5" id="fill-0-render-2081-0">
           <g>
             <rect width="85.9375" height="41.5" style="fill:#fafafa">
             </rect>
@@ -1229,7 +1229,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed283c2b9">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-900" y="468" width="253" height="24" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="252.046875" height="26" id="fill-0-render-2581-0">
+        <pattern patternUnits="objectBoundingBox" width="252.046875" height="26" id="fill-0-render-2082-0">
           <g>
             <rect width="252.046875" height="26" style="fill:#9c9caa">
             </rect>
@@ -1244,7 +1244,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed28675cd">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="526" width="65" height="29" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="64.453125" height="31" id="fill-0-render-2582-0">
+        <pattern patternUnits="objectBoundingBox" width="64.453125" height="31" id="fill-0-render-2083-0">
           <g>
             <rect width="64.453125" height="31" style="fill:#fafafa">
             </rect>
@@ -1259,7 +1259,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed288c697">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-900" y="534" width="253" height="24" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="252.046875" height="26" id="fill-0-render-2583-0">
+        <pattern patternUnits="objectBoundingBox" width="252.046875" height="26" id="fill-0-render-2084-0">
           <g>
             <rect width="252.046875" height="26" style="fill:#9c9caa">
             </rect>
@@ -1274,7 +1274,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed28b8ebb">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="584" width="49" height="22" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="48.34375" height="23" id="fill-0-render-2584-0">
+        <pattern patternUnits="objectBoundingBox" width="48.34375" height="23" id="fill-0-render-2085-0">
           <g>
             <rect width="48.34375" height="23" style="fill:#fafafa">
             </rect>
@@ -1289,7 +1289,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed28e0acc">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-900" y="592" width="227" height="22" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="226.84375" height="23" id="fill-0-render-2585-0">
+        <pattern patternUnits="objectBoundingBox" width="226.84375" height="23" id="fill-0-render-2086-0">
           <g>
             <rect width="226.84375" height="23" style="fill:#9c9caa">
             </rect>
@@ -1304,7 +1304,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed290bff6">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="636" width="53" height="17" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="52.6875" height="18.5" id="fill-0-render-2586-0">
+        <pattern patternUnits="objectBoundingBox" width="52.6875" height="18.5" id="fill-0-render-2087-0">
           <g>
             <rect width="52.6875" height="18.5" style="fill:#fafafa">
             </rect>
@@ -1319,7 +1319,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed292e28b">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-900" y="644" width="177" height="17" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="176.4296875" height="18.5" id="fill-0-render-2587-0">
+        <pattern patternUnits="objectBoundingBox" width="176.4296875" height="18.5" id="fill-0-render-2088-0">
           <g>
             <rect width="176.4296875" height="18.5" style="fill:#9c9caa">
             </rect>
@@ -1334,7 +1334,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed295321e">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="684" width="58" height="15" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="57.9609375" height="15.5" id="fill-0-render-2588-0">
+        <pattern patternUnits="objectBoundingBox" width="57.9609375" height="15.5" id="fill-0-render-2089-0">
           <g>
             <rect width="57.9609375" height="15.5" style="fill:#fafafa">
             </rect>
@@ -1349,7 +1349,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed29769ae">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-900" y="692" width="152" height="15" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="151.2265625" height="15.5" id="fill-0-render-2589-0">
+        <pattern patternUnits="objectBoundingBox" width="151.2265625" height="15.5" id="fill-0-render-2090-0">
           <g>
             <rect width="151.2265625" height="15.5" style="fill:#9c9caa">
             </rect>
@@ -1364,7 +1364,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab8ed29a2fd7">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="778" width="108" height="24" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="107.6875" height="26" id="fill-0-render-2590-0">
+        <pattern patternUnits="objectBoundingBox" width="107.6875" height="26" id="fill-0-render-2091-0">
           <g>
             <rect width="107.6875" height="26" style="fill:#fafafa">
             </rect>
@@ -1385,7 +1385,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab900d592220">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1416" y="834" width="70" height="18" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="69.203125" height="19.5" id="fill-0-render-2592-0">
+        <pattern patternUnits="objectBoundingBox" width="69.203125" height="19.5" id="fill-0-render-2093-0">
           <g>
             <rect width="69.203125" height="19.5" style="fill:#fff">
             </rect>
@@ -1400,7 +1400,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab900d5d6dfe">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1452" y="876" width="77" height="14" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="76.7890625" height="14.5" id="fill-0-render-2593-0">
+        <pattern patternUnits="objectBoundingBox" width="76.7890625" height="14.5" id="fill-0-render-2094-0">
           <g>
             <rect width="76.7890625" height="14.5" style="fill:#9c9caa">
             </rect>
@@ -1417,7 +1417,7 @@
       <rect rx="10" ry="10" x="-1240" y="818" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="160" height="48">
       </rect>
     </g>
-    <g id="strokes-437b15bb-5405-8047-8008-ab903bdd0ca9-437b15bb-5405-8047-8008-ab900d617b4d" class="strokes">
+    <g id="strokes-8a7393f4-edd8-8078-8008-ab9908f54c60-437b15bb-5405-8047-8008-ab900d617b4d" class="strokes">
       <g class="stroke-shape">
         <rect rx="10" ry="10" x="-1240" y="818" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="160" height="48" style="fill:none;fill-opacity:none;stroke-width:1.5;stroke:#26262e">
         </rect>
@@ -1427,7 +1427,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab900d66fb1d">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1210" y="834" width="78" height="18" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="77.0859375" height="19.5" id="fill-0-render-2595-0">
+        <pattern patternUnits="objectBoundingBox" width="77.0859375" height="19.5" id="fill-0-render-2096-0">
           <g>
             <rect width="77.0859375" height="19.5" style="fill:#fafafa">
             </rect>
@@ -1442,7 +1442,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab900d6ace6f">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1240" y="876" width="68" height="14" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="67.09375" height="14.5" id="fill-0-render-2596-0">
+        <pattern patternUnits="objectBoundingBox" width="67.09375" height="14.5" id="fill-0-render-2097-0">
           <g>
             <rect width="67.09375" height="14.5" style="fill:#9c9caa">
             </rect>
@@ -1459,7 +1459,7 @@
       <rect rx="14" ry="14" x="-1030" y="818" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="240" height="110" style="fill:#141419">
       </rect>
     </g>
-    <g id="strokes-437b15bb-5405-8047-8008-ab903bdd0cac-437b15bb-5405-8047-8008-ab900d6ea6d3" class="strokes">
+    <g id="strokes-8a7393f4-edd8-8078-8008-ab9908f54c63-437b15bb-5405-8047-8008-ab900d6ea6d3" class="strokes">
       <g class="stroke-shape">
         <rect rx="14" ry="14" x="-1030" y="818" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="240" height="110" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
         </rect>
@@ -1469,7 +1469,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab900d73dfb8">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1008" y="842" width="62" height="20" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="61.5625" height="20.5" id="fill-0-render-2598-0">
+        <pattern patternUnits="objectBoundingBox" width="61.5625" height="20.5" id="fill-0-render-2099-0">
           <g>
             <rect width="61.5625" height="20.5" style="fill:#fafafa">
             </rect>
@@ -1484,7 +1484,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab900d77aa42">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1008" y="874" width="102" height="15" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="101.0859375" height="15.5" id="fill-0-render-2599-0">
+        <pattern patternUnits="objectBoundingBox" width="101.0859375" height="15.5" id="fill-0-render-2100-0">
           <g>
             <rect width="101.0859375" height="15.5" style="fill:#9c9caa">
             </rect>
@@ -1499,7 +1499,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab900d7b71e2">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-1030" y="938" width="64" height="14" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="63.3359375" height="14.5" id="fill-0-render-2600-0">
+        <pattern patternUnits="objectBoundingBox" width="63.3359375" height="14.5" id="fill-0-render-2101-0">
           <g>
             <rect width="63.3359375" height="14.5" style="fill:#9c9caa">
             </rect>
@@ -1520,7 +1520,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab900d8472c4">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-724" y="826" width="28" height="15" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="27.1796875" height="15.5" id="fill-0-render-2602-0">
+        <pattern patternUnits="objectBoundingBox" width="27.1796875" height="15.5" id="fill-0-render-2103-0">
           <g>
             <rect width="27.1796875" height="15.5" style="fill:#34d399">
             </rect>
@@ -1535,7 +1535,7 @@
   <g id="shape-437b15bb-5405-8047-8008-ab900d887bb2">
     <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="-740" y="858" width="67" height="14" rx="0" ry="0">
       <defs>
-        <pattern patternUnits="objectBoundingBox" width="66.5859375" height="14.5" id="fill-0-render-2603-0">
+        <pattern patternUnits="objectBoundingBox" width="66.5859375" height="14.5" id="fill-0-render-2104-0">
           <g>
             <rect width="66.5859375" height="14.5" style="fill:#9c9caa">
             </rect>
