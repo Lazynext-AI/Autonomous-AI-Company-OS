@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { PageHeader, Card, Empty, timeAgo } from "@/components/ui";
 import { toast } from "@/components/Toast";
-import { TerminalSquare, Plus, Trash2, FolderOpen, FileText, ChevronDown, ChevronRight } from "lucide-react";
+import { TerminalSquare, Plus, Trash2, FolderOpen, FileText, ChevronDown, ChevronRight, ChevronRight as Run } from "lucide-react";
 
 interface Sandbox {
   sandboxID: string;
@@ -53,6 +53,28 @@ export default function SandboxPage() {
   const [open, setOpen] = useState<string | null>(null);
   const [files, setFiles] = useState<Record<string, any[]>>({});
   const [fileContent, setFileContent] = useState<{ path: string; content: string } | null>(null);
+  const [term, setTerm] = useState<string | null>(null);
+  const [cmd, setCmd] = useState("");
+  const [termLog, setTermLog] = useState<{ cmd: string; out: string }[]>([]);
+  const [running, setRunning] = useState(false);
+
+  const exec = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cmd.trim() || !term) return;
+    setRunning(true);
+    const r = await fetch("/api/sandbox/exec", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: term, cmd }),
+    });
+    const d = await r.json();
+    setTermLog((l) => [
+      ...l,
+      { cmd, out: d.error || d.stderr || d.stdout || `(exit ${d.status || "?"})` },
+    ]);
+    setCmd("");
+    setRunning(false);
+  };
 
   const browse = async (id: string, path = "/home/user") => {
     const r = await fetch(`/api/sandbox/files?id=${id}&path=${encodeURIComponent(path)}`);
@@ -106,7 +128,14 @@ export default function SandboxPage() {
                   <div className="text-xs text-muted">up {timeAgo(s.startedAt)}</div>
                 )}
               </div>
-              <div className="flex gap-1 shrink-0">
+              <div className="flex gap-1.5 shrink-0">
+                <button
+                  onClick={() => setTerm(term === s.sandboxID ? null : s.sandboxID)}
+                  className="text-muted hover:text-accentSoft transition"
+                  aria-label="Terminal"
+                >
+                  <TerminalSquare className="w-4 h-4" />
+                </button>
                 <button
                   onClick={() => (open === s.sandboxID ? setOpen(null) : browse(s.sandboxID))}
                   className="text-muted hover:text-accentSoft transition"
@@ -121,6 +150,38 @@ export default function SandboxPage() {
             </Card>
           ))}
         </div>
+      )}
+
+      {/* real terminal — executes commands in the live VM via envd Connect-RPC */}
+      {term && (
+        <Card className="mt-4 max-w-4xl p-0 overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-border flex items-center gap-2">
+            <TerminalSquare className="w-4 h-4 text-ok" />
+            <span className="text-sm font-semibold font-mono">user@{term.slice(0, 12)}</span>
+            <span className="text-xs text-muted ml-auto">live</span>
+          </div>
+          <div className="bg-black/90 text-green-400 font-mono text-xs p-4 max-h-72 overflow-y-auto space-y-3">
+            {termLog.length === 0 && <div className="text-muted">$ type a command — runs in the real VM</div>}
+            {termLog.map((l, i) => (
+              <div key={i}>
+                <div className="text-white">$ {l.cmd}</div>
+                <pre className="whitespace-pre-wrap">{l.out}</pre>
+              </div>
+            ))}
+          </div>
+          <form onSubmit={exec} className="border-t border-border flex items-center px-4 py-2.5 gap-2 bg-input">
+            <span className="text-ok font-mono text-sm">$</span>
+            <input
+              value={cmd}
+              onChange={(e) => setCmd(e.target.value)}
+              placeholder="ls -la"
+              className="flex-1 bg-transparent font-mono text-sm text-fg outline-none"
+            />
+            <button type="submit" disabled={running} className="text-muted hover:text-fg" aria-label="Run">
+              <Run className="w-4 h-4" />
+            </button>
+          </form>
+        </Card>
       )}
 
       {/* live file browser — reads the real sandbox filesystem via envd */}

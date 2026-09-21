@@ -168,6 +168,22 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
       return json({ id, agent: a.id, text });
     }
 
+    case "/agent/generate": {
+      // Stand-in codegen: Workers AI generates an artifact until Atlas is funded.
+      if (!env.AI) return json({ error: "AI binding not configured" }, 503);
+      const b = await readBody<{ system: string; prompt: string; max_tokens?: number }>(req);
+      const res = await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
+        messages: [
+          { role: "system", content: b.system },
+          { role: "user", content: b.prompt },
+        ],
+        max_tokens: b.max_tokens ?? 2048,
+      });
+      const text = (res as { response?: string }).response?.trim() ?? "";
+      if (!text) return json({ error: "empty model response" }, 502);
+      return json({ text });
+    }
+
     case "/bus/ack": {
       const b = await readBody<{ channel: string; group: string; ids: (string | number)[] }>(req);
       if (!b.ids?.length) return json({ ok: true });
