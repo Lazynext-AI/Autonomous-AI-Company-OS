@@ -8,6 +8,7 @@ import {
   LayoutDashboard, Users, ListTodo, Brain, FileText, BookOpen,
   Activity, Key, Settings, Menu, X, BarChart3, Package, Bell, Search,
   Rocket, Code2, MessageSquare, TerminalSquare, ShieldCheck, ScrollText,
+  LogOut,
 } from "lucide-react";
 
 const NAV = [
@@ -71,7 +72,19 @@ export default function Sidebar() {
         <div className="px-7 pb-6 flex items-center gap-2 text-xs text-muted">
           <span className="w-2 h-2 rounded-full bg-ok animate-pulse" />
           Live · v0.1
-          <span className="ml-auto"><ThemeToggle /></span>
+          <span className="ml-auto flex items-center gap-1.5">
+            <ThemeToggle />
+            <button
+              onClick={async () => {
+                await fetch("/api/logout", { method: "POST" });
+                location.href = "/login";
+              }}
+              aria-label="Sign out"
+              className="w-8 h-8 rounded-lg bg-input flex items-center justify-center text-muted hover:text-fg transition"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </span>
         </div>
       </aside>
 
