@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { PageHeader, Card, Empty, timeAgo } from "@/components/ui";
 import { Github, GitFork, Star, ExternalLink } from "lucide-react";
 
@@ -43,7 +44,7 @@ export default function CodePage() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-5xl">
           {repos.map((r) => (
-            <a key={r.name} href={r.html_url} target="_blank" rel="noreferrer" className="block">
+            <Link key={r.name} href={`/code/${r.name}`} className="block">
               <Card className="hover:border-accent transition h-full">
                 <div className="flex items-center gap-2.5 mb-2">
                   <Github className="w-4 h-4 text-muted" />
@@ -65,7 +66,7 @@ export default function CodePage() {
                   <span className="ml-auto">{timeAgo(r.updated_at)}</span>
                 </div>
               </Card>
-            </a>
+            </Link>
           ))}
         </div>
       )}
