@@ -21,6 +21,7 @@ const ITEMS = [
   { href: "/conversations", label: "Conversations", icon: Activity, hint: "Agent-to-agent threads" },
   { href: "/logs", label: "Logs", icon: Activity, hint: "Console — errors + events" },
   { href: "/approvals", label: "Approvals", icon: Activity, hint: "Sign off on sensitive actions" },
+  { href: "/audit", label: "Audit", icon: Activity, hint: "Who did what — founder + agent events" },
   { href: "/analytics", label: "Analytics", icon: Activity, hint: "Tasks + scores over time" },
   { href: "/deployments", label: "Deployments", icon: Activity, hint: "Shipped products" },
   { href: "/code", label: "Code", icon: Activity, hint: "GitHub repos" },
