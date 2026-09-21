@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { queryApi, parseJson } from "@/lib/api";
+import { queryApi } from "@/lib/api";
 import { PageHeader, Card, Empty, timeAgo } from "@/components/ui";
-import { Bell, AlertTriangle, FileText, Zap } from "lucide-react";
+import { Bell, AlertTriangle, FileText, Zap, CheckCheck } from "lucide-react";
 
 interface Item {
   id: string;
@@ -13,11 +13,18 @@ interface Item {
   at: string;
 }
 
+const READ_KEY = "lz_notifications_read";
+
 export default function NotificationsPage() {
   const [items, setItems] = useState<Item[]>([]);
+  const [read, setRead] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    try {
+      setRead(new Set(JSON.parse(localStorage.getItem(READ_KEY) || "[]")));
+    } catch {}
+
     const load = async () => {
       try {
         const briefings = await queryApi<any>(
@@ -55,6 +62,22 @@ export default function NotificationsPage() {
     return () => clearInterval(t);
   }, []);
 
+  const markRead = (id: string) => {
+    setRead((s) => {
+      const next = new Set(s).add(id);
+      localStorage.setItem(READ_KEY, JSON.stringify([...next]));
+      return next;
+    });
+  };
+
+  const markAll = () => {
+    const all = new Set(items.map((i) => i.id));
+    setRead(all);
+    localStorage.setItem(READ_KEY, JSON.stringify([...all]));
+  };
+
+  const unread = items.filter((i) => !read.has(i.id));
+
   const icon = (k: Item["kind"]) =>
     k === "alert" ? (
       <AlertTriangle className="w-4 h-4 text-bad" />
@@ -66,26 +89,47 @@ export default function NotificationsPage() {
 
   return (
     <>
-      <PageHeader title="Notifications" subtitle="Everything worth your attention — alerts, briefings, milestones." />
+      <PageHeader
+        title="Notifications"
+        subtitle={`${unread.length} unread · alerts, briefings, milestones.`}
+      >
+        {unread.length > 0 && (
+          <button
+            onClick={markAll}
+            className="inline-flex items-center gap-2 bg-card hover:bg-cardHover border border-border text-sm font-medium px-4 py-2.5 rounded-lg transition"
+          >
+            <CheckCheck className="w-4 h-4" /> Mark all read
+          </button>
+        )}
+      </PageHeader>
 
       {items.length === 0 && !loading ? (
         <Empty title="All caught up" hint="Alerts and briefings land here." />
       ) : (
         <div className="space-y-2.5 max-w-3xl">
-          {items.map((n) => (
-            <Card key={n.id} className="py-3.5 px-4 flex items-start gap-3.5">
-              <div className="w-8 h-8 rounded-lg bg-input flex items-center justify-center shrink-0 mt-0.5">
-                {icon(n.kind)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <div className="text-sm font-semibold text-fg truncate">{n.title}</div>
-                  <span className="text-xs text-muted shrink-0 ml-auto">{timeAgo(n.at)}</span>
+          {items.map((n) => {
+            const isUnread = !read.has(n.id);
+            return (
+              <Card
+                key={n.id}
+                className={`py-3.5 px-4 flex items-start gap-3.5 cursor-pointer transition ${isUnread ? "border-accentDim" : "opacity-70"}`}
+              >
+                <div className="w-8 h-8 rounded-lg bg-input flex items-center justify-center shrink-0 mt-0.5" onClick={() => markRead(n.id)}>
+                  {icon(n.kind)}
                 </div>
-                <div className="text-xs text-muted mt-0.5 line-clamp-2">{n.body}</div>
-              </div>
-            </Card>
-          ))}
+                <div className="flex-1 min-w-0" onClick={() => markRead(n.id)}>
+                  <div className="flex items-center gap-2">
+                    {isUnread && <span className="w-2 h-2 rounded-full bg-accent shrink-0" />}
+                    <div className={`text-sm font-semibold truncate ${isUnread ? "text-fg" : "text-muted"}`}>
+                      {n.title}
+                    </div>
+                    <span className="text-xs text-muted shrink-0 ml-auto">{timeAgo(n.at)}</span>
+                  </div>
+                  <div className="text-xs text-muted mt-0.5 line-clamp-2">{n.body}</div>
+                </div>
+              </Card>
+            );
+          })}
         </div>
       )}
     </>
