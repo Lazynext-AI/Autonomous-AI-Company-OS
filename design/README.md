@@ -7,8 +7,8 @@ these are snapshots for design-to-code and reference.
 ## Marketing
 landing-page · pricing · pricing-table · signup · login · forgot-password ·
 verify-email · two-factor · docs-landing · docs-detail · status-page ·
-status-history · 404 · 429 · 500 · legal · help-center · changelog ·
-og-card · brand · cookie-banner · maintenance-banner
+status-history · 404 · 429 · 500 · legal · help-center · changelog · waitlist ·
+vs-hiring · og-card · brand · cookie-banner · maintenance-banner
 
 ## Onboarding
 onboarding-1..3 · onboarding-success
@@ -20,10 +20,13 @@ feed · api-keys · api-playground · webhooks · billing · settings ·
 account · integrations · team · audit-log · domains · notifications ·
 command-palette · search · avatar-menu · shortcuts ·
 deploy-detail · sandbox · logs · code-review · task-comments ·
-webhook-delivery · email-prefs · feature-flags
+webhook-delivery · email-prefs · feature-flags · analytics ·
+product-switcher · notification-detail
 
 ## Modals
-modal-create-task · modal-create-api-key · modal-create-webhook
+modal-create-task · modal-create-api-key · modal-create-webhook ·
+modal-plan-change · modal-integration-config · modal-webhook-test ·
+modal-agent-config · modal-data-export
 
 ## Mobile
 mobile · mobile-nav · mobile-briefing · mobile-tasks · mobile-agents ·

@@ -1,0 +1,452 @@
+<svg width="640" xmlns="http://www.w3.org/2000/svg" height="520" viewBox="3100 8300 640 520" style="-webkit-print-color-adjust::exact" xmlns:xlink="http://www.w3.org/1999/xlink" fill="none" version="1.1">
+  <style>
+  </style>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba9c85f3578">
+    <defs>
+      <clipPath id="frame-clip-8a7393f4-edd8-8078-8008-aba9c85f3578-render-18970" class="frame-clip frame-clip-def">
+        <rect rx="0" ry="0" x="3100" y="8300" width="640" height="520" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)">
+        </rect>
+      </clipPath>
+    </defs>
+    <g class="frame-container-wrapper">
+      <g class="frame-container-blur">
+        <g class="frame-container-shadows">
+          <g clip-path="url(#frame-clip-8a7393f4-edd8-8078-8008-aba9c85f3578-render-18970)" fill="none">
+            <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c85f3578">
+              <rect rx="0" ry="0" x="3100" y="8300" width="640" height="520" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="frame-background" style="fill:#0a0a0b">
+              </rect>
+            </g>
+            <g class="frame-children">
+              <g id="shape-8a7393f4-edd8-8078-8008-aba9c87e68ec" style="opacity:0.6">
+                <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c87e68ec">
+                  <rect rx="0" ry="0" x="3100" y="8300" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="640" height="520" style="fill:#000">
+                  </rect>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba9c896d128">
+                <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c896d128">
+                  <rect rx="16" ry="16" x="3180" y="8380" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="480" height="360" style="fill:#141419">
+                  </rect>
+                </g>
+                <g id="strokes-8a7393f4-edd8-8078-8008-abaa6ebb8227-8a7393f4-edd8-8078-8008-aba9c896d128" class="strokes">
+                  <g class="stroke-shape">
+                    <rect rx="16" ry="16" x="3180" y="8380" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="480" height="360" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
+                    </rect>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba9c8b58c01">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="3204" y="8406" width="100" height="23" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="99.34375" height="24.5" id="fill-0-render-18973-0">
+                      <g>
+                        <rect width="99.34375" height="24.5" style="fill:#fafafa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c8b58c01">
+                    <text x="3204" y="8429.5" dominant-baseline="ideographic" textLength="99.34375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:19px;text-decoration:none;direction:ltr;fill:#fafafa">Change plan</text>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba9c8cb4a58">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="3204" y="8438" width="127" height="16" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="126.3125" height="17" id="fill-0-render-18974-0">
+                      <g>
+                        <rect width="126.3125" height="17" style="fill:#a78bfa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c8cb4a58">
+                    <text x="3204" y="8454" dominant-baseline="ideographic" textLength="126.3125" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#a78bfa">Company → Enterprise</text>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba9c8e0925d">
+                <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c8e0925d">
+                  <rect rx="10" ry="10" x="3204" y="8480" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="432" height="130" style="fill:#0e0e13">
+                  </rect>
+                </g>
+                <g id="strokes-8a7393f4-edd8-8078-8008-abaa6ebb822a-8a7393f4-edd8-8078-8008-aba9c8e0925d" class="strokes">
+                  <g class="stroke-shape">
+                    <rect rx="10" ry="10" x="3204" y="8480" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="432" height="130" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
+                    </rect>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba9c8ff00ac">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="3224" y="8505" width="42" height="16" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="41.203125" height="17" id="fill-0-render-18976-0">
+                      <g>
+                        <rect width="41.203125" height="17" style="fill:#9c9caa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c8ff00ac">
+                    <text x="3224" y="8521" dominant-baseline="ideographic" textLength="41.203125" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#9c9caa">Current</text>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba9c91474bc">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="3500" y="8505" width="42" height="16" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="41.734375" height="17" id="fill-0-render-18977-0">
+                      <g>
+                        <rect width="41.734375" height="17" style="fill:#fafafa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c91474bc">
+                    <text x="3500" y="8521" dominant-baseline="ideographic" textLength="41.734375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#fafafa">$49/mo</text>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba9c928c42f">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="3224" y="8541" width="25" height="16" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="24.25" height="17" id="fill-0-render-18978-0">
+                      <g>
+                        <rect width="24.25" height="17" style="fill:#9c9caa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c928c42f">
+                    <text x="3224" y="8557" dominant-baseline="ideographic" textLength="24.25" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#9c9caa">New</text>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba9c93dce26">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="3500" y="8541" width="49" height="16" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="48.1875" height="17" id="fill-0-render-18979-0">
+                      <g>
+                        <rect width="48.1875" height="17" style="fill:#fafafa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c93dce26">
+                    <text x="3500" y="8557" dominant-baseline="ideographic" textLength="48.1875" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#fafafa">$199/mo</text>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba9c952d735">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="3224" y="8577" width="89" height="16" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="88.984375" height="17" id="fill-0-render-18980-0">
+                      <g>
+                        <rect width="88.984375" height="17" style="fill:#9c9caa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c952d735">
+                    <text x="3224" y="8593" dominant-baseline="ideographic" textLength="88.984375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#9c9caa">Difference today</text>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba9c967e65c">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="3500" y="8577" width="100" height="16" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="99.8515625" height="17" id="fill-0-render-18981-0">
+                      <g>
+                        <rect width="99.8515625" height="17" style="fill:#fafafa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c967e65c">
+                    <text x="3500" y="8593" dominant-baseline="ideographic" textLength="99.8515625" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#fafafa">+$37.50 (prorated)</text>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba9c97df78c">
+                <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c97df78c">
+                  <rect rx="8" ry="8" x="3204" y="8630" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="120" height="40">
+                  </rect>
+                </g>
+                <g id="strokes-8a7393f4-edd8-8078-8008-abaa6ebb8231-8a7393f4-edd8-8078-8008-aba9c97df78c" class="strokes">
+                  <g class="stroke-shape">
+                    <rect rx="8" ry="8" x="3204" y="8630" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="120" height="40" style="fill:none;fill-opacity:none;stroke-width:1.5;stroke:#26262e">
+                    </rect>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba9c99b006e">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="3242" y="8644" width="37" height="16" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="36.59375" height="17" id="fill-0-render-18983-0">
+                      <g>
+                        <rect width="36.59375" height="17" style="fill:#fafafa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c99b006e">
+                    <text x="3242" y="8660" dominant-baseline="ideographic" textLength="36.59375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#fafafa">Cancel</text>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba9c9b019df">
+                <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c9b019df">
+                  <rect rx="8" ry="8" x="3510" y="8630" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="126" height="40" style="fill:#8b5cf6">
+                  </rect>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba9c9ca5f3a">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="3532" y="8644" width="47" height="16" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="46.6328125" height="17" id="fill-0-render-18985-0">
+                      <g>
+                        <rect width="46.6328125" height="17" style="fill:#fff">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c9ca5f3a">
+                    <text x="3532" y="8660" dominant-baseline="ideographic" textLength="46.6328125" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#fff">Upgrade</text>
+                  </g>
+                </g>
+              </g>
+              <g id="shape-8a7393f4-edd8-8078-8008-aba9c9deb9aa">
+                <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="3204" y="8696" width="199" height="14" rx="0" ry="0">
+                  <defs>
+                    <pattern patternUnits="objectBoundingBox" width="198.78125" height="14.5" id="fill-0-render-18986-0">
+                      <g>
+                        <rect width="198.78125" height="14.5" style="fill:#9c9caa">
+                        </rect>
+                      </g>
+                    </pattern>
+                  </defs>
+                  <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c9deb9aa">
+                    <text x="3204" y="8709.5" dominant-baseline="ideographic" textLength="198.78125" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:11px;text-decoration:none;direction:ltr;fill:#9c9caa">Unlocks: SSO, audit log, dedicated support.</text>
+                  </g>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba9c87e68ec" style="opacity:0.6">
+    <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c87e68ec">
+      <rect rx="0" ry="0" x="3100" y="8300" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="640" height="520" style="fill:#000">
+      </rect>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba9c896d128">
+    <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c896d128">
+      <rect rx="16" ry="16" x="3180" y="8380" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="480" height="360" style="fill:#141419">
+      </rect>
+    </g>
+    <g id="strokes-8a7393f4-edd8-8078-8008-abaa6ebbdc4e-8a7393f4-edd8-8078-8008-aba9c896d128" class="strokes">
+      <g class="stroke-shape">
+        <rect rx="16" ry="16" x="3180" y="8380" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="480" height="360" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
+        </rect>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba9c8b58c01">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="3204" y="8406" width="100" height="23" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="99.34375" height="24.5" id="fill-0-render-18989-0">
+          <g>
+            <rect width="99.34375" height="24.5" style="fill:#fafafa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c8b58c01">
+        <text x="3204" y="8429.5" dominant-baseline="ideographic" textLength="99.34375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:19px;text-decoration:none;direction:ltr;fill:#fafafa">Change plan</text>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba9c8cb4a58">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="3204" y="8438" width="127" height="16" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="126.3125" height="17" id="fill-0-render-18990-0">
+          <g>
+            <rect width="126.3125" height="17" style="fill:#a78bfa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c8cb4a58">
+        <text x="3204" y="8454" dominant-baseline="ideographic" textLength="126.3125" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#a78bfa">Company → Enterprise</text>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba9c8e0925d">
+    <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c8e0925d">
+      <rect rx="10" ry="10" x="3204" y="8480" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="432" height="130" style="fill:#0e0e13">
+      </rect>
+    </g>
+    <g id="strokes-8a7393f4-edd8-8078-8008-abaa6ebbdc51-8a7393f4-edd8-8078-8008-aba9c8e0925d" class="strokes">
+      <g class="stroke-shape">
+        <rect rx="10" ry="10" x="3204" y="8480" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="432" height="130" style="fill:none;fill-opacity:none;stroke-width:1;stroke:#26262e">
+        </rect>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba9c8ff00ac">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="3224" y="8505" width="42" height="16" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="41.203125" height="17" id="fill-0-render-18992-0">
+          <g>
+            <rect width="41.203125" height="17" style="fill:#9c9caa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c8ff00ac">
+        <text x="3224" y="8521" dominant-baseline="ideographic" textLength="41.203125" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#9c9caa">Current</text>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba9c91474bc">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="3500" y="8505" width="42" height="16" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="41.734375" height="17" id="fill-0-render-18993-0">
+          <g>
+            <rect width="41.734375" height="17" style="fill:#fafafa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c91474bc">
+        <text x="3500" y="8521" dominant-baseline="ideographic" textLength="41.734375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#fafafa">$49/mo</text>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba9c928c42f">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="3224" y="8541" width="25" height="16" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="24.25" height="17" id="fill-0-render-18994-0">
+          <g>
+            <rect width="24.25" height="17" style="fill:#9c9caa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c928c42f">
+        <text x="3224" y="8557" dominant-baseline="ideographic" textLength="24.25" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#9c9caa">New</text>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba9c93dce26">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="3500" y="8541" width="49" height="16" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="48.1875" height="17" id="fill-0-render-18995-0">
+          <g>
+            <rect width="48.1875" height="17" style="fill:#fafafa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c93dce26">
+        <text x="3500" y="8557" dominant-baseline="ideographic" textLength="48.1875" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#fafafa">$199/mo</text>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba9c952d735">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="3224" y="8577" width="89" height="16" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="88.984375" height="17" id="fill-0-render-18996-0">
+          <g>
+            <rect width="88.984375" height="17" style="fill:#9c9caa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c952d735">
+        <text x="3224" y="8593" dominant-baseline="ideographic" textLength="88.984375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#9c9caa">Difference today</text>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba9c967e65c">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="3500" y="8577" width="100" height="16" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="99.8515625" height="17" id="fill-0-render-18997-0">
+          <g>
+            <rect width="99.8515625" height="17" style="fill:#fafafa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c967e65c">
+        <text x="3500" y="8593" dominant-baseline="ideographic" textLength="99.8515625" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#fafafa">+$37.50 (prorated)</text>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba9c97df78c">
+    <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c97df78c">
+      <rect rx="8" ry="8" x="3204" y="8630" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="120" height="40">
+      </rect>
+    </g>
+    <g id="strokes-8a7393f4-edd8-8078-8008-abaa6ebbdc58-8a7393f4-edd8-8078-8008-aba9c97df78c" class="strokes">
+      <g class="stroke-shape">
+        <rect rx="8" ry="8" x="3204" y="8630" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="120" height="40" style="fill:none;fill-opacity:none;stroke-width:1.5;stroke:#26262e">
+        </rect>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba9c99b006e">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="3242" y="8644" width="37" height="16" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="36.59375" height="17" id="fill-0-render-18999-0">
+          <g>
+            <rect width="36.59375" height="17" style="fill:#fafafa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c99b006e">
+        <text x="3242" y="8660" dominant-baseline="ideographic" textLength="36.59375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#fafafa">Cancel</text>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba9c9b019df">
+    <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c9b019df">
+      <rect rx="8" ry="8" x="3510" y="8630" transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" width="126" height="40" style="fill:#8b5cf6">
+      </rect>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba9c9ca5f3a">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="3532" y="8644" width="47" height="16" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="46.6328125" height="17" id="fill-0-render-19001-0">
+          <g>
+            <rect width="46.6328125" height="17" style="fill:#fff">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c9ca5f3a">
+        <text x="3532" y="8660" dominant-baseline="ideographic" textLength="46.6328125" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:13px;text-decoration:none;direction:ltr;fill:#fff">Upgrade</text>
+      </g>
+    </g>
+  </g>
+  <g id="shape-8a7393f4-edd8-8078-8008-aba9c9deb9aa">
+    <g transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)" class="text-container" x="3204" y="8696" width="199" height="14" rx="0" ry="0">
+      <defs>
+        <pattern patternUnits="objectBoundingBox" width="198.78125" height="14.5" id="fill-0-render-19002-0">
+          <g>
+            <rect width="198.78125" height="14.5" style="fill:#9c9caa">
+            </rect>
+          </g>
+        </pattern>
+      </defs>
+      <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba9c9deb9aa">
+        <text x="3204" y="8709.5" dominant-baseline="ideographic" textLength="198.78125" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:11px;text-decoration:none;direction:ltr;fill:#9c9caa">Unlocks: SSO, audit log, dedicated support.</text>
+      </g>
+    </g>
+  </g>
+</svg>
