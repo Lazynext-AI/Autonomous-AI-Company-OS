@@ -38,6 +38,7 @@ email-briefing · email-alert · email-welcome · email-reset · email-invoice
 
 ## Design system
 cover · user-flow · design-system · ui-states · terminal · site-map ·
+splash · voice-tone · email-components ·
 buttons · inputs · icons · spacing-grid · motion · accessibility ·
 cards · tables · form-elements · charts · light-theme
 
