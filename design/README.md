@@ -37,7 +37,7 @@ mobile-login · mobile-settings · tablet
 email-briefing · email-alert · email-welcome · email-reset · email-invoice
 
 ## Design system
-design-system · ui-states · terminal · site-map ·
+cover · user-flow · design-system · ui-states · terminal · site-map ·
 buttons · inputs · icons · spacing-grid · motion · accessibility ·
 cards · tables · form-elements · charts · light-theme
 
