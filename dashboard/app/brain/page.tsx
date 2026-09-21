@@ -2,228 +2,141 @@
 
 import { useEffect, useState } from "react";
 import { queryApi, parseJson } from "@/lib/api";
-import Link from "next/link";
-import { Brain, Code, AlertTriangle, CheckCircle, TrendingUp, Package } from "lucide-react";
+import { PageHeader, Card, Empty } from "@/components/ui";
 
 export default function BrainPage() {
   const [brain, setBrain] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
   useEffect(() => {
-    const fetchBrain = async () => {
+    const load = async () => {
       try {
         const rows = await queryApi<any>("SELECT * FROM company_brain LIMIT 1");
-        const data = rows[0];
-        if (data) {
+        const d = rows[0];
+        if (d) {
           setBrain({
-            ...data,
-            metrics: parseJson(data.metrics, {}),
-            tech_stack: parseJson(data.tech_stack, {}),
-            live_urls: parseJson(data.live_urls, {}),
-            current_sprint: parseJson(data.current_sprint, {}),
-            open_bugs: parseJson(data.open_bugs, []),
-            shipped_features: parseJson(data.shipped_features, []),
-            user_feedback: parseJson(data.user_feedback, []),
-            agent_statuses: parseJson(data.agent_statuses, {}),
-            blockers: parseJson(data.blockers, []),
+            ...d,
+            metrics: parseJson(d.metrics, {}),
+            tech_stack: parseJson(d.tech_stack, {}),
+            live_urls: parseJson(d.live_urls, {}),
+            current_sprint: parseJson(d.current_sprint, {}),
+            open_bugs: parseJson(d.open_bugs, []),
+            shipped_features: parseJson(d.shipped_features, []),
+            blockers: parseJson(d.blockers, []),
           });
         }
         setLoading(false);
-        setLastUpdate(new Date());
-      } catch (error) {
-        console.error("Error fetching brain:", error);
+      } catch {
         setLoading(false);
       }
     };
-
-    fetchBrain();
-    const pollInterval = setInterval(fetchBrain, 2000);
-    return () => clearInterval(pollInterval);
+    load();
+    const t = setInterval(load, 5000);
+    return () => clearInterval(t);
   }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-400 mx-auto mb-4"></div>
-          <p className="text-zinc-400">Loading company brain...</p>
-        </div>
-      </div>
-    );
-  }
 
   const metrics = brain?.metrics || {};
   const techStack = brain?.tech_stack || {};
-  const shippedFeatures = Array.isArray(brain?.shipped_features) ? brain.shipped_features : [];
-  const openBugs = Array.isArray(brain?.open_bugs) ? brain.open_bugs : [];
-  const blockers = Array.isArray(brain?.blockers) ? brain.blockers : [];
-  const userFeedback = Array.isArray(brain?.user_feedback) ? brain.user_feedback : [];
+  const shipped = brain?.shipped_features || [];
+  const bugs = brain?.open_bugs || [];
+  const blockers = brain?.blockers || [];
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="border-b border-zinc-800 bg-zinc-900/50 sticky top-0 z-10 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Brain className="w-6 h-6" />
-              Company Brain
-            </h1>
-            <div className="flex items-center gap-2 text-sm text-zinc-400">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span>Live • Updated: {lastUpdate.toLocaleTimeString()}</span>
-            </div>
-          </div>
-        </div>
-      </div>
+    <>
+      <PageHeader title="Brain" subtitle="The company's memory — mission, stack, shipped, blockers." />
 
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        <nav className="flex gap-4 mb-6 border-b border-zinc-800 pb-4">
-          <Link href="/" className="text-zinc-400 hover:text-zinc-200 transition">
-            Overview
-          </Link>
-          <Link href="/agents" className="text-zinc-400 hover:text-zinc-200 transition">
-            Agents
-          </Link>
-          <Link href="/feed" className="text-zinc-400 hover:text-zinc-200 transition">
-            Live Feed
-          </Link>
-          <Link href="/brain" className="text-blue-400 font-semibold border-b-2 border-blue-400 pb-2">
-            Company Brain
-          </Link>
-          <Link href="/briefings" className="text-zinc-400 hover:text-zinc-200 transition">
-            Briefings
-          </Link>
-        </nav>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Product Info */}
-          <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
-            <h2 className="text-lg font-semibold mb-4">Product Information</h2>
-            <div className="space-y-3">
-              <div>
-                <div className="text-sm text-zinc-400 mb-1">Product Name</div>
-                <div className="text-lg font-semibold">{brain?.product_name || "—"}</div>
+      <div className="grid grid-cols-2 gap-5">
+        <Card>
+          <h2 className="text-sm font-semibold mb-4">Product</h2>
+          <div className="space-y-3 text-sm">
+            {[["Name", brain?.product_name], ["Mission", brain?.mission], ["Description", brain?.product_description]].map(([k, v]) => (
+              <div key={k}>
+                <div className="text-xs text-muted">{k}</div>
+                <div className="text-zinc-50 mt-0.5">{v || "—"}</div>
               </div>
-              <div>
-                <div className="text-sm text-zinc-400 mb-1">Mission</div>
-                <div className="text-zinc-200">{brain?.mission || "—"}</div>
-              </div>
-              <div>
-                <div className="text-sm text-zinc-400 mb-1">Description</div>
-                <div className="text-zinc-200">{brain?.product_description || "—"}</div>
-              </div>
-            </div>
+            ))}
           </div>
+        </Card>
 
-          {/* Metrics */}
-          <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5" />
-              Metrics
-            </h2>
-            <div className="grid grid-cols-2 gap-4">
-              <MetricItem label="Users" value={metrics.users ?? 0} />
-              <MetricItem label="Revenue" value={`$${metrics.revenue ?? 0}`} />
-              <MetricItem label="MRR" value={`$${metrics.mrr ?? 0}`} />
-              <MetricItem label="Uptime" value={`${metrics.uptime_pct ?? 100}%`} />
-              <MetricItem label="Error Rate" value={`${metrics.error_rate ?? 0}%`} />
-              <MetricItem label="Deploys" value={metrics.deploy_count ?? 0} />
-            </div>
+        <Card>
+          <h2 className="text-sm font-semibold mb-4">Metrics</h2>
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              ["Users", metrics.users ?? 0],
+              ["MRR", `$${metrics.mrr ?? 0}`],
+              ["Uptime", `${metrics.uptime_pct ?? 100}%`],
+              ["Deploys", metrics.deploy_count ?? 0],
+              ["Error rate", `${metrics.error_rate ?? 0}%`],
+              ["Revenue", `$${metrics.revenue ?? 0}`],
+            ].map(([l, v]) => (
+              <div key={l}>
+                <div className="text-xs text-muted">{l}</div>
+                <div className="text-lg font-semibold text-zinc-50">{v}</div>
+              </div>
+            ))}
           </div>
+        </Card>
 
-          {/* Tech Stack */}
-          <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Code className="w-5 h-5" />
-              Tech Stack
-            </h2>
-            {Object.keys(techStack).length === 0 ? (
-              <p className="text-zinc-400 text-sm">No tech stack defined</p>
+        <Card>
+          <h2 className="text-sm font-semibold mb-4">Tech stack</h2>
+          {Object.keys(techStack).length === 0 ? (
+            <p className="text-sm text-muted">Not set yet.</p>
+          ) : (
+            Object.entries(techStack).map(([k, v]) => (
+              <div key={k} className="flex justify-between py-1.5 text-sm">
+                <span className="text-muted capitalize">{k}</span>
+                <span className="text-zinc-50">{String(v)}</span>
+              </div>
+            ))
+          )}
+        </Card>
+
+        <Card>
+          <h2 className="text-sm font-semibold mb-4">Shipped ({shipped.length})</h2>
+          <div className="space-y-2 max-h-56 overflow-y-auto">
+            {shipped.length === 0 ? (
+              <p className="text-sm text-muted">Nothing shipped yet.</p>
             ) : (
-              <div className="space-y-2">
-                {Object.entries(techStack).map(([key, value]) => (
-                  <div key={key} className="flex justify-between">
-                    <span className="text-zinc-400 capitalize">{key}:</span>
-                    <span className="text-zinc-200">{String(value)}</span>
-                  </div>
-                ))}
-              </div>
+              shipped.map((f: any, i: number) => (
+                <div key={i} className="bg-input rounded-lg px-3 py-2 text-xs text-zinc-50">
+                  {typeof f === "string" ? f : f.description || JSON.stringify(f)}
+                </div>
+              ))
             )}
           </div>
+        </Card>
 
-          {/* Shipped Features */}
-          <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-400" />
-              Shipped Features ({shippedFeatures.length})
-            </h2>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {shippedFeatures.length === 0 ? (
-                <p className="text-zinc-400 text-sm">No features shipped yet</p>
-              ) : (
-                shippedFeatures.map((feature: any, idx: number) => (
-                  <div key={idx} className="bg-zinc-800/50 rounded p-2 text-sm">
-                    {typeof feature === "string" ? feature : feature.description || JSON.stringify(feature)}
-                  </div>
-                ))
-              )}
-            </div>
+        <Card>
+          <h2 className="text-sm font-semibold mb-4">Open bugs ({bugs.length})</h2>
+          <div className="space-y-2 max-h-56 overflow-y-auto">
+            {bugs.length === 0 ? (
+              <p className="text-sm text-muted">None open.</p>
+            ) : (
+              bugs.map((b: any, i: number) => (
+                <div key={i} className="bg-badBg rounded-lg px-3 py-2 text-xs text-zinc-50">
+                  <span className="text-bad font-semibold">{b.severity || "BUG"}</span>{" "}
+                  {typeof b === "string" ? b : b.description || JSON.stringify(b)}
+                </div>
+              ))
+            )}
           </div>
+        </Card>
 
-          {/* Open Bugs */}
-          <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-red-400" />
-              Open Bugs ({openBugs.length})
-            </h2>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {openBugs.length === 0 ? (
-                <p className="text-zinc-400 text-sm">No open bugs</p>
-              ) : (
-                openBugs.map((bug: any, idx: number) => (
-                  <div key={idx} className="bg-red-400/10 border border-red-400/20 rounded p-2 text-sm">
-                    <div className="font-semibold text-red-400 mb-1">
-                      {bug.severity || "UNKNOWN"}: {bug.component || "Unknown"}
-                    </div>
-                    <div className="text-zinc-300">
-                      {typeof bug === "string" ? bug : bug.description || JSON.stringify(bug)}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+        <Card>
+          <h2 className="text-sm font-semibold mb-4">Blockers ({blockers.length})</h2>
+          <div className="space-y-2 max-h-56 overflow-y-auto">
+            {blockers.length === 0 ? (
+              <p className="text-sm text-muted">Clear — nothing blocking.</p>
+            ) : (
+              blockers.map((b: any, i: number) => (
+                <div key={i} className="bg-warnBg rounded-lg px-3 py-2 text-xs text-zinc-50">
+                  {typeof b === "string" ? b : b.description || JSON.stringify(b)}
+                </div>
+              ))
+            )}
           </div>
-
-          {/* Blockers */}
-          <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-yellow-400" />
-              Blockers ({blockers.length})
-            </h2>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {blockers.length === 0 ? (
-                <p className="text-zinc-400 text-sm">No blockers</p>
-              ) : (
-                blockers.map((blocker: any, idx: number) => (
-                  <div key={idx} className="bg-yellow-400/10 border border-yellow-400/20 rounded p-2 text-sm">
-                    {typeof blocker === "string" ? blocker : blocker.description || JSON.stringify(blocker)}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
+        </Card>
       </div>
-    </div>
-  );
-}
-
-function MetricItem({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div>
-      <div className="text-xs text-zinc-400 mb-1">{label}</div>
-      <div className="text-lg font-semibold">{value}</div>
-    </div>
+    </>
   );
 }
