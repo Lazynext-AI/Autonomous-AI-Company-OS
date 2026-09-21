@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { queryApi, parseJson } from "@/lib/api";
 import Link from "next/link";
 import { PageHeader, Card, StatusBadge, Empty, timeAgo } from "@/components/ui";
+import AssignTaskModal from "@/components/AssignTaskModal";
 
 interface Task {
   task_id: string;
@@ -25,18 +26,19 @@ export default function TasksPage() {
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
 
+  const load = async () => {
+    try {
+      const rows = await queryApi<any>(
+        "SELECT * FROM task_log ORDER BY created_at DESC LIMIT 200"
+      );
+      setTasks(rows.map((t) => ({ ...t, error_log: parseJson(t.error_log, []) })));
+      setLoading(false);
+    } catch {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const load = async () => {
-      try {
-        const rows = await queryApi<any>(
-          "SELECT * FROM task_log ORDER BY created_at DESC LIMIT 200"
-        );
-        setTasks(rows.map((t) => ({ ...t, error_log: parseJson(t.error_log, []) })));
-        setLoading(false);
-      } catch {
-        setLoading(false);
-      }
-    };
     load();
     const t = setInterval(load, 5000);
     return () => clearInterval(t);
@@ -47,20 +49,23 @@ export default function TasksPage() {
   return (
     <>
       <PageHeader title="Tasks" subtitle="Everything the company is doing — queued, working, done.">
-        <div className="flex gap-2">
-          {FILTERS.map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition ${
-                filter === f
-                  ? "bg-accent text-white"
-                  : "bg-card text-muted hover:text-fg border border-border"
-              }`}
-            >
-              {f.replace("_", " ")}
-            </button>
-          ))}
+        <div className="flex items-center gap-3">
+          <div className="flex gap-2">
+            {FILTERS.map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition ${
+                  filter === f
+                    ? "bg-accent text-white"
+                    : "bg-card text-muted hover:text-fg border border-border"
+                }`}
+              >
+                {f.replace("_", " ")}
+              </button>
+            ))}
+          </div>
+          <AssignTaskModal onDone={load} />
         </div>
       </PageHeader>
 
