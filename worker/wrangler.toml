@@ -25,6 +25,21 @@ binding = "AI"
 [browser]
 binding = "BROWSER"
 
+# Code-execution container — Python sandbox replacing E2B.
+[[containers]]
+name = "code-exec"
+class_name = "CodeExecContainer"
+image = "./Dockerfile"
+max_instances = 5
+
+[[durable_objects.bindings]]
+name = "CODE_EXEC"
+class_name = "CodeExecContainer"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["CodeExecContainer"]
+
 # Continuous agent loop — cron fires agentTick every 10 minutes.
 [triggers]
 crons = ["*/10 * * * *"]

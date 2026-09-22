@@ -14,6 +14,8 @@ import { handleBilling } from "./billing";
 import { handleOAuth } from "./oauth";
 import { handleWebSearch } from "./websearch";
 import { handleScrape } from "./scrape";
+import { getContainer } from "@cloudflare/containers";
+export { CodeExecContainer } from "./exec_container";
 import { handleWidget } from "./widget";
 import { fanOut, handleWebhooks, publishToBus } from "./webhooks";
 
@@ -275,6 +277,11 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
     }
     case "/scrape": {
       return handleScrape(req, env);
+    }
+    case "/exec": {
+      if (!env.CODE_EXEC) return json({ error: "exec container not configured" }, 503);
+      const container = getContainer(env.CODE_EXEC);
+      return container.fetch(req);
     }
 
     default:
