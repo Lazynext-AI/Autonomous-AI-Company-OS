@@ -163,6 +163,29 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
       return json({ text });
     }
 
+    case "/email/send": {
+      // Real transactional email via Resend — founder flows (verify, reset, alerts).
+      if (!env.RESEND_API_KEY) return json({ error: "email not configured" }, 503);
+      const b = await readBody<{ to: string; subject: string; html: string }>(req);
+      if (!b.to || !b.subject || !b.html) return json({ error: "to, subject, html required" }, 400);
+      const r = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${env.RESEND_API_KEY}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          from: "Lazynext <support@lazynext.com>",
+          to: [b.to],
+          subject: b.subject,
+          html: b.html,
+        }),
+      });
+      const d = (await r.json()) as { id?: string; message?: string };
+      if (!r.ok) return json({ error: d.message ?? "send failed" }, r.status);
+      return json({ ok: true, id: d.id });
+    }
+
     case "/bus/ack": {
       const b = await readBody<{ channel: string; group: string; ids: (string | number)[] }>(req);
       if (!b.ids?.length) return json({ ok: true });

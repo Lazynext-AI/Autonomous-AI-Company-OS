@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { PageHeader, Card } from "@/components/ui";
+import { queryApi } from "@/lib/api";
 import { toast } from "@/components/Toast";
 import Link from "next/link";
 import {
@@ -46,7 +47,11 @@ export default function SettingsPage() {
   const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
 
   useEffect(() => {
-    Promise.all(FLAGS.map((f) => kv("get", f.key).then((r) => [f.key, r.value === "true"])))
+    Promise.all(
+      [...FLAGS.map((f) => f.key), "flag:two_factor"].map((k) =>
+        kv("get", k).then((r) => [k, r.value === "true"])
+      )
+    )
       .then((pairs) => setFlags(Object.fromEntries(pairs as [string, boolean][])))
       .finally(() => setLoading(false));
     const d = (localStorage.getItem("lz_density") as "compact") || "comfortable";
@@ -198,6 +203,48 @@ export default function SettingsPage() {
           <p className="px-5 py-3 text-xs text-muted">
             Stored in Cloudflare KV — agents read these at runtime via kv_get.
           </p>
+        </Card>
+
+        <Card>
+          <h2 className="text-sm font-semibold mb-3">Security</h2>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm text-fg">Two-factor auth</div>
+                <div className="text-xs text-muted">Require a TOTP code at sign-in (flagged — wired when multi-auth lands)</div>
+              </div>
+              <button
+                onClick={() => toggle("flag:two_factor")}
+                className={`w-11 h-6 rounded-full transition relative ${flags["flag:two_factor"] ? "bg-accent" : "bg-input border border-border"}`}
+              >
+                <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${flags["flag:two_factor"] ? "left-[22px]" : "left-0.5"}`} />
+              </button>
+            </div>
+            <div className="pt-3 border-t border-border">
+              <div className="text-sm text-fg mb-1">Email verification</div>
+              <div className="text-xs text-muted mb-3">Send a real verification email to the founder address via Resend.</div>
+              <button
+                onClick={async () => {
+                  const b = await queryApi<any>("SELECT founder_email FROM company_brain LIMIT 1");
+                  const email = b[0]?.founder_email;
+                  if (!email) return toast("No founder_email set");
+                  const r = await fetch("/api/email", {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({
+                      to: email,
+                      subject: "Verify your Lazynext email",
+                      html: `<div style="font-family:sans-serif;background:#0A0A0B;color:#FAFAFA;padding:32px;border-radius:12px"><h2 style="margin:0 0 12px"><span style="color:#A78BFA">◆</span> Lazynext</h2><p style="color:#9C9CAA">Confirm this address owns the company dashboard.</p><a href="https://dashboard.lazynext.com" style="display:inline-block;margin-top:16px;background:#8B5CF6;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700">Verify email</a></div>`,
+                    }),
+                  });
+                  toast(r.ok ? `Verification sent to ${email}` : "Send failed");
+                }}
+                className="text-xs bg-accent hover:bg-accentSoft text-white font-semibold px-3.5 py-2 rounded-lg transition"
+              >
+                Send verification email
+              </button>
+            </div>
+          </div>
         </Card>
 
         <Card>

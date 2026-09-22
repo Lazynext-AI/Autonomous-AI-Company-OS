@@ -43,7 +43,10 @@ export default function LoginPage() {
           className="bg-card border border-border rounded-[14px] p-6 space-y-4"
         >
           <div>
-            <label className="text-xs text-muted">Passphrase</label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs text-muted">Passphrase</label>
+              <a href="/forgot" className="text-xs text-accentSoft hover:underline">Forgot?</a>
+            </div>
             <div className="relative mt-1.5">
               <input
                 type={show ? "text" : "password"}

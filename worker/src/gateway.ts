@@ -10,6 +10,7 @@ export interface Env {
   VECTORS: VectorizeIndex;
   AI?: Ai;
   API_TOKEN?: string;
+  RESEND_API_KEY?: string;
 }
 
 export interface ApiKey {
