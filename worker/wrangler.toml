@@ -21,7 +21,7 @@ index_name = "company-knowledge"
 [ai]
 binding = "AI"
 
-# Browser Rendering — headless Chromium for page scraping (replaces Firecrawl).
+# Browser Rendering — headless Chromium for page scraping (for agent research).
 [browser]
 binding = "BROWSER"
 

@@ -32,4 +32,4 @@
 - Plann (social planner): non-technical founder, $1M revenue in 2 years
 - Subscribr: pre-sold 50 lifetime deals (~$20K) before writing code
 
-Source: compiled via Firecrawl from lovable.dev/guides and greensighter.com/blog, Dec 2025 - Sep 2026.
+Source: compiled via Cloudflare Browser Rendering from lovable.dev/guides and greensighter.com/blog, Dec 2025 - Sep 2026.
