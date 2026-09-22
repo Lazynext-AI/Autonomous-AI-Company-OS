@@ -25,8 +25,9 @@ async function hmac(secret: string, body: string): Promise<string> {
 }
 
 async function deliver(env: Env, ep: WebhookEndpoint, channel: string, messageId: string, payload: string) {
-  // Platform-aware formatting: Slack/Discord accept {content|text},
-  // Telegram needs chat_id+text, everything else gets the raw event.
+  // Platform-aware formatting: Slack/Discord/Teams/Google Chat accept
+  // {content|text}, Telegram needs chat_id+text, everything else gets
+  // the raw event.
   let body: string;
   const host = new URL(ep.url).hostname;
   const pretty = `[${channel}] ${payload}`.slice(0, 1800);
@@ -37,6 +38,10 @@ async function deliver(env: Env, ep: WebhookEndpoint, channel: string, messageId
   } else if (host === "api.telegram.org") {
     const chatId = new URL(ep.url).searchParams.get("chat_id") ?? "";
     body = JSON.stringify({ chat_id: chatId, text: `Lazynext · ${pretty}` });
+  } else if (host === "chat.googleapis.com") {
+    body = JSON.stringify({ text: `*Lazynext* · ${pretty}` });
+  } else if (host.includes("webhook.office.com") || host.includes("logic.azure.com")) {
+    body = JSON.stringify({ text: `**Lazynext** · ${pretty}` });
   } else {
     body = JSON.stringify({
       event: "bus.message",

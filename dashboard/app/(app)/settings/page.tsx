@@ -317,11 +317,11 @@ export default function SettingsPage() {
         <Card>
           <h2 className="text-sm font-semibold mb-3">Chat integrations</h2>
           <p className="text-xs text-muted mb-4">
-            Company events post to Slack, Discord or Telegram. Paste a webhook URL — Lazynext
-            formats the message for each platform automatically.
+            Company events post to Slack, Discord, Telegram, Microsoft Teams or Google Chat.
+            Paste a webhook URL — Lazynext formats the message for each platform automatically.
           </p>
           <div className="space-y-3">
-            {(["slack", "discord", "telegram"] as const).map((platform) => (
+            {(["slack", "discord", "telegram", "teams", "google chat"] as const).map((platform) => (
               <ChatHook key={platform} platform={platform} />
             ))}
           </div>
