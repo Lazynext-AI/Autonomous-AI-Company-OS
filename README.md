@@ -395,8 +395,8 @@ Frontends deploy to Cloudflare Pages, backends to Workers (JS/TS) or Containers
    - API token (`CF_API_TOKEN`) with edit perms for Workers Scripts, Workers KV, D1, Vectorize
    - Account ID (`CF_ACCOUNT_ID`) from the dashboard sidebar
 
-2. **Atlas Cloud API Key**: Get from [atlascloud.ai](https://www.atlascloud.ai)
-   - Required for all agent operations
+2. **LLM brain**: Cloudflare Workers AI (Llama-3.3-70b) — runs via the company
+   worker, no separate key needed. Free tier included.
 
 ### Installation Steps
 
@@ -408,7 +408,7 @@ cd autonomous-ai-company
 # Copy environment template
 cp .env.example .env
 
-# Edit .env: ATLASCLOUD_API_KEY, CF_ACCOUNT_ID, CF_API_TOKEN
+# Edit .env: CF_ACCOUNT_ID, CF_API_TOKEN
 
 # Install dependencies (uses uv)
 make setup
@@ -443,14 +443,12 @@ make validate-env
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID | `abc123...` |
 | `CLOUDFLARE_API_KEY` | Cloudflare Global API Key (wrangler + deploys) | `cfk_...` |
 | `CLOUDFLARE_EMAIL` | Cloudflare account email (global-key auth) | `you@example.com` |
-| `ATLASCLOUD_API_KEY` | Atlas Cloud API key | `apikey-...` |
 
 ### Optional Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `ATLAS_BASE_URL` | Atlas Cloud base URL | `https://api.atlascloud.ai/v1` |
-| `ATLAS_MODEL` | Default model | `deepseek-ai/DeepSeek-V3.1-Terminus` |
+| `LLM_MODEL` | Brain model (Workers AI) | `@cf/meta/llama-3.3-70b-instruct-fp8-fast` |
 | `PRODUCTS_BASE_DIR` | Base directory for product repos | `./products` |
 | `KNOWLEDGE_BASE_DIR` | Knowledge base PDF directory | `./knowledge_base` |
 | `CEO_LOOP_INTERVAL` | CEO strategic loop interval (seconds) | `300` |

@@ -19,7 +19,7 @@ fi
 if [[ ! -f .env ]]; then
     echo "Creating .env from .env.example..."
     cp .env.example .env
-    echo "Please edit .env and fill in ATLASCLOUD_API_KEY, CLOUDFLARE_API_URL, CLOUDFLARE_API_TOKEN"
+    echo "Please edit .env and fill in CLOUDFLARE_API_URL, CLOUDFLARE_API_TOKEN"
 fi
 
 # Create Python 3.12 venv and install dependencies
@@ -43,7 +43,7 @@ echo ""
 echo "=== Setup Complete ==="
 echo ""
 echo "Next steps:"
-echo "1. Edit .env: ATLASCLOUD_API_KEY, CF_ACCOUNT_ID, CF_API_TOKEN"
+echo "1. Edit .env: CF_ACCOUNT_ID, CF_API_TOKEN"
 echo "2. Run 'make worker-resources' to create D1, KV, and Vectorize resources"
 echo "3. Copy the printed resource IDs into worker/wrangler.toml"
 echo "4. Run 'npx wrangler secret put API_TOKEN' in worker/ to set the shared secret"

@@ -28,9 +28,6 @@ FIX_INSTRUCTIONS = {
         "CLOUDFLARE_API_URL to the workers.dev URL and CLOUDFLARE_API_TOKEN to the "
         "shared secret set via 'npx wrangler secret put API_TOKEN'."
     ),
-    "atlas": (
-        "Atlas Cloud: Get API key at atlascloud.ai. Add ATLASCLOUD_API_KEY to .env."
-    ),
     "embeddings": (
         "Embeddings: Install sentence-transformers: pip install sentence-transformers (free, local, no API key)"
     ),
@@ -77,32 +74,20 @@ async def check_cloudflare() -> tuple[bool, str]:
         return False, str(e)
 
 
-async def check_atlas() -> tuple[bool, str]:
-    """Validate Atlas Cloud API key."""
-    key = os.getenv("ATLASCLOUD_API_KEY", "").strip()
-    base = os.getenv("ATLAS_BASE_URL", "https://api.atlascloud.ai/v1").strip().rstrip("/")
-    model = os.getenv("ATLAS_MODEL", "deepseek-ai/DeepSeek-V3.1-Terminus").strip()
-    if not key:
-        return False, "ATLASCLOUD_API_KEY not set. Get at atlascloud.ai"
+async def check_brain() -> tuple[bool, str]:
+    """Validate the Cloudflare Workers AI brain via the worker."""
+    url = os.getenv("CLOUDFLARE_API_URL", "").strip().rstrip("/")
+    token = os.getenv("CLOUDFLARE_API_TOKEN", "").strip()
+    if not url or not token:
+        return False, "CLOUDFLARE_API_URL / CLOUDFLARE_API_TOKEN not set"
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
             r = await client.post(
-                f"{base}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {key}",
-                    "content-type": "application/json",
-                },
-                json={
-                    "model": model,
-                    "max_tokens": 1,
-                    "messages": [{"role": "user", "content": "Hi"}],
-                },
+                f"{url}/agent/generate",
+                headers={"authorization": f"Bearer {token}"},
+                json={"system": "", "prompt": "Hi", "max_tokens": 1},
             )
-            if r.status_code == 200:
-                return True, "OK"
-            if r.status_code == 401:
-                return False, "Invalid API key. Check atlascloud.ai"
-            return False, f"HTTP {r.status_code}: {r.text[:120]}"
+            return (True, "OK") if r.status_code == 200 else (False, f"HTTP {r.status_code}: {r.text[:120]}")
     except Exception as e:
         return False, str(e)
 
@@ -195,7 +180,7 @@ async def main() -> None:
 
     checks = [
         ("Cloudflare", check_cloudflare, True),
-        ("Atlas", check_atlas, True),
+        ("Brain (Workers AI)", check_brain, True),
         ("Embeddings", check_embeddings, True),
         ("GitHub", check_github, False),
         ("Resend", check_resend, False),
@@ -213,8 +198,8 @@ async def main() -> None:
         else:
             console.print(f"[green]✓[/green] {name}: OK")
 
-    failed_required = [r for r in results if not r[1] and r[0] in ("Cloudflare", "Atlas", "Embeddings")]
-    failed_optional = [r for r in results if not r[1] and r[0] not in ("Cloudflare", "Atlas", "Embeddings")]
+    failed_required = [r for r in results if not r[1] and r[0] in ("Cloudflare", "Brain (Workers AI)", "Embeddings")]
+    failed_optional = [r for r in results if not r[1] and r[0] not in ("Cloudflare", "Brain (Workers AI)", "Embeddings")]
 
     if failed_required:
         console.print("\n[bold red]Required services failed. Fix these before starting:[/bold red]")

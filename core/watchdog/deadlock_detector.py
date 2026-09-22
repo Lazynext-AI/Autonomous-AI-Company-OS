@@ -60,12 +60,12 @@ class DeadlockDetector:
                 logger.warning("message_backlog", channel=channel.value, count=count)
 
     async def _check_model_availability(self) -> None:
-        """Check Atlas Cloud API key is configured."""
+        """Check the Cloudflare Workers AI brain is configured."""
         try:
-            if not self._settings.atlas_api_key:
-                logger.warning("atlas_api_key_not_set")
+            if not (self._settings.cloudflare_api_url and self._settings.cloudflare_api_token):
+                logger.warning("workers_ai_not_configured")
         except Exception as e:
-            logger.error("atlas_check_failed", error=str(e))
+            logger.error("brain_check_failed", error=str(e))
 
     async def _check_connections(self) -> None:
         """Check the Cloudflare Worker is reachable."""

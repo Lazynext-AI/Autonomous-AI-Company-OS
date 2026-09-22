@@ -10,12 +10,10 @@ setup:
 	@bash scripts/setup.sh
 
 models:
-	@echo "Using Atlas Cloud API - point ATLAS_BASE_URL at api.atlascloud.ai/v1."
-	@echo "Add ATLASCLOUD_API_KEY to .env (get at atlascloud.ai)"
-	@echo "Model tiers: DeepSeek V3.1 Terminus (coding), DeepSeek V4 Flash (simple tasks)"
+	@echo "Brain: Cloudflare Workers AI — Llama-3.3-70b (via the company worker, free)."
+	@echo "Needs CLOUDFLARE_API_URL + CLOUDFLARE_API_TOKEN in .env."
 	@echo ""
 	@echo "Embeddings: Free local sentence-transformers (no API key)"
-	@echo "Model downloads automatically on first use (~90MB)"
 
 # Cloudflare resource management (uses CLOUDFLARE_DEPLOY_TOKEN, or API_KEY+EMAIL)
 worker-resources:

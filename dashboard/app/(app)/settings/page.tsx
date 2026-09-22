@@ -12,13 +12,12 @@ import {
 const INTEGRATIONS = [
   { name: "GitHub", desc: "Lazynext-Platform org — repos + CI", icon: GitBranch, ok: true },
   { name: "Resend", desc: "Transactional email — briefings, alerts", icon: Mail, ok: true },
-  { name: "E2B", desc: "Code sandboxes for agents", icon: TerminalSquare, ok: true },
-  { name: "Atlas Cloud", desc: "LLM inference — needs credits", icon: Cpu, ok: false },
-  { name: "Cloudflare", desc: "Workers + D1 + KV + Vectorize", icon: Globe, ok: true },
+  { name: "Workers AI", desc: "LLM brain — Llama-3.3-70b, free", icon: Cpu, ok: true },
+  { name: "Cloudflare", desc: "Workers + D1 + KV + Vectorize + Browser + Containers", icon: Globe, ok: true },
   { name: "Penpot", desc: "Design system — penpot.lazynext.com", icon: Palette, ok: true },
-  { name: "Firecrawl", desc: "Market + competitor research", icon: Database, ok: true },
+  { name: "Scraping", desc: "Cloudflare Browser Rendering (Firecrawl fallback)", icon: Database, ok: true },
+  { name: "Web Search", desc: "Serper (Google results) — market research", icon: Globe, ok: true },
   { name: "Dodo Payments", desc: "Billing — merchant of record", icon: CreditCard, ok: false },
-  { name: "Web Search", desc: "Serper (Google results) — market research", icon: Globe, ok: false },
 ];
 
 const FLAGS = [
@@ -154,16 +153,15 @@ export default function SettingsPage() {
                   <span className="text-fg font-mono text-xs">
                     {integration === "GitHub" && "GITHUB_TOKEN"}
                     {integration === "Resend" && "RESEND_API_KEY"}
-                    {integration === "E2B" && "E2B_API_KEY"}
-                    {integration === "Firecrawl" && "FIRECRAWL_API_KEY"}
-                    {integration === "Atlas Cloud" && "ATLASCLOUD_API_KEY"}
+                    {integration === "Scraping" && "CLOUDFLARE (browser)"}
+                    {integration === "Workers AI" && "CLOUDFLARE_API_URL"}
                     {integration === "Cloudflare" && "CLOUDFLARE_DEPLOY_TOKEN"}
                     {integration === "Penpot" && "penpot.lazynext.com"}
                   </span>
                 </div>
                 <p className="text-xs text-muted pt-2 border-t border-border">
-                  {integration === "Atlas Cloud"
-                    ? "Add credits at atlascloud.ai — the client auto-uses Atlas once funded."
+                  {integration === "Workers AI"
+                    ? "Runs on Cloudflare Workers AI — free, no key needed."
                     : `Rotate by updating ${integration.toUpperCase().replace(" ", "_")} env vars, then redeploy.`}
                 </p>
               </div>

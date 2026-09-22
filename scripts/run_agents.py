@@ -21,9 +21,7 @@ console = Console()
 async def main() -> None:
     settings = get_settings()
     if not settings.cloudflare_api_url or not settings.cloudflare_api_token:
-        console.print("[yellow]Cloudflare not configured. Set CLOUDFLARE_API_URL and CLOUDFLARE_API_TOKEN in .env[/yellow]")
-    if not settings.atlas_api_key:
-        console.print("[yellow]Atlas Cloud not configured. Set ATLASCLOUD_API_KEY in .env[/yellow]")
+        console.print("[red]Cloudflare not configured — the Workers AI brain needs CLOUDFLARE_API_URL and CLOUDFLARE_API_TOKEN in .env[/red]")
 
     company_brain = CachedCompanyBrain()
     agent_memory = AgentMemory()

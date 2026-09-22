@@ -1,4 +1,4 @@
-"""RAG engine - Vectorize similarity search + Atlas Cloud answer generation."""
+"""RAG engine - Vectorize similarity search + Workers AI answer generation."""
 
 from dataclasses import dataclass
 from typing import Any
@@ -117,15 +117,15 @@ class RAGEngine:
             context = "\n\n".join(s.chunk_text for s in sources)
             from core.llm.atlas_client import AtlasClient
             from core.config import get_light_model
-            atlas = AtlasClient()
+            llm = AtlasClient()
             try:
-                answer = await atlas.chat_completion(
+                answer = await llm.chat_completion(
                     get_light_model(),
                     [{"role": "user", "content": f"Based on this context, answer the question.\n\nContext:\n{context}\n\nQuestion: {question}"}],
                     system_prompt="Answer concisely using only the provided context. If the context doesn't contain the answer, say so.",
                 )
             finally:
-                await atlas.close()
+                await llm.close()
 
             return RAGResult(
                 answer=answer,

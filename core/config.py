@@ -24,15 +24,8 @@ class Settings(BaseSettings):
     cloudflare_api_url: str = ""
     cloudflare_api_token: str = ""
 
-    # Atlas Cloud LLM API (OpenAI-compatible)
-    atlas_api_key: str = Field(
-        "", validation_alias=AliasChoices("ATLAS_API_KEY", "ATLASCLOUD_API_KEY")
-    )
-    atlas_base_url: str = Field(
-        "https://api.atlascloud.ai/v1",
-        validation_alias=AliasChoices("ATLAS_BASE_URL", "ATLASCLOUD_BASE_URL"),
-    )
-    atlas_model: str = "deepseek-ai/DeepSeek-V3.1-Terminus"
+    # LLM brain — Cloudflare Workers AI (via the company worker, no key needed)
+    llm_model: str = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
 
     # Cloudflare account credentials (wrangler / deployments / resource management)
     cloudflare_account_id: str = ""
@@ -67,24 +60,15 @@ class Settings(BaseSettings):
         return v.upper()
 
 
-# Model role mapping - tiered Atlas Cloud models by importance (cost-optimized)
-# High priority (coding, complex reasoning): DeepSeek V3.1 Terminus
-# Low priority (simple tasks, reporting): DeepSeek V4 Flash
+# Model role mapping — all agents run on Cloudflare Workers AI (Llama-3.3-70b).
+WORKERS_AI_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
 MODEL_REGISTRY: dict[str, str] = {
-    "ceo": "deepseek-ai/DeepSeek-V3.1-Terminus",
-    "cto": "deepseek-ai/DeepSeek-V3.1-Terminus",
-    "backend": "deepseek-ai/DeepSeek-V3.1-Terminus",
-    "frontend": "deepseek-ai/DeepSeek-V3.1-Terminus",
-    "fullstack": "deepseek-ai/DeepSeek-V3.1-Terminus",
-    "code_review": "deepseek-ai/DeepSeek-V3.1-Terminus",
-    "devops": "deepseek-ai/DeepSeek-V3.1-Terminus",
-    "qa": "deepseek-ai/DeepSeek-V3.1-Terminus",
-    "marketing": "deepseek-ai/deepseek-v4-flash",
-    "sales": "deepseek-ai/deepseek-v4-flash",
-    "customer_success": "deepseek-ai/deepseek-v4-flash",
-    "hr": "deepseek-ai/deepseek-v4-flash",
-    "knowledge": "deepseek-ai/deepseek-v4-flash",
-    "finance": "deepseek-ai/deepseek-v4-flash",
+    role: WORKERS_AI_MODEL
+    for role in (
+        "ceo", "cto", "backend", "frontend", "fullstack", "code_review",
+        "devops", "qa", "marketing", "sales", "customer_success", "hr",
+        "knowledge", "finance",
+    )
 }
 
 
@@ -98,10 +82,10 @@ def get_model_for_role(role: str) -> str:
     """Return the model name for a given agent role."""
     settings = get_settings()
     role_lower = role.lower().strip()
-    default_model = settings.atlas_model
+    default_model = settings.llm_model
     return MODEL_REGISTRY.get(role_lower, default_model)
 
 
 def get_light_model() -> str:
     """Return the light model for routing/simple tasks."""
-    return "deepseek-ai/deepseek-v4-flash"
+    return WORKERS_AI_MODEL

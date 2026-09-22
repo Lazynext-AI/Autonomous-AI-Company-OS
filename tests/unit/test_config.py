@@ -4,22 +4,19 @@ import pytest
 
 from core.config import MODEL_REGISTRY, get_model_for_role, get_settings
 
+WORKERS_AI = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+
 
 def test_get_settings() -> None:
     """Settings loads from environment."""
     settings = get_settings()
-    assert settings.atlas_base_url.startswith("https://")
-    assert settings.atlas_model
+    assert settings.llm_model.startswith("@cf/")
 
 
 def test_get_model_for_role() -> None:
-    """Model registry returns correct tiered models for each role."""
-    assert get_model_for_role("ceo") == "deepseek-ai/DeepSeek-V3.1-Terminus"
-    assert get_model_for_role("cto") == "deepseek-ai/DeepSeek-V3.1-Terminus"
-    assert get_model_for_role("backend") == "deepseek-ai/DeepSeek-V3.1-Terminus"
-    assert get_model_for_role("qa") == "deepseek-ai/DeepSeek-V3.1-Terminus"
-    assert get_model_for_role("marketing") == "deepseek-ai/deepseek-v4-flash"
-    assert get_model_for_role("unknown_role") == "deepseek-ai/DeepSeek-V3.1-Terminus"
+    """Model registry returns the Workers AI model for each role."""
+    for role in ("ceo", "cto", "backend", "qa", "marketing", "unknown_role"):
+        assert get_model_for_role(role) == WORKERS_AI
 
 
 def test_model_registry_has_all_roles() -> None:
