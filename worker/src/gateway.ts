@@ -13,9 +13,6 @@ export interface Env {
   RESEND_API_KEY?: string;
   DODO_API_KEY?: string;
   DODO_WEBHOOK_SECRET?: string;
-  GOOGLE_SEARCH_KEY?: string;
-  GOOGLE_SEARCH_CX?: string;
-  BRAVE_SEARCH_KEY?: string;
   SERPER_API_KEY?: string;
 }
 
