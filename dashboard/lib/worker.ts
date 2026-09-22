@@ -13,7 +13,12 @@ async function workerEnv(): Promise<Record<string, string | undefined>> {
 export async function workerFetch(path: string, body: unknown, method = "POST") {
   const env = await workerEnv();
   const url = env.CLOUDFLARE_API_URL || process.env.CLOUDFLARE_API_URL;
-  const token = env.CLOUDFLARE_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
+  // /api/v1/* is the public API gateway — it requires an lzk_ key, not the
+  // internal shared secret. Internal routes (/query, /kv/*) use API_TOKEN.
+  const isPublicApi = path.startsWith("/api/v1/");
+  const token = isPublicApi
+    ? env.LAZYNEXT_API_KEY || process.env.LAZYNEXT_API_KEY
+    : env.CLOUDFLARE_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
   if (!url || !token) {
     return NextResponse.json({ error: "worker not configured" }, { status: 503 });
   }
