@@ -45,7 +45,6 @@ const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; nam
     group: "Commerce & billing", icon: ShoppingCart,
     items: [
       { id: "shopify", name: "Shopify", hint: "Store URL + access token — if a product is a store" },
-      { id: "stripe", name: "Stripe", hint: "Secret key — only if skipping Dodo" },
     ],
   },
   {

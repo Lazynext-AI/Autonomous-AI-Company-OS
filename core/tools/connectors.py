@@ -137,14 +137,6 @@ async def _shopify(payload: dict, cred: str) -> dict:
     )
 
 
-async def _stripe(payload: dict, cred: str) -> dict:
-    return await _post(
-        "https://api.stripe.com/v1/charges",
-        auth=(cred, ""),
-        data=payload,
-    )
-
-
 # --- Phone / SMS ----------------------------------------------------------
 
 async def _twilio(payload: dict, cred: str) -> dict:
@@ -237,7 +229,7 @@ async def _docusign(payload: dict, cred: str) -> dict:
 _DISPATCH = {
     "x": _x, "linkedin": _linkedin, "meta": _meta,
     "hubspot": _hubspot, "salesforce": _salesforce, "pipedrive": _pipedrive, "attio": _attio,
-    "shopify": _shopify, "stripe": _stripe,
+    "shopify": _shopify,
     "twilio": _twilio, "whatsapp": _whatsapp,
     "intercom": _intercom, "zendesk": _zendesk,
     "mailchimp": _mailchimp, "sendgrid": _sendgrid,
