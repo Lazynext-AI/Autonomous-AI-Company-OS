@@ -137,6 +137,24 @@ export default function SettingsPage() {
               <div className="text-fg">Lazynext — The Autonomous AI Company OS</div>
             </div>
             <div>
+              <div className="text-xs text-muted">Domains</div>
+              <div className="space-y-1 mt-1">
+                {[
+                  ["lazynext.com", "marketing"],
+                  ["dashboard.lazynext.com", "dashboard"],
+                  ["ai-company.lazynext.com", "API"],
+                  ["penpot.lazynext.com", "design"],
+                ].map(([d, r]) => (
+                  <div key={d} className="flex items-center justify-between">
+                    <a href={`https://${d}`} target="_blank" rel="noreferrer" className="text-accentSoft hover:underline text-xs font-mono">
+                      {d}
+                    </a>
+                    <span className="text-xs text-muted">{r}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
               <div className="text-xs text-muted">Runtime</div>
               <div className="text-fg">Local agents → Cloudflare Workers/D1</div>
             </div>

@@ -23,12 +23,15 @@ export function PageHeader({
 export function Card({
   children,
   className = "",
+  onClick,
 }: {
   children: ReactNode;
   className?: string;
+  onClick?: () => void;
 }) {
   return (
     <div
+      onClick={onClick}
       className={`bg-card border border-border rounded-[14px] p-5 ${className}`}
     >
       {children}

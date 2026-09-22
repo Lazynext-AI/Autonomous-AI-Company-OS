@@ -162,5 +162,13 @@ footer{border-top:1px solid var(--border);padding:40px 0;color:var(--muted);font
   </div>
 </div>
 </footer>
+<div id="cookie" style="display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#141419;border:1px solid #26262E;border-radius:14px;padding:14px 18px;font-size:13px;color:#FAFAFA;max-width:560px;z-index:99;box-shadow:0 8px 30px rgba(0,0,0,.5)">
+  We use a single auth cookie to keep you signed in — no trackers, no ads.
+  <a href="/legal" style="color:#A78BFA">Legal</a>
+  <button onclick="localStorage.setItem('lz_cookie_ok','1');document.getElementById('cookie').style.display='none'" style="margin-left:14px;background:#8B5CF6;color:#fff;border:0;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">OK</button>
+</div>
+<script>
+if(!localStorage.getItem('lz_cookie_ok'))document.getElementById('cookie').style.display='block';
+</script>
 </body>
 </html>

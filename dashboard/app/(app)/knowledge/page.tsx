@@ -19,6 +19,7 @@ export default function KnowledgePage() {
   const [chunks, setChunks] = useState<Chunk[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
+  const [openFile, setOpenFile] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("founder_notes");
   const [content, setContent] = useState("");
@@ -99,7 +100,11 @@ export default function KnowledgePage() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {Object.entries(files).map(([file, list]) => (
-            <Card key={file} className="hover:border-accentDim transition">
+            <Card
+              key={file}
+              className="hover:border-accentDim transition cursor-pointer"
+              onClick={() => setOpenFile((o) => (o === file ? null : file))}
+            >
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-8 h-8 rounded-lg bg-input flex items-center justify-center text-accentSoft text-sm">
                   📄
@@ -111,7 +116,17 @@ export default function KnowledgePage() {
                   </div>
                 </div>
               </div>
-              <p className="text-xs text-muted line-clamp-2">{list[0].content}</p>
+              {openFile === file ? (
+                <div className="space-y-2 mt-3">
+                  {list.map((c: any, i: number) => (
+                    <pre key={i} className="bg-input rounded-lg p-3 text-xs text-fg/80 whitespace-pre-wrap font-mono max-h-48 overflow-auto">
+                      {c.content}
+                    </pre>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted line-clamp-2">{list[0].content}</p>
+              )}
             </Card>
           ))}
         </div>
