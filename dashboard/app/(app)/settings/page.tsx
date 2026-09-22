@@ -7,6 +7,7 @@ import { toast } from "@/components/Toast";
 import Link from "next/link";
 import {
   GitBranch, Mail, TerminalSquare, Globe, Database, Palette, Cpu, CreditCard,
+  Share2, Briefcase, ShoppingCart, Phone, LifeBuoy, Send, CalendarClock, MessageCircle,
 } from "lucide-react";
 
 const INTEGRATIONS = [
@@ -18,6 +19,63 @@ const INTEGRATIONS = [
   { name: "Scraping", desc: "Cloudflare Browser Rendering (Firecrawl fallback)", icon: Database, ok: true },
   { name: "Web Search", desc: "Serper (Google results) — market research", icon: Globe, ok: true },
   { name: "Dodo Payments", desc: "Billing — merchant of record ($29/mo plan live)", icon: CreditCard, ok: true },
+];
+
+// Connector library — situational services wired to accept credentials.
+// Stored in KV as conn:<id> so agents can call them once you add a key/URL.
+const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; name: string; hint: string }[] }[] = [
+  {
+    group: "Social posting", icon: Share2,
+    items: [
+      { id: "x", name: "X / Twitter", hint: "API key + secret — agents post marketing tweets" },
+      { id: "linkedin", name: "LinkedIn", hint: "Access token — agents post B2B content" },
+      { id: "meta", name: "Meta Ads", hint: "Access token + ad account id — run paid campaigns" },
+    ],
+  },
+  {
+    group: "Sales CRM", icon: Briefcase,
+    items: [
+      { id: "hubspot", name: "HubSpot", hint: "API key — real leads + pipeline" },
+      { id: "salesforce", name: "Salesforce", hint: "OAuth token — enterprise pipeline" },
+      { id: "pipedrive", name: "Pipedrive", hint: "API token — sales tracking" },
+      { id: "attio", name: "Attio", hint: "API key — modern CRM" },
+    ],
+  },
+  {
+    group: "Commerce & billing", icon: ShoppingCart,
+    items: [
+      { id: "shopify", name: "Shopify", hint: "Store URL + access token — if a product is a store" },
+      { id: "stripe", name: "Stripe", hint: "Secret key — only if skipping Dodo" },
+    ],
+  },
+  {
+    group: "Phone / SMS", icon: Phone,
+    items: [
+      { id: "twilio", name: "Twilio", hint: "Account SID + auth token + number — SMS/voice" },
+      { id: "whatsapp", name: "WhatsApp Business", hint: "API token + phone id — chat notifications" },
+    ],
+  },
+  {
+    group: "Support tickets", icon: LifeBuoy,
+    items: [
+      { id: "intercom", name: "Intercom", hint: "Access token — customer support" },
+      { id: "zendesk", name: "Zendesk", hint: "Subdomain + token — support tickets" },
+    ],
+  },
+  {
+    group: "Email marketing", icon: Send,
+    items: [
+      { id: "mailchimp", name: "Mailchimp", hint: "API key + list id — campaigns" },
+      { id: "sendgrid", name: "SendGrid", hint: "API key — marketing email" },
+    ],
+  },
+  {
+    group: "Scheduling & signing", icon: CalendarClock,
+    items: [
+      { id: "calendly", name: "Calendly", hint: "Access token — agents book meetings" },
+      { id: "docusign", name: "DocuSign", hint: "Access token + account id — sign contracts" },
+    ],
+  },
 ];
 
 const FLAGS = [
@@ -58,6 +116,55 @@ function ChatHook({ platform }: { platform: string }) {
       >
         Connect
       </button>
+    </div>
+  );
+}
+
+function ConnectorHook({ id, name, hint }: { id: string; name: string; hint: string }) {
+  const [val, setVal] = useState("");
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    fetch("/api/kv", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "get", key: `conn:${id}` }),
+    })
+      .then((r) => r.json())
+      .then((d) => setSaved(Boolean(d.value)));
+  }, [id]);
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <div className="text-sm font-semibold text-fg">{name}</div>
+        <span className={`text-[11px] font-semibold ${saved ? "text-ok" : "text-muted"}`}>
+          {saved ? "connected" : "not set"}
+        </span>
+      </div>
+      <div className="text-xs text-muted mb-2">{hint}</div>
+      <div className="flex gap-2">
+        <input
+          type="password"
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          placeholder={saved ? "••••••• (saved — replace)" : "API key / token / URL"}
+          className="flex-1 bg-input border border-border rounded-lg px-3 py-2 text-xs text-fg outline-none focus:border-accent transition"
+        />
+        <button
+          onClick={async () => {
+            if (!val) return;
+            const r = await fetch("/api/kv", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ action: "put", key: `conn:${id}`, value: val }),
+            });
+            toast(r.ok ? `${name} connected` : "Failed");
+            if (r.ok) { setVal(""); setSaved(true); }
+          }}
+          className="text-xs bg-accent hover:bg-accentSoft text-white font-semibold px-3.5 py-2 rounded-lg transition shrink-0"
+        >
+          {saved ? "Update" : "Connect"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -321,6 +428,32 @@ export default function SettingsPage() {
           <div className="space-y-3">
             {(["slack", "discord", "telegram", "teams", "google chat"] as const).map((platform) => (
               <ChatHook key={platform} platform={platform} />
+            ))}
+          </div>
+        </Card>
+
+        <Card className="p-0 overflow-hidden col-span-2">
+          <div className="px-5 py-4 border-b border-border flex items-center gap-2">
+            <MessageCircle className="w-4 h-4 text-accentSoft" />
+            <div className="text-sm font-semibold">Connector library</div>
+          </div>
+          <p className="px-5 pt-3 pb-1 text-xs text-muted">
+            Situational services — add a credential and agents can call them. Stored in KV as
+            <code className="mx-1 text-accentSoft">conn:*</code>; nothing activates until you connect it.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-0 px-5 py-4">
+            {CONNECTORS.map((g) => (
+              <div key={g.group} className="mb-5 last:mb-0">
+                <div className="flex items-center gap-2 text-xs font-semibold text-muted uppercase tracking-wide mb-3">
+                  <g.icon className="w-3.5 h-3.5 text-accentSoft" />
+                  {g.group}
+                </div>
+                <div className="space-y-4">
+                  {g.items.map((c) => (
+                    <ConnectorHook key={c.id} id={c.id} name={c.name} hint={c.hint} />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </Card>
