@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     email_from: str = "Lazynext <support@lazynext.com>"
     e2b_api_key: str = ""
+    serper_api_key: str = ""
 
     # App config
     knowledge_base_dir: str = "./knowledge_base"

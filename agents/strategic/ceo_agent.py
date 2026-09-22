@@ -7,7 +7,7 @@ from agents.base_agent import BaseAgent, TaskResult
 from core.config import get_settings
 from core.messaging.channels import Channels
 from core.messaging.schemas import DirectiveMessage, MilestoneMessage, TaskMessage
-from core.tools.search_tool import search_duckduckgo
+from core.tools.search_tool import search_web
 
 
 CEO_SYSTEM_PROMPT = """You are the CEO of an autonomous AI startup. Your job is to set strategic direction,
@@ -72,8 +72,8 @@ class CEOAgent(BaseAgent):
         brain = await self.company_brain.get()
         product_name = brain.product_name or "our product"
 
-        search_results = await search_duckduckgo(f"{product_name} competitors", 5)
-        market_results = await search_duckduckgo("market trends software startup", 5)
+        search_results = await search_web(f"{product_name} competitors", 5)
+        market_results = await search_web("market trends software startup", 5)
         search_context = "\n".join(
             f"- {r.get('title', '')}: {r.get('snippet', '')[:100]}"
             for r in (search_results + market_results)[:5]
