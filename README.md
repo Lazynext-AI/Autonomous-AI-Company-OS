@@ -371,7 +371,7 @@ When significant milestones are achieved (e.g., first deployment, 100 users, rev
 | Cloudflare (Worker + D1 + KV + Vectorize + Pages + Containers) | All persistent state and deployments | Yes |
 | GitHub | Remote repos, push triggers, Actions CI monitoring | Optional |
 | Resend | Weekly founder briefing emails (also on dashboard) | Optional |
-| E2B | Code execution sandbox | Optional |
+| Cloudflare Container | Code execution sandbox | Built-in |
 
 Frontends deploy to Cloudflare Pages, backends to Workers (JS/TS) or Containers
 (Python). Briefings appear on the dashboard and optionally via email.

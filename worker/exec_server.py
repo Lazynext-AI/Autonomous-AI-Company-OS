@@ -1,5 +1,5 @@
 """In-container exec server — receives code, runs it in a subprocess, returns
-stdout/stderr/result/error. Replaces the E2B sandbox for agent code execution."""
+stdout/stderr/result/error — the agent code-execution sandbox."""
 
 import json
 import subprocess

@@ -1,4 +1,4 @@
-"""Agent tools: code executor (E2B), email (Resend), web search (Serper), scraping (Firecrawl)."""
+"""Agent tools: code executor (Cloudflare container), email (Resend), web search (Serper), scraping (Firecrawl)."""
 
 from core.tools.code_executor import CodeExecutionResult, run_code
 from core.tools.email_tool import send_email

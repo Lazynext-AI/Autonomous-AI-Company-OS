@@ -93,7 +93,7 @@ export default function SandboxPage() {
     <>
       <PageHeader
         title="Sandbox"
-        subtitle="Live E2B sandboxes — agents run untrusted code here."
+        subtitle="Cloudflare exec container — agents run untrusted code here."
       >
         <button
           onClick={create}
@@ -107,7 +107,7 @@ export default function SandboxPage() {
       {boxes.length === 0 && !loading ? (
         <Empty
           title="No sandboxes running"
-          hint="Create one — it's a real, isolated E2B VM (5-min timeout). Agents spawn these automatically when running."
+          hint="Create one — it's the Cloudflare exec container (Python sandbox). Agents spawn these automatically when running."
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl">
@@ -226,7 +226,7 @@ export default function SandboxPage() {
 
       <p className="text-xs text-muted mt-5 max-w-4xl">
         Sandboxes run agent-generated code. Command execution happens via the Python SDK inside the
-        runtime — this panel manages sandbox lifecycle (create / list / kill) over the E2B REST API.
+        runtime — this panel manages sandbox lifecycle (create / list / kill) over the Cloudflare container.
       </p>
     </>
   );

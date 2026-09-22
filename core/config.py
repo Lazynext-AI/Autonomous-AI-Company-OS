@@ -37,7 +37,6 @@ class Settings(BaseSettings):
     github_token: str = ""
     resend_api_key: str = ""
     email_from: str = "Lazynext <support@lazynext.com>"
-    e2b_api_key: str = ""
     serper_api_key: str = ""
     firecrawl_api_key: str = ""
 

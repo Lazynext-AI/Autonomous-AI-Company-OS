@@ -25,7 +25,7 @@ binding = "AI"
 [browser]
 binding = "BROWSER"
 
-# Code-execution container — Python sandbox replacing E2B.
+# Code-execution container — Python sandbox for agent code execution.
 [[containers]]
 name = "code-exec"
 class_name = "CodeExecContainer"

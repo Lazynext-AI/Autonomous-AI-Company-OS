@@ -39,10 +39,6 @@ FIX_INSTRUCTIONS = {
         "Resend: resend.com → API Keys → Create API key. Free tier: 3000 emails/month. "
         "Add domain in Resend dashboard to send to non-resend.dev addresses."
     ),
-    "e2b": (
-        "E2B: pip install e2b-code-interpreter. Get API key at e2b.dev/dashboard → API Keys. "
-        "Uses e2b_code_interpreter.Sandbox per E2B docs."
-    ),
 }
 
 
@@ -152,26 +148,21 @@ async def check_resend() -> tuple[bool, str]:
         return False, str(e)
 
 
-async def check_e2b() -> tuple[bool, str]:
-    """Validate E2B API key using e2b_code_interpreter SDK (Sandbox.create + run_code)."""
-    key = os.getenv("E2B_API_KEY", "").strip()
-    if not key:
-        return False, "E2B_API_KEY not set (optional for sandbox execution)"
+async def check_exec() -> tuple[bool, str]:
+    """Validate the Cloudflare exec container via the worker /exec route."""
+    url = os.getenv("CLOUDFLARE_API_URL", "").strip().rstrip("/")
+    token = os.getenv("CLOUDFLARE_API_TOKEN", "").strip()
+    if not url or not token:
+        return False, "CLOUDFLARE_API_URL / CLOUDFLARE_API_TOKEN not set"
     try:
-        from e2b_code_interpreter import Sandbox
-
-        def _validate() -> None:
-            with Sandbox.create(api_key=key) as sbx:
-                sbx.run_code("print(1)")
-
-        await asyncio.to_thread(_validate)
-        return True, "OK"
-    except ImportError:
-        return False, "Install e2b-code-interpreter: poetry add e2b-code-interpreter"
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            r = await client.post(
+                f"{url}/exec",
+                headers={"authorization": f"Bearer {token}", "content-type": "application/json"},
+                json={"code": "print(1)"},
+            )
+            return (True, "OK") if r.status_code == 200 else (False, f"HTTP {r.status_code}")
     except Exception as e:
-        err = str(e).lower()
-        if "401" in err or "unauthorized" in err or "invalid" in err:
-            return False, "Invalid key. Create at e2b.dev/dashboard → API Keys"
         return False, str(e)
 
 
@@ -184,7 +175,7 @@ async def main() -> None:
         ("Embeddings", check_embeddings, True),
         ("GitHub", check_github, False),
         ("Resend", check_resend, False),
-        ("E2B", check_e2b, False),
+        ("Exec (Cloudflare container)", check_exec, False),
     ]
 
     results: list[tuple[str, bool, str]] = []

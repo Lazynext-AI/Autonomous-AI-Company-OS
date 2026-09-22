@@ -93,7 +93,7 @@ export default function BillingPage() {
           </div>
           <p className="text-xs text-muted mt-2">
             Self-hosted runtime on your own credentials — Cloudflare (brain + infra),
-            E2B (sandboxes), Resend (email). Costs are your provider usage.
+            Cloudflare containers (sandboxes), Resend (email). Costs are your provider usage.
           </p>
           <button
             onClick={() => setPlanOpen(true)}

@@ -115,18 +115,18 @@ class BackendAgent(BaseAgent):
             logger.warning("auto_deploy_task_creation_failed", error=str(e))
 
     async def post_task_hook(self, task: TaskMessage, result: TaskResult) -> None:
-        """Write generated code to files, test with E2B, and commit to git."""
+        """Write generated code to files, test in the Cloudflare sandbox, and commit to git."""
         if result.success and result.output:
             try:
-                # Extract Python code blocks for testing (optional - skip if E2B not available or dependencies missing)
+                # Extract Python code blocks for testing (optional - skip if the exec container is unavailable or dependencies missing)
                 import re
                 code_blocks = re.findall(r"```python\n(.*?)```", result.output, re.DOTALL)
                 
-                # Test code with E2B if available (skip if dependencies missing - expected in clean sandbox)
+                # Test code in the Cloudflare exec container (skip if dependencies missing - expected in clean sandbox)
                 test_results = []
                 if code_blocks:
                     for i, code in enumerate(code_blocks):
-                        # Skip testing if code has imports that won't be available in E2B sandbox
+                        # Skip testing if code has imports that won't be available in the exec container
                         has_external_imports = any(imp in code for imp in ["from app.", "import app.", "from pydantic_settings", "from sqlalchemy"])
                         if has_external_imports:
                             test_results.append(f"Code block {i+1}: ⚠ Skipped (requires project dependencies)")
@@ -158,7 +158,7 @@ class BackendAgent(BaseAgent):
                     
                     # Add test results if available
                     if test_results:
-                        files_info += f"\n[E2B Tests: {'; '.join(test_results)}]"
+                        files_info += f"\n[Exec Tests: {'; '.join(test_results)}]"
                     
                     # Add validation warnings if any
                     if write_result.get("validation_errors"):
