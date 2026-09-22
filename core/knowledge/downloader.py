@@ -1,7 +1,7 @@
 """Knowledge downloader — sources the knowledge base from the platform's own
-web tools (Serper search + Cloudflare Browser Rendering scrape) instead of
-external catalogs like OpenLibrary/arXiv. A topic is researched live, the best
-source is scraped to markdown, and the content is ingested for RAG."""
+web tools (Serper search + Cloudflare Browser Rendering scrape). A topic is
+researched live, the best source is scraped to markdown, and the content is
+ingested for RAG."""
 
 import asyncio
 import re

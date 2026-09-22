@@ -38,7 +38,6 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     email_from: str = "Lazynext <support@lazynext.com>"
     serper_api_key: str = ""
-    firecrawl_api_key: str = ""
 
     # App config
     knowledge_base_dir: str = "./knowledge_base"

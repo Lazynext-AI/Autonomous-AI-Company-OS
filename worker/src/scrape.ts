@@ -1,5 +1,5 @@
 // Cloudflare Browser Rendering scrape — headless Chromium extracts a page's
-// main content (replaces Firecrawl for agent research).
+// main content for agent research.
 import puppeteer from "@cloudflare/puppeteer";
 import { Env, json } from "./gateway";
 

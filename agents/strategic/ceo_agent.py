@@ -80,7 +80,7 @@ class CEOAgent(BaseAgent):
             for r in (search_results + market_results)[:5]
         )
 
-        # Firecrawl deep-read: pull full content from the top competitor pages.
+        # Deep-read: pull full content from the top competitor pages.
         deep = await research_topic(f"{product_name} competitors", max_results=2)
         if deep:
             search_context += f"\n\nCompetitor deep-dive:\n{deep[:2500]}"

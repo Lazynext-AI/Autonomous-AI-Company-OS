@@ -16,7 +16,7 @@ const INTEGRATIONS = [
   { name: "Workers AI", desc: "LLM brain — Llama-3.3-70b, free", icon: Cpu, ok: true },
   { name: "Cloudflare", desc: "Workers + D1 + KV + Vectorize + Browser + Containers", icon: Globe, ok: true },
   { name: "Penpot", desc: "Design system — penpot.lazynext.com", icon: Palette, ok: true },
-  { name: "Scraping", desc: "Cloudflare Browser Rendering (Firecrawl fallback)", icon: Database, ok: true },
+  { name: "Scraping", desc: "Cloudflare Browser Rendering — headless Chromium", icon: Database, ok: true },
   { name: "Web Search", desc: "Serper (Google results) — market research", icon: Globe, ok: true },
   { name: "Dodo Payments", desc: "Billing — merchant of record ($29/mo plan live)", icon: CreditCard, ok: true },
 ];
@@ -81,7 +81,7 @@ const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; nam
 const FLAGS = [
   { key: "flag:briefing_emails", label: "Briefing emails", desc: "Weekly founder report to your inbox" },
   { key: "flag:auto_deploy", label: "Auto-deploy", desc: "DevOps ships products without approval" },
-  { key: "flag:knowledge_ingestion", label: "Knowledge ingestion", desc: "Firecrawl + RAG on new sources" },
+  { key: "flag:knowledge_ingestion", label: "Knowledge ingestion", desc: "Web research + RAG on new sources" },
   { key: "flag:webhook_alerts", label: "Webhook alerts", desc: "Signed events on deploys + failures" },
   { key: "flag:auto_code_review", label: "Auto code review", desc: "Review agent scores every PR" },
   { key: "flag:maintenance", label: "Maintenance mode", desc: "Show the maintenance screen across the dashboard" },

@@ -1,5 +1,5 @@
 """Page scraping tool — Cloudflare Browser Rendering (headless Chromium on the
-worker). Firecrawl remains an optional fallback if its key is set."""
+worker). The only scraper."""
 
 from typing import Any
 
@@ -10,46 +10,28 @@ from core.config import get_settings
 
 logger = structlog.get_logger(__name__)
 
-FIRECRAWL_BASE = "https://api.firecrawl.dev/v1"
-
 
 async def scrape_url(url: str, max_chars: int = 6000) -> str:
-    """Scrape a page's main content. Cloudflare Browser Rendering is primary;
-    Firecrawl is used only if the worker scrape is unavailable."""
+    """Scrape a page's main content via Cloudflare Browser Rendering."""
     settings = get_settings()
-
-    # Primary: Cloudflare Browser Rendering via the worker.
-    if settings.cloudflare_api_url and settings.cloudflare_api_token:
-        try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                r = await client.post(
-                    f"{settings.cloudflare_api_url.rstrip('/')}/scrape",
-                    headers={
-                        "authorization": f"Bearer {settings.cloudflare_api_token}",
-                        "content-type": "application/json",
-                    },
-                    json={"url": url, "max_chars": max_chars},
-                )
-                if r.status_code == 200:
-                    md = r.json().get("markdown", "")
-                    if md:
-                        return md[:max_chars]
-        except Exception as e:
-            logger.warning("cloudflare_scrape_failed", url=url, error=str(e))
-
-    # Fallback: Firecrawl (only if a key is set).
-    if settings.firecrawl_api_key:
-        try:
-            async with httpx.AsyncClient(timeout=45.0) as client:
-                r = await client.post(
-                    f"{FIRECRAWL_BASE}/scrape",
-                    headers={"Authorization": f"Bearer {settings.firecrawl_api_key}", "Content-Type": "application/json"},
-                    json={"url": url, "formats": ["markdown"], "onlyMainContent": True},
-                )
-                if r.status_code == 200:
-                    return (r.json().get("data") or {}).get("markdown", "")[:max_chars]
-        except Exception as e:
-            logger.error("firecrawl_scrape_error", url=url, error=str(e))
+    if not (settings.cloudflare_api_url and settings.cloudflare_api_token):
+        return ""
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            r = await client.post(
+                f"{settings.cloudflare_api_url.rstrip('/')}/scrape",
+                headers={
+                    "authorization": f"Bearer {settings.cloudflare_api_token}",
+                    "content-type": "application/json",
+                },
+                json={"url": url, "max_chars": max_chars},
+            )
+            if r.status_code == 200:
+                md = r.json().get("markdown", "")
+                if md:
+                    return md[:max_chars]
+    except Exception as e:
+        logger.warning("cloudflare_scrape_failed", url=url, error=str(e))
     return ""
 
 

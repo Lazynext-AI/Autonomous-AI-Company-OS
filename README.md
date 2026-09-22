@@ -216,7 +216,7 @@ Agents build products in a **separate isolated repository**:
 
 1. **Strategic Planning Phase**
    - CEO agent reads company brain state
-   - Performs market research via DuckDuckGo search
+   - Performs market research via Serper (Google) search
    - Generates strategic directive with goals, priorities, and deadline
    - Publishes directive to `ceo.directives` channel
 
