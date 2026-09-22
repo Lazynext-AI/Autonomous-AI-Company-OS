@@ -16,6 +16,7 @@ export interface Env {
   GOOGLE_SEARCH_KEY?: string;
   GOOGLE_SEARCH_CX?: string;
   BRAVE_SEARCH_KEY?: string;
+  SERPER_API_KEY?: string;
 }
 
 export interface ApiKey {
