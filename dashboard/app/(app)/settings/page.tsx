@@ -32,6 +32,35 @@ const FLAGS = [
   { key: "email:usage_digest", label: "Email: usage digest", desc: "Monthly API + spend digest" },
 ];
 
+function ChatHook({ platform }: { platform: string }) {
+  const [url, setUrl] = useState("");
+  return (
+    <div className="flex gap-2">
+      <input
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        placeholder={`${platform.charAt(0).toUpperCase() + platform.slice(1)} webhook URL`}
+        className="flex-1 bg-input border border-border rounded-lg px-3 py-2 text-xs text-fg outline-none focus:border-accent transition"
+      />
+      <button
+        onClick={async () => {
+          if (!url) return;
+          const r = await fetch("/api/webhooks", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ url, channels: "*" }),
+          });
+          toast(r.ok ? `${platform} connected` : "Failed");
+          if (r.ok) setUrl("");
+        }}
+        className="text-xs bg-accent hover:bg-accentSoft text-white font-semibold px-3.5 py-2 rounded-lg transition capitalize"
+      >
+        Connect
+      </button>
+    </div>
+  );
+}
+
 function kv(action: string, key: string, value?: string) {
   return fetch("/api/kv", {
     method: "POST",
@@ -279,6 +308,19 @@ export default function SettingsPage() {
               >
                 {d}
               </button>
+            ))}
+          </div>
+        </Card>
+
+        <Card>
+          <h2 className="text-sm font-semibold mb-3">Chat integrations</h2>
+          <p className="text-xs text-muted mb-4">
+            Company events post to Slack, Discord or Telegram. Paste a webhook URL — Lazynext
+            formats the message for each platform automatically.
+          </p>
+          <div className="space-y-3">
+            {(["slack", "discord", "telegram"] as const).map((platform) => (
+              <ChatHook key={platform} platform={platform} />
             ))}
           </div>
         </Card>

@@ -60,8 +60,14 @@ External consumers use `lzk_*` API keys (issued via `/api/v1/keys` with the admi
 - **Key admin** (admin token only): `POST /api/v1/keys`, `GET /api/v1/keys`, `DELETE /api/v1/keys/{id}`
 - **Webhooks**: `POST /api/v1/webhooks` registers an HTTPS endpoint subscribed to bus channels (`*` or csv); every bus publish + briefing insert fans out a signed POST (`x-lazynext-signature`), deliveries logged (`/api/v1/webhooks/deliveries`)
 - **Docs**: `GET /api/v1/openapi.json` + Swagger UI at `/api/v1/docs`
-- **Python client**: `core/public_api_client.py` (`LazynextApiClient`)
-- **CLI**: `lazynext` command (installed at `/opt/homebrew/bin/lazynext`) — `status`, `briefings`, `tasks`, `task "…"`, `agents`, `search`, `health`, `mcp-tools`
+- **SDKs**: `core/public_api_client.py` (Python) · `sdk/js/` (JS/TS, `npm i lazynext`) · `sdk/go/` (Go)
+- **CLI**: `lazynext` command (installed at `/opt/homebrew/bin/lazynext`) — `status`, `briefings`, `tasks`, `task "…"`, `agents`, `search`, `health`, `mcp-tools`, `waitlist`
+- **A2A**: `GET /.well-known/agent.json` (agent card) + `POST /a2a` (`tasks/send`/`tasks/get`) — other AI agents can delegate work
+- **OAuth 2.0**: `POST /oauth/token` (client_credentials + authorization_code) + `POST /oauth/authorize` (admin-mints scoped `lzk_` keys)
+- **Embeddable widget**: `<script src="https://ai-company.lazynext.com/widget.js"></script>` + `<div data-lazynext="status|chat">` — live status card / chat box on any site
+- **Chat integrations**: webhook endpoints auto-detect Slack/Discord/Telegram URLs and format messages natively — connect in Settings → Chat integrations
+- **Browser extension**: `extension/` — manifest v3, popup shows live status + tasks + queue box (load unpacked → Settings → paste `lzk_` key)
+- **Copilot**: `copilot` channel in Conversations — real AI replies via Workers AI
 
 The dashboard is also an installable PWA (manifest + icons) — "Add to Home Screen" / browser install works on mobile and desktop.
 

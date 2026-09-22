@@ -1,0 +1,8 @@
+{
+  "name": "lazynext",
+  "version": "1.0.0",
+  "description": "Lazynext API client — control the autonomous AI company from JS/TS.",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "license": "MIT"
+}

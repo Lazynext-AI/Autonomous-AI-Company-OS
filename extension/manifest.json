@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Lazynext — Autonomous AI Company",
+  "version": "1.0.0",
+  "description": "Watch and command your autonomous AI company from the toolbar.",
+  "action": { "default_popup": "popup.html", "default_title": "Lazynext" },
+  "options_page": "options.html",
+  "permissions": ["storage"],
+  "host_permissions": ["https://ai-company.lazynext.com/*"]
+}

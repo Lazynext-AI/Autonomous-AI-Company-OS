@@ -43,7 +43,7 @@ export default function ConversationsPage() {
     return () => clearInterval(t);
   }, [active]);
 
-  const names = Object.keys(channels);
+  const names = Array.from(new Set(["copilot", ...Object.keys(channels)]));
   const msgs = (channels[active] || []).slice().reverse();
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -52,17 +52,27 @@ export default function ConversationsPage() {
     e.preventDefault();
     if (!draft.trim() || !active) return;
     setSending(true);
+    const text = draft;
     const r = await fetch("/api/publish", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         channel: active,
-        payload: { from: "founder", text: draft, via: "dashboard" },
+        payload: { from: "founder", text, via: "dashboard" },
       }),
     });
+    if (r.ok) {
+      setDraft("");
+      // Copilot channel → real AI reply posted back to the bus.
+      if (active === "copilot") {
+        await fetch("/api/copilot", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+      }
+    } else toast("Send failed");
     setSending(false);
-    if (r.ok) setDraft("");
-    else toast("Send failed");
   };
 
   return (
@@ -87,9 +97,9 @@ export default function ConversationsPage() {
                 }`}
               >
                 <div className={`text-sm font-medium truncate ${c === active ? "text-accentSoft" : "text-fg"}`}>
-                  #{c}
+                  {c === "copilot" ? "✦ Copilot" : `#${c}`}
                 </div>
-                <div className="text-xs text-muted">{channels[c].length} messages</div>
+                <div className="text-xs text-muted">{(channels[c] ?? []).length} messages</div>
               </button>
             ))}
           </Card>

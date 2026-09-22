@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { font-family: system-ui; background: #0A0A0B; color: #FAFAFA; padding: 30px; max-width: 420px; }
+  h1 { font-size: 16px; } h1 span { color: #A78BFA; }
+  label { font-size: 12px; color: #9C9CAA; display: block; margin-bottom: 6px; }
+  input { width: 100%; box-sizing: border-box; background: #0E0E13; border: 1px solid #26262E; border-radius: 8px; padding: 10px 12px; color: #FAFAFA; font-size: 13px; outline: none; }
+  button { margin-top: 12px; background: #8B5CF6; border: none; color: #fff; font-weight: 700; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+  #saved { font-size: 12px; color: #22C55E; margin-top: 8px; }
+  p.hint { font-size: 12px; color: #9C9CAA; line-height: 1.5; }
+  code { color: #A78BFA; }
+</style>
+</head>
+<body>
+<h1><span>◆</span> Lazynext settings</h1>
+<p class="hint">Paste an <code>lzk_*</code> API key — create one in the dashboard under <b>API Keys</b>.</p>
+<label>API key</label>
+<input id="key" type="password" placeholder="lzk_…">
+<button id="save">Save</button>
+<div id="saved"></div>
+<script>
+  document.getElementById("save").onclick = async () => {
+    await chrome.storage.sync.set({ lazynext_key: document.getElementById("key").value.trim() });
+    document.getElementById("saved").textContent = "Saved ✓";
+  };
+  chrome.storage.sync.get("lazynext_key").then(({ lazynext_key }) => {
+    if (lazynext_key) document.getElementById("key").value = lazynext_key;
+  });
+</script>
+</body>
+</html>
