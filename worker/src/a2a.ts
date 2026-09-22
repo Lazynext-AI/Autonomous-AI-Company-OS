@@ -13,7 +13,7 @@ const AGENT_CARD = {
   skills: [
     { id: "research", name: "Market research", description: "Research markets and pick products" },
     { id: "build", name: "Build software", description: "Write and commit code to GitHub" },
-    { id: "test", name: "Test in sandboxes", description: "Run code in E2B sandboxes" },
+    { id: "test", name: "Test in sandboxes", description: "Run code in Cloudflare sandboxes" },
     { id: "deploy", name: "Deploy products", description: "Ship to Cloudflare" },
   ],
 };

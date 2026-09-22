@@ -1,5 +1,5 @@
 // Code-execution container — a Cloudflare Container (Durable Object) that runs
-// the Python exec_server, replacing the E2B sandbox for agent code runs.
+// the Python exec_server, for agent code runs.
 import { Container } from "@cloudflare/containers";
 
 export class CodeExecContainer extends Container {
