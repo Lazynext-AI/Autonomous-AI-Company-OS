@@ -23,6 +23,8 @@ const INTEGRATIONS = [
 
 // Connector library — situational services wired to accept credentials.
 // Stored in KV as conn:<id> so agents can call them once you add a key/URL.
+// CRM, support tickets, scheduling, and commerce are native (built-in on D1) —
+// only genuinely-external services remain here.
 const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; name: string; hint: string }[] }[] = [
   {
     group: "Social posting", icon: Share2,
@@ -33,21 +35,6 @@ const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; nam
     ],
   },
   {
-    group: "Sales CRM", icon: Briefcase,
-    items: [
-      { id: "hubspot", name: "HubSpot", hint: "API key — real leads + pipeline" },
-      { id: "salesforce", name: "Salesforce", hint: "OAuth token — enterprise pipeline" },
-      { id: "pipedrive", name: "Pipedrive", hint: "API token — sales tracking" },
-      { id: "attio", name: "Attio", hint: "API key — modern CRM" },
-    ],
-  },
-  {
-    group: "Commerce & billing", icon: ShoppingCart,
-    items: [
-      { id: "shopify", name: "Shopify", hint: "Store URL + access token — if a product is a store" },
-    ],
-  },
-  {
     group: "Phone / SMS", icon: Phone,
     items: [
       { id: "twilio", name: "Twilio", hint: "Account SID + auth token + number — SMS/voice" },
@@ -55,23 +42,15 @@ const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; nam
     ],
   },
   {
-    group: "Support tickets", icon: LifeBuoy,
-    items: [
-      { id: "intercom", name: "Intercom", hint: "Access token — customer support" },
-      { id: "zendesk", name: "Zendesk", hint: "Subdomain + token — support tickets" },
-    ],
-  },
-  {
     group: "Email marketing", icon: Send,
     items: [
-      { id: "mailchimp", name: "Mailchimp", hint: "API key + list id — campaigns" },
+      { id: "mailchimp", name: "Mailchimp", hint: "API key + list id — campaigns (Resend covers transactional)" },
       { id: "sendgrid", name: "SendGrid", hint: "API key — marketing email" },
     ],
   },
   {
-    group: "Scheduling & signing", icon: CalendarClock,
+    group: "Signing", icon: CalendarClock,
     items: [
-      { id: "calendly", name: "Calendly", hint: "Access token — agents book meetings" },
       { id: "docusign", name: "DocuSign", hint: "Access token + account id — sign contracts" },
     ],
   },

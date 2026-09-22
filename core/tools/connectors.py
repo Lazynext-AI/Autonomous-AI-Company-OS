@@ -92,50 +92,7 @@ async def _meta(text: str, cred: str) -> dict:
 
 # --- Sales CRM ------------------------------------------------------------
 
-async def _hubspot(payload: dict, cred: str) -> dict:
-    return await _post(
-        "https://api.hubapi.com/crm/v3/objects/contacts",
-        headers={"authorization": f"Bearer {cred}"},
-        json_body={"properties": payload},
-    )
-
-
-async def _salesforce(payload: dict, cred: str) -> dict:
-    # cred format: "<instance_url>:<access_token>"
-    inst, _, token = cred.partition(":")
-    return await _post(
-        f"{inst.rstrip('/')}/services/data/v59.0/sobjects/Lead",
-        headers={"authorization": f"Bearer {token}"},
-        json_body=payload,
-    )
-
-
-async def _pipedrive(payload: dict, cred: str) -> dict:
-    return await _post(
-        f"https://api.pipedrive.com/v1/persons?api_token={cred}",
-        json_body=payload,
-    )
-
-
-async def _attio(payload: dict, cred: str) -> dict:
-    return await _post(
-        "https://api.attio.com/v2/records",
-        headers={"authorization": f"Bearer {cred}"},
-        json_body=payload,
-    )
-
-
 # --- Commerce -------------------------------------------------------------
-
-async def _shopify(payload: dict, cred: str) -> dict:
-    # cred format: "<store>.myshopify.com:<access_token>"
-    store, _, token = cred.partition(":")
-    return await _post(
-        f"https://{store}/admin/api/2024-01/products.json",
-        headers={"X-Shopify-Access-Token": token},
-        json_body={"product": payload},
-    )
-
 
 # --- Phone / SMS ----------------------------------------------------------
 
@@ -166,25 +123,6 @@ async def _whatsapp(payload: dict, cred: str) -> dict:
 
 # --- Support tickets ------------------------------------------------------
 
-async def _intercom(payload: dict, cred: str) -> dict:
-    return await _post(
-        "https://api.intercom.io/conversations",
-        headers={"authorization": f"Bearer {cred}", "Intercom-Version": "2.10"},
-        json_body=payload,
-    )
-
-
-async def _zendesk(payload: dict, cred: str) -> dict:
-    # cred format: "<subdomain>:<email>/token:<api_token>"
-    sub, _, authc = cred.partition(":")
-    email_tok, _, token = authc.partition(":")
-    return await _post(
-        f"https://{sub}.zendesk.com/api/v2/tickets.json",
-        auth=(email_tok, token),
-        json_body={"ticket": payload},
-    )
-
-
 # --- Email marketing ------------------------------------------------------
 
 async def _mailchimp(payload: dict, cred: str) -> dict:
@@ -208,14 +146,6 @@ async def _sendgrid(payload: dict, cred: str) -> dict:
 
 # --- Scheduling & signing -------------------------------------------------
 
-async def _calendly(payload: dict, cred: str) -> dict:
-    return await _post(
-        "https://api.calendly.com/scheduled_events",
-        headers={"authorization": f"Bearer {cred}"},
-        json_body=payload,
-    )
-
-
 async def _docusign(payload: dict, cred: str) -> dict:
     # cred format: "<account_id>:<access_token>"
     acct, _, token = cred.partition(":")
@@ -228,12 +158,9 @@ async def _docusign(payload: dict, cred: str) -> dict:
 
 _DISPATCH = {
     "x": _x, "linkedin": _linkedin, "meta": _meta,
-    "hubspot": _hubspot, "salesforce": _salesforce, "pipedrive": _pipedrive, "attio": _attio,
-    "shopify": _shopify,
     "twilio": _twilio, "whatsapp": _whatsapp,
-    "intercom": _intercom, "zendesk": _zendesk,
     "mailchimp": _mailchimp, "sendgrid": _sendgrid,
-    "calendly": _calendly, "docusign": _docusign,
+    "docusign": _docusign,
 }
 
 

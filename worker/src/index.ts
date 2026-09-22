@@ -18,6 +18,7 @@ import { getContainer } from "@cloudflare/containers";
 export { CodeExecContainer } from "./exec_container";
 import { handleWidget } from "./widget";
 import { fanOut, handleWebhooks, publishToBus } from "./webhooks";
+import { handleServices } from "./services";
 
 export { Env };
 
@@ -308,6 +309,9 @@ export default {
         return cors(req, await handleBilling(req, env, ctx, path));
       if (path.startsWith("/api/v1/webhooks"))
         return cors(req, await handleWebhooks(req, env, ctx, path));
+      if (path.startsWith("/api/v1/crm") || path.startsWith("/api/v1/support") ||
+          path.startsWith("/api/v1/booking") || path.startsWith("/api/v1/store"))
+        return cors(req, await handleServices(req, env, ctx, path));
       if (path.startsWith("/api/")) return cors(req, await handlePublicApi(req, env, ctx, path));
 
       // Internal surface: shared-secret auth as before
