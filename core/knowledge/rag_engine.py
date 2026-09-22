@@ -115,9 +115,9 @@ class RAGEngine:
                 )
 
             context = "\n\n".join(s.chunk_text for s in sources)
-            from core.llm.atlas_client import AtlasClient
+            from core.llm.workers_ai_client import WorkersAIClient
             from core.config import get_light_model
-            llm = AtlasClient()
+            llm = WorkersAIClient()
             try:
                 answer = await llm.chat_completion(
                     get_light_model(),

@@ -51,7 +51,7 @@ class BaseAgent(ABC):
         agent_memory: AgentMemory,
         episodic_memory: EpisodicMemory,
         message_bus: MessageBus,
-        ollama_client,  # AtlasClient or any client with chat_completion(model, messages, system_prompt)
+        ollama_client,  # WorkersAIClient or any client with chat_completion(model, messages, system_prompt)
         rag_engine=None,
         knowledge_downloader=None,
         performance_scorer: "PerformanceScorer | None" = None,

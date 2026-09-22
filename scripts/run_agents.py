@@ -7,7 +7,7 @@ from rich.console import Console
 from core.config import get_settings
 from core.evaluation.reward_engine import RewardEngine
 from core.evaluation.scorer import PerformanceScorer
-from core.llm.atlas_client import AtlasClient
+from core.llm.workers_ai_client import WorkersAIClient
 from core.memory.agent_memory import AgentMemory
 from core.memory.company_brain_cached import CachedCompanyBrain
 from core.memory.episodic_memory import EpisodicMemory
@@ -27,7 +27,7 @@ async def main() -> None:
     agent_memory = AgentMemory()
     episodic_memory = EpisodicMemory()
     message_bus = MessageBus()
-    llm_client = AtlasClient()
+    llm_client = WorkersAIClient()
     task_tracker = TaskTracker()
     await message_bus.create_consumer_groups()
     worker_task = llm_client.start_worker()

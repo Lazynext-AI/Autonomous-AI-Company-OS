@@ -1,7 +1,4 @@
-"""LLM client — Cloudflare Workers AI (Llama-3.3-70b) via the company worker.
-
-This module keeps the `AtlasClient` name for backward compatibility with the
-agents, but the backend is now entirely Cloudflare Workers AI. No Atlas Cloud."""
+"""LLM client — Cloudflare Workers AI (Llama-3.3-70b) via the company worker."""
 
 import asyncio
 from typing import Any
@@ -16,7 +13,7 @@ logger = structlog.get_logger(__name__)
 WORKERS_AI_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
 
 
-class AtlasClient:
+class WorkersAIClient:
     """LLM client backed by Cloudflare Workers AI via the company worker."""
 
     def __init__(self) -> None:
