@@ -25,6 +25,10 @@ const FLAGS = [
   { key: "flag:webhook_alerts", label: "Webhook alerts", desc: "Signed events on deploys + failures" },
   { key: "flag:auto_code_review", label: "Auto code review", desc: "Review agent scores every PR" },
   { key: "flag:maintenance", label: "Maintenance mode", desc: "Show the maintenance screen across the dashboard" },
+  { key: "email:weekly_briefing", label: "Email: weekly briefing", desc: "Sunday founder report by email" },
+  { key: "email:deploy_alerts", label: "Email: deploy alerts", desc: "Instant email when a product ships" },
+  { key: "email:agent_failures", label: "Email: agent failures", desc: "Email when an agent fails 3x" },
+  { key: "email:usage_digest", label: "Email: usage digest", desc: "Monthly API + spend digest" },
 ];
 
 function kv(action: string, key: string, value?: string) {

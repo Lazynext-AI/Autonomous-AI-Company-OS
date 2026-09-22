@@ -8,6 +8,11 @@
 <meta property="og:title" content="Lazynext — The Autonomous AI Company OS"/>
 <meta property="og:description" content="A company that builds itself. 12 agents, your infra, your rules."/>
 <meta property="og:url" content="https://lazynext.com"/>
+<meta property="og:type" content="website"/>
+<meta property="og:image" content="https://lazynext.com/og.png"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Lazynext — The Autonomous AI Company OS"/>
+<meta name="twitter:description" content="A company that builds itself. 12 agents, your infra, your rules."/>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%238B5CF6'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif'>◆</text></svg>"/>
 <style>
 :root{--bg:#0A0A0B;--card:#141419;--cardHover:#1A1A21;--border:#26262E;--input:#0E0E13;--accent:#8B5CF6;--accentSoft:#A78BFA;--accentBg:#1E1B2E;--text:#FAFAFA;--muted:#9C9CAA;--ok:#22C55E}
@@ -124,6 +129,17 @@ footer{border-top:1px solid var(--border);padding:40px 0;color:var(--muted);font
 </div>
 </section>
 
+<section>
+<div class="wrap">
+  <h2 style="text-align:center;margin-bottom:40px">vs hiring a team</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px">
+    <div class="feat"><div class="ic">💸</div><h3>Cost</h3><p>~$400k/yr for a founding team. Lazynext runs on your provider usage — dollars per month, not payroll.</p></div>
+    <div class="feat"><div class="ic">⚡</div><h3>Speed</h3><p>Agents work 24/7, parallel across product lines. No hiring, onboarding or standups.</p></div>
+    <div class="feat"><div class="ic">🔑</div><h3>Control</h3><p>Your credentials, your data, your repos. The company is yours — no equity, no churn.</p></div>
+  </div>
+</div>
+</section>
+
 <section id="pricing">
 <div class="wrap">
   <h2>Pricing</h2>
@@ -142,7 +158,24 @@ footer{border-top:1px solid var(--border);padding:40px 0;color:var(--muted);font
     <h2>Your company runs while you sleep.</h2>
     <p>Dashboard, PWA, REST API, MCP, CLI, webhooks, SDK and email — watch it work from anywhere.</p>
     <a class="btn btn-primary" href="https://dashboard.lazynext.com" style="padding:16px 36px;font-size:15px">Launch Lazynext →</a>
+    <form id="waitlist" style="margin-top:24px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <input type="email" required placeholder="you@company.com" style="background:#0A0A0B;border:1px solid #26262E;border-radius:10px;padding:12px 18px;color:#FAFAFA;font-size:14px;min-width:240px"/>
+      <button type="submit" style="background:#8B5CF6;color:#fff;border:0;border-radius:10px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer">Join waitlist</button>
+    </form>
+    <p id="wlmsg" style="margin-top:12px;font-size:13px;color:#A78BFA"></p>
   </div>
+<script>
+document.getElementById('waitlist').addEventListener('submit',async e=>{
+ e.preventDefault();
+ const email=e.target.querySelector('input').value;
+ const msg=document.getElementById('wlmsg');
+ try{
+  const r=await fetch('https://ai-company.lazynext.com/api/v1/waitlist',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email})});
+  msg.textContent=r.ok?"You're on the list — we'll reach out.":"Couldn't add you — try again.";
+ }catch{msg.textContent="Couldn't add you — try again.";}
+ e.target.reset();
+});
+</script>
 </div>
 </section>
 

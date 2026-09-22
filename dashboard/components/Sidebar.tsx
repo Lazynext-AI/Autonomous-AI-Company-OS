@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Users, ListTodo, Brain, FileText, BookOpen,
   Activity, Key, Settings, Menu, X, BarChart3, Package, Bell, Search,
   Rocket, Code2, MessageSquare, TerminalSquare, ShieldCheck, ScrollText,
-  LogOut, CreditCard, Zap,
+  LogOut, CreditCard, Zap, Palette,
 } from "lucide-react";
 
 const NAV = [
@@ -35,12 +35,14 @@ const NAV = [
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/api-keys", label: "API Keys", icon: Key },
   { href: "/playground", label: "Playground", icon: Zap },
+  { href: "/design", label: "Design", icon: Palette },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [avatarMenu, setAvatarMenu] = useState(false);
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
@@ -95,21 +97,51 @@ export default function Sidebar() {
           </Link>
         </div>
         {nav}
-        <div className="px-7 pb-6 flex items-center gap-2 text-xs text-muted">
+        <div className="px-7 pb-6 flex items-center gap-2 text-xs text-muted relative">
           <span className="w-2 h-2 rounded-full bg-ok animate-pulse" />
           Live · v0.1
           <span className="ml-auto flex items-center gap-1.5">
             <ThemeToggle />
-            <button
-              onClick={async () => {
-                await fetch("/api/logout", { method: "POST" });
-                location.href = "/login";
-              }}
-              aria-label="Sign out"
-              className="w-8 h-8 rounded-lg bg-input flex items-center justify-center text-muted hover:text-fg transition"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setAvatarMenu((o) => !o)}
+                aria-label="Account menu"
+                className="w-8 h-8 rounded-full bg-accentBg flex items-center justify-center text-accentSoft text-xs font-bold transition hover:ring-2 hover:ring-accent"
+              >
+                F
+              </button>
+              {avatarMenu && (
+                <div className="absolute bottom-10 right-0 bg-card border border-border rounded-xl shadow-xl w-48 py-2 z-50">
+                  <div className="px-4 py-2 border-b border-border">
+                    <div className="text-xs font-semibold text-fg">Founder</div>
+                    <div className="text-[10px] text-muted">owner account</div>
+                  </div>
+                  <Link
+                    href="/settings"
+                    onClick={() => setAvatarMenu(false)}
+                    className="flex items-center gap-2.5 px-4 py-2 text-xs text-fg/80 hover:bg-cardHover transition"
+                  >
+                    <Settings className="w-3.5 h-3.5 text-muted" /> Settings
+                  </Link>
+                  <Link
+                    href="/billing"
+                    onClick={() => setAvatarMenu(false)}
+                    className="flex items-center gap-2.5 px-4 py-2 text-xs text-fg/80 hover:bg-cardHover transition"
+                  >
+                    <CreditCard className="w-3.5 h-3.5 text-muted" /> Billing
+                  </Link>
+                  <button
+                    onClick={async () => {
+                      await fetch("/api/logout", { method: "POST" });
+                      location.href = "/login";
+                    }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-bad hover:bg-cardHover transition text-left"
+                  >
+                    <LogOut className="w-3.5 h-3.5" /> Sign out
+                  </button>
+                </div>
+              )}
+            </div>
           </span>
         </div>
       </aside>

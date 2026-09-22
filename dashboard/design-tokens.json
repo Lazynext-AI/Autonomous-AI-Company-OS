@@ -1,0 +1,70 @@
+{
+  "$schema": "https://design-tokens.org/",
+  "name": "lazynext-design-system",
+  "source": "penpot.lazynext.com · New File 1",
+  "color": {
+    "bg":        { "value": "#0A0A0B", "type": "color" },
+    "card":      { "value": "#141419", "type": "color" },
+    "cardHover": { "value": "#1A1A21", "type": "color" },
+    "border":    { "value": "#26262E", "type": "color" },
+    "input":     { "value": "#0E0E13", "type": "color" },
+    "accent":    { "value": "#8B5CF6", "type": "color" },
+    "accentSoft":{ "value": "#A78BFA", "type": "color" },
+    "accentDim": { "value": "#3B2A5E", "type": "color" },
+    "accentBg":  { "value": "#1E1B2E", "type": "color" },
+    "text":      { "value": "#FAFAFA", "type": "color" },
+    "muted":     { "value": "#9C9CAA", "type": "color" },
+    "green":     { "value": "#22C55E", "type": "color" },
+    "greenBg":   { "value": "#0E2A1E", "type": "color" },
+    "amber":     { "value": "#F59E0B", "type": "color" },
+    "amberBg":   { "value": "#241F10", "type": "color" },
+    "red":       { "value": "#EF4444", "type": "color" },
+    "redBg":     { "value": "#2A1215", "type": "color" }
+  },
+  "font": {
+    "family":  { "value": "Source Sans Pro" },
+    "display": { "value": "56px/700", "type": "font" },
+    "h1":      { "value": "36px/700", "type": "font" },
+    "h2":      { "value": "24px/700", "type": "font" },
+    "h3":      { "value": "19px/700", "type": "font" },
+    "body":    { "value": "14px/400", "type": "font" },
+    "small":   { "value": "12px/400", "type": "font" },
+    "label":   { "value": "11px/700 uppercase", "type": "font" }
+  },
+  "space": {
+    "xs": { "value": "4px" },  "sm": { "value": "8px" },
+    "md": { "value": "16px" }, "lg": { "value": "24px" },
+    "xl": { "value": "32px" }, "2xl": { "value": "48px" },
+    "3xl": { "value": "64px" }
+  },
+  "radius": {
+    "sm": { "value": "6px" },  "md": { "value": "10px" },
+    "lg": { "value": "14px" }, "pill": { "value": "999px" }
+  },
+  "breakpoint": {
+    "mobile": { "value": "390px" }, "tablet": { "value": "768px" },
+    "desktop": { "value": "1200px" }, "wide": { "value": "1440px" }
+  },
+  "motion": {
+    "micro":    { "value": "150ms ease-out" },
+    "ui":       { "value": "250ms ease-in-out" },
+    "page":     { "value": "350ms ease" },
+    "skeleton": { "value": "1200ms pulse" }
+  },
+  "a11y": {
+    "focusRing": { "value": "2px solid #8B5CF6" },
+    "minTouch":  { "value": "44px" },
+    "contrast": {
+      "text": "16.1:1 AAA", "muted": "7.2:1 AAA",
+      "accentSoft": "8.4:1 AAA", "accent": "4.9:1 AA"
+    }
+  },
+  "component": {
+    "button":  { "height": "40–56px", "radius": "10px", "variants": ["primary","secondary","danger","ghost"] },
+    "card":    { "padding": "16px", "radius": "14px", "border": "1px solid #26262E" },
+    "input":   { "height": "48px", "radius": "10px", "bg": "#0E0E13" },
+    "badge":   { "height": "24px", "radius": "12px", "font": "11px bold" },
+    "toggle":  { "size": "48x28", "on": "#8B5CF6", "off": "#26262E" },
+    "sidebar": { "width": "240px", "bg": "#141419" }
+  }
+}

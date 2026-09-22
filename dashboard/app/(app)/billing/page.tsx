@@ -4,9 +4,18 @@ import { useEffect, useState } from "react";
 import { queryApi } from "@/lib/api";
 import { PageHeader, Card } from "@/components/ui";
 import { CreditCard, Activity, Key, Rocket, BookOpen } from "lucide-react";
+import { toast } from "@/components/Toast";
+
+const PLANS = [
+  { name: "Founder", price: "$0", desc: "Self-hosted on your own credentials — current." },
+  { name: "Team", price: "$49/mo", desc: "Multi-seat access, shared agents, priority support." },
+  { name: "Scale", price: "$199/mo", desc: "Multi-company fleets, SLA, dedicated infra." },
+];
 
 export default function BillingPage() {
   const [m, setM] = useState({ tasks: 0, keys: 0, deploys: 0, chunks: 0, messages: 0 });
+  const [plan, setPlan] = useState("Founder");
+  const [planOpen, setPlanOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,7 +37,25 @@ export default function BillingPage() {
       )
       .catch(() => {})
       .finally(() => setLoading(false));
+    fetch("/api/kv", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "get", key: "plan" }),
+    })
+      .then((r) => r.json())
+      .then((d) => { if (d.value) setPlan(JSON.parse(d.value).name ?? "Founder"); })
+      .catch(() => {});
   }, []);
+
+  const changePlan = async (name: string) => {
+    const r = await fetch("/api/kv", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "put", key: "plan", value: JSON.stringify({ name }) }),
+    });
+    if (r.ok) { setPlan(name); setPlanOpen(false); toast(`Plan → ${name}`); }
+    else toast("Plan change failed");
+  };
 
   const USAGE = [
     { icon: Activity, label: "Tasks run", value: m.tasks },
@@ -46,13 +73,19 @@ export default function BillingPage() {
         <Card>
           <h2 className="text-sm font-semibold mb-3">Plan</h2>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-fg">Founder</span>
+            <span className="text-2xl font-bold text-fg">{plan}</span>
             <span className="text-xs font-semibold text-accentSoft bg-accentBg px-2 py-1 rounded-md">current</span>
           </div>
           <p className="text-xs text-muted mt-2">
             Self-hosted runtime on your own credentials — Atlas Cloud (LLM), Cloudflare (infra),
             E2B (sandboxes), Resend (email). Costs are your provider usage.
           </p>
+          <button
+            onClick={() => setPlanOpen(true)}
+            className="mt-4 text-xs text-accentSoft hover:underline font-medium"
+          >
+            Change plan →
+          </button>
         </Card>
 
         <Card>
@@ -68,6 +101,34 @@ export default function BillingPage() {
           </div>
         </Card>
       </div>
+
+      {planOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setPlanOpen(false)}>
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-fg mb-5">Change plan</h2>
+            <div className="space-y-3">
+              {PLANS.map((p) => (
+                <button
+                  key={p.name}
+                  onClick={() => changePlan(p.name)}
+                  className={`w-full text-left p-4 rounded-xl border transition ${
+                    plan === p.name
+                      ? "border-accent bg-accentBg"
+                      : "border-border bg-input hover:border-accentDim"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-fg">{p.name}</span>
+                    <span className="text-sm font-bold text-accentSoft">{p.price}</span>
+                  </div>
+                  <p className="text-xs text-muted mt-1">{p.desc}</p>
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-muted mt-4">Self-hosted — plan selection is recorded locally; billing is your provider usage.</p>
+          </div>
+        </div>
+      )}
     </>
   );
 }

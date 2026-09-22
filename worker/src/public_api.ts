@@ -177,6 +177,23 @@ export async function handlePublicApi(
   if (path === "/api/v1/health") {
     return json({ ok: true, service: "lazynext-api", version: "1.0.0" });
   }
+
+  // Public waitlist — no API key needed; the marketing form posts here.
+  if (req.method === "POST" && path === "/api/v1/waitlist") {
+    try {
+      const b = (await req.json()) as { email?: string };
+      const email = (b.email ?? "").trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
+        return json({ error: "valid email required" }, 400);
+      await env.DB.prepare(
+        "INSERT OR IGNORE INTO waitlist (email, source) VALUES (?, ?)",
+      ).bind(email, "landing").run();
+      return json({ ok: true });
+    } catch (e) {
+      return json({ error: e instanceof Error ? e.message : String(e) }, 500);
+    }
+  }
+
   if (path === "/api/v1/openapi.json") return json(OPENAPI_SPEC);
   if (path === "/api/v1/docs") {
     return new Response(DOCS_HTML, { headers: { "content-type": "text/html" } });
