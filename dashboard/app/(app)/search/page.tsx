@@ -40,8 +40,8 @@ export default function SearchPage() {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        sql: "INSERT INTO knowledge_chunks (filename, category, content, source) VALUES (?, ?, ?, ?)",
-        params: [h.url, "web_research", `${h.title}\n${h.snippet}`, h.source],
+        sql: "INSERT INTO knowledge_chunks (id, filename, category, chunk_index, content) VALUES (lower(hex(randomblob(16))), ?, ?, 0, ?)",
+        params: [h.url, "web_research", `${h.title}\n${h.snippet}`],
       }),
     });
   };
@@ -83,7 +83,7 @@ export default function SearchPage() {
             value={wq}
             onChange={(e) => setWq(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && webSearch()}
-            placeholder="Search the live web (Google / Brave)…"
+            placeholder="Search the live web (Google results via Serper)…"
             className="flex-1 bg-input border border-border rounded-lg px-3 py-2 text-sm text-fg outline-none focus:border-accent transition"
           />
           <button
