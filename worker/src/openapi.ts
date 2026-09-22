@@ -21,6 +21,14 @@ export const OPENAPI_SPEC = {
     "/api/v1/health": {
       get: { summary: "Service health (public)", security: [], responses: { "200": { description: "ok" } } },
     },
+    "/api/v1/waitlist": {
+      post: {
+        summary: "Join the public waitlist (no key)",
+        security: [],
+        requestBody: { content: { "application/json": { schema: { type: "object", required: ["email"], properties: { email: { type: "string", format: "email" } } } } } },
+        responses: { "200": { description: "Joined" }, "400": { description: "Invalid email" } },
+      },
+    },
     "/api/v1/status": {
       get: { summary: "Company snapshot counters", responses: { "200": { description: "Counts" } } },
     },

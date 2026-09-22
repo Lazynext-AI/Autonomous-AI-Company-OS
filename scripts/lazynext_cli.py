@@ -11,6 +11,7 @@ Usage:
   lazynext search "query"          Search the knowledge base
   lazynext health                  Ping all public endpoints
   lazynext mcp-tools               List MCP tools
+  lazynext waitlist "email"        Join the public waitlist (no key)
 """
 import os
 import sys
@@ -37,7 +38,15 @@ def _client() -> LazynextApiClient:
 
 def main() -> int:
     cmd = sys.argv[1] if len(sys.argv) > 1 else "help"
-    c = _client() if cmd not in ("help", "-h", "--help", "health") else None
+    # waitlist needs no API key — it's public
+    c = _client() if cmd not in ("help", "-h", "--help", "health", "waitlist") else None
+
+    if cmd == "waitlist":
+        if len(sys.argv) < 3:
+            sys.exit('usage: lazynext waitlist "you@company.com"')
+        r = LazynextApiClient(api_key="", base_url=BASE).join_waitlist(sys.argv[2])
+        print("joined:", r.get("ok"))
+        return 0
 
     if cmd == "status":
         for k, v in c.status().items():

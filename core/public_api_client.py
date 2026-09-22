@@ -31,6 +31,12 @@ class LazynextApiClient:
     def status(self) -> dict:
         return self._get("/api/v1/status")
 
+    def join_waitlist(self, email: str) -> dict:
+        # Public — no API key needed. The marketing waitlist posts here.
+        r = httpx.post(f"{self.base_url}/api/v1/waitlist", json={"email": email}, timeout=15)
+        r.raise_for_status()
+        return r.json()
+
     def list_briefings(self, limit: int = 20) -> list:
         return self._get("/api/v1/briefings", limit=limit)["briefings"]
 
