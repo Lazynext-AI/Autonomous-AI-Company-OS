@@ -6,6 +6,35 @@ import { Env, json } from "./gateway";
 
 const DODO_API = "https://test.dodopayments.com"; // swap to live.dodopayments.com for live mode
 
+// Standard Webhooks (Svix) verification for Dodo. The whsec_ secret is
+// base64; the signed payload is `${webhook-id}.${webhook-timestamp}.${body}`.
+async function verifyDodo(
+  secret: string, id: string, ts: string, body: string, sigHeader: string,
+): Promise<boolean> {
+  const rawSecret = secret.startsWith("whsec_") ? secret.slice(6) : secret;
+  let keyBytes: Uint8Array;
+  try {
+    keyBytes = Uint8Array.from(atob(rawSecret), (c) => c.charCodeAt(0));
+  } catch {
+    keyBytes = new TextEncoder().encode(rawSecret);
+  }
+  const key = await crypto.subtle.importKey(
+    "raw", keyBytes.buffer as ArrayBuffer, { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
+  );
+  const mac = await crypto.subtle.sign(
+    "HMAC", key, new TextEncoder().encode(`${id}.${ts}.${body}`),
+  );
+  const bytes = new Uint8Array(mac);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  const expected = btoa(bin);
+  // Header holds space-separated "v1,<sig>" entries; accept any match.
+  return sigHeader.split(" ").some((s) => {
+    const [v, sig] = s.split(",");
+    return v === "v1" && sig === expected;
+  });
+}
+
 async function dodoFetch(env: Env, path: string, body: unknown): Promise<Response> {
   const key = env.DODO_API_KEY;
   if (!key) return json({ error: "DODO_API_KEY not configured" }, 503);
@@ -27,33 +56,34 @@ export async function handleBilling(
   ctx: ExecutionContext,
   path: string,
 ): Promise<Response> {
-  // Public webhook — Dodo calls this on payment events.
+  // Public webhook — Dodo calls this on payment events. Signature uses
+  // Standard Webhooks: sign `${id}.${timestamp}.${body}` with the whsec_ secret.
   if (req.method === "POST" && path === "/api/v1/billing/webhook") {
-    const evt = (await req.json()) as {
+    const raw = await req.text();
+    const secret = env.DODO_WEBHOOK_SECRET;
+    if (secret) {
+      const id = req.headers.get("webhook-id") ?? "";
+      const ts = req.headers.get("webhook-timestamp") ?? "";
+      const sigHeader = req.headers.get("webhook-signature") ?? "";
+      const ok = await verifyDodo(secret, id, ts, raw, sigHeader);
+      if (!ok) return json({ error: "bad signature" }, 401);
+    }
+    const evt = JSON.parse(raw) as {
       type?: string;
       data?: { metadata?: { plan?: string }; status?: string };
     };
-    // Verify signature if Dodo webhook secret is set.
-    const secret = env.DODO_WEBHOOK_SECRET;
-    if (secret) {
-      const sig = req.headers.get("webhook-signature") ?? "";
-      const enc = new TextEncoder();
-      const key = await crypto.subtle.importKey(
-        "raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
-      );
-      const mac = await crypto.subtle.sign(
-        "HMAC", key, enc.encode(await req.clone().text()),
-      );
-      const expected = Array.from(new Uint8Array(mac)).map((b) => b.toString(16).padStart(2, "0")).join("");
-      if (sig !== expected) return json({ error: "bad signature" }, 401);
-    }
     const plan = evt.data?.metadata?.plan;
-    const paid = evt.type === "payment.succeeded" || evt.type === "subscription.active";
-    if (paid && plan) {
-      await env.EPHEMERAL.put("plan", JSON.stringify({ name: plan }));
+    const type = evt.type ?? "";
+    // Activate on payment/subscription success; downgrade to Founder on
+    // cancellation/failure so the plan always reflects real billing state.
+    const activate = type === "payment.succeeded" || type === "subscription.active" || type === "subscription.renewed";
+    const downgrade = type === "subscription.cancelled" || type === "subscription.expired" || type === "subscription.on_hold" || type === "payment.failed";
+    if (plan && (activate || downgrade)) {
+      const name = activate ? plan : "Founder";
+      await env.EPHEMERAL.put("plan", JSON.stringify({ name }));
       await env.DB.prepare(
         "INSERT INTO bus_messages (channel, payload, created_at) VALUES ('billing.events', ?, datetime('now'))",
-      ).bind(JSON.stringify({ type: evt.type, plan })).run();
+      ).bind(JSON.stringify({ type, plan: name, from: plan })).run();
     }
     return json({ ok: true });
   }
