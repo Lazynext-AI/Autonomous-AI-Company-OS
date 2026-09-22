@@ -1,6 +1,7 @@
 // A2A (Agent-to-Agent) interface — other AI agents can delegate work to
 // Lazynext agents. Follows the agent-card + tasks/send/get shape.
 import { Env, json } from "./gateway";
+import { publishToBus } from "./webhooks";
 
 const AGENT_CARD = {
   name: "Lazynext — The Autonomous AI Company",
@@ -20,6 +21,7 @@ const AGENT_CARD = {
 export async function handleA2a(
   req: Request,
   env: Env,
+  ctx: ExecutionContext,
   path: string,
 ): Promise<Response> {
   if (path === "/.well-known/agent.json") return json(AGENT_CARD);
@@ -38,11 +40,8 @@ export async function handleA2a(
       const text = body.params?.message?.parts?.[0]?.text ?? "";
       if (!text) return json({ error: "message text required" }, 400);
       const id = `a2a-${crypto.randomUUID().slice(0, 8)}`;
-      await env.DB.prepare(
-        "INSERT INTO bus_messages (channel, payload, created_at) VALUES (?, ?, datetime('now'))",
-      )
-        .bind("a2a.tasks", JSON.stringify({ id, task: text, source: "a2a" }))
-        .run();
+      // Goes through publishToBus — fans out to webhooks like any message.
+      await publishToBus(env, ctx, "a2a.tasks", JSON.stringify({ id, task: text, source: "a2a" }));
       return json({
         jsonrpc: "2.0",
         id: body.id,

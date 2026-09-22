@@ -1,6 +1,7 @@
 // Embeddable widget — any website can <script> this in and get a live
 // Lazynext status card or a chat widget that posts to the company bus.
 import { Env, json } from "./gateway";
+import { publishToBus } from "./webhooks";
 
 const WIDGET_JS = `(function(){
   var API = "https://ai-company.lazynext.com/api/v1";
@@ -45,6 +46,7 @@ const WIDGET_JS = `(function(){
 export async function handleWidget(
   req: Request,
   env: Env,
+  ctx: ExecutionContext,
   path: string,
 ): Promise<Response> {
   // Serve the embed script — public, CORS-open.
@@ -63,9 +65,8 @@ export async function handleWidget(
     const b = (await req.json()) as { text?: string };
     const text = (b.text ?? "").slice(0, 500);
     if (!text) return json({ error: "text required" }, 400);
-    await env.DB.prepare(
-      "INSERT INTO bus_messages (channel, payload, created_at) VALUES ('widget.chat', ?, datetime('now'))",
-    ).bind(JSON.stringify({ text, source: "widget" })).run();
+    // publishToBus → webhook fan-out, same as every other bus write.
+    await publishToBus(env, ctx, "widget.chat", JSON.stringify({ text, source: "widget" }));
     return json({ reply: "The company received your message — an agent will pick it up." });
   }
 

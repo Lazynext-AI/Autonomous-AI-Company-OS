@@ -283,11 +283,11 @@ export default {
       if (req.method === "OPTIONS") return preflight();
       if (path === "/mcp") return cors(req, await handleMcp(req, env, ctx));
       if (path === "/a2a" || path === "/.well-known/agent.json")
-        return cors(req, await handleA2a(req, env, path));
+        return cors(req, await handleA2a(req, env, ctx, path));
       if (path.startsWith("/oauth/"))
         return cors(req, await handleOAuth(req, env, path, url));
       if (path === "/widget.js" || path === "/api/v1/widget/chat")
-        return cors(req, await handleWidget(req, env, path));
+        return cors(req, await handleWidget(req, env, ctx, path));
       if (path.startsWith("/api/v1/webhooks"))
         return cors(req, await handleWebhooks(req, env, ctx, path));
       if (path.startsWith("/api/")) return cors(req, await handlePublicApi(req, env, ctx, path));
