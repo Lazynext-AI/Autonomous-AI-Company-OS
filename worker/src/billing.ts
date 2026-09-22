@@ -1,9 +1,10 @@
 // Dodo Payments billing — checkout sessions + webhook handler.
 // Merchant-of-record: Dodo handles tax/compliance; we just create
 // a checkout link and update the plan on payment success.
+// Host: test.dodopayments.com (test mode) or live.dodopayments.com.
 import { Env, json } from "./gateway";
 
-const DODO_API = "https://api.dodopayments.com";
+const DODO_API = "https://test.dodopayments.com"; // swap to live.dodopayments.com for live mode
 
 async function dodoFetch(env: Env, path: string, body: unknown): Promise<Response> {
   const key = env.DODO_API_KEY;

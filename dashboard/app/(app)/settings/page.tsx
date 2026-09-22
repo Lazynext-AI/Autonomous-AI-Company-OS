@@ -17,7 +17,7 @@ const INTEGRATIONS = [
   { name: "Penpot", desc: "Design system — penpot.lazynext.com", icon: Palette, ok: true },
   { name: "Scraping", desc: "Cloudflare Browser Rendering (Firecrawl fallback)", icon: Database, ok: true },
   { name: "Web Search", desc: "Serper (Google results) — market research", icon: Globe, ok: true },
-  { name: "Dodo Payments", desc: "Billing — merchant of record", icon: CreditCard, ok: false },
+  { name: "Dodo Payments", desc: "Billing — merchant of record ($29/mo plan live)", icon: CreditCard, ok: true },
 ];
 
 const FLAGS = [
