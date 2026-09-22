@@ -12,6 +12,7 @@ import { handleMcp } from "./mcp";
 import { handleA2a } from "./a2a";
 import { handleBilling } from "./billing";
 import { handleOAuth } from "./oauth";
+import { handleWebSearch } from "./websearch";
 import { handleWidget } from "./widget";
 import { fanOut, handleWebhooks, publishToBus } from "./webhooks";
 
@@ -267,6 +268,9 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
       const b = await readBody<{ ids: string[] }>(req);
       const res = await env.VECTORS.deleteByIds(b.ids);
       return json(res);
+    }
+    case "/websearch": {
+      return handleWebSearch(req, env);
     }
 
     default:

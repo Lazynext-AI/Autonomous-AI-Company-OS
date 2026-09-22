@@ -18,6 +18,7 @@ const INTEGRATIONS = [
   { name: "Penpot", desc: "Design system — penpot.lazynext.com", icon: Palette, ok: true },
   { name: "Firecrawl", desc: "Market + competitor research", icon: Database, ok: true },
   { name: "Dodo Payments", desc: "Billing — merchant of record", icon: CreditCard, ok: false },
+  { name: "Web Search", desc: "Google Custom Search / Brave — market research", icon: Globe, ok: false },
 ];
 
 const FLAGS = [

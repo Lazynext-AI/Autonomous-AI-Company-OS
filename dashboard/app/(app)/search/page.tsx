@@ -4,13 +4,47 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { queryApi, parseJson } from "@/lib/api";
 import { PageHeader, Card, StatusBadge, timeAgo } from "@/components/ui";
-import { Search as SearchIcon, ListTodo, Users, BookOpen } from "lucide-react";
+import { Search as SearchIcon, ListTodo, Users, BookOpen, Globe, Loader2, Plus } from "lucide-react";
 
 export default function SearchPage() {
   const [q, setQ] = useState("");
   const [tasks, setTasks] = useState<any[]>([]);
   const [agents, setAgents] = useState<any[]>([]);
   const [docs, setDocs] = useState<any[]>([]);
+  const [wq, setWq] = useState("");
+  const [web, setWeb] = useState<any[]>([]);
+  const [webLoading, setWebLoading] = useState(false);
+  const [webErr, setWebErr] = useState("");
+
+  const webSearch = async () => {
+    const query = wq.trim();
+    if (!query) return;
+    setWebLoading(true); setWebErr("");
+    try {
+      const r = await fetch("/api/websearch", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ q: query }),
+      });
+      const d = await r.json();
+      if (r.ok) setWeb(d.results ?? []);
+      else setWebErr(d.error ?? "search failed");
+    } catch (e: any) {
+      setWebErr(e.message ?? "search failed");
+    }
+    setWebLoading(false);
+  };
+
+  const ingest = async (h: any) => {
+    await fetch("/api/query", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        sql: "INSERT INTO knowledge_chunks (filename, category, content, source) VALUES (?, ?, ?, ?)",
+        params: [h.url, "web_research", `${h.title}\n${h.snippet}`, h.source],
+      }),
+    });
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -38,7 +72,49 @@ export default function SearchPage() {
 
   return (
     <>
-      <PageHeader title="Search" subtitle="Across tasks, agents and knowledge." />
+      <PageHeader title="Search" subtitle="Across tasks, agents, knowledge — and the live web." />
+
+      <Card className="max-w-2xl mb-8">
+        <h2 className="text-xs font-bold text-muted uppercase tracking-wide mb-3 flex items-center gap-2">
+          <Globe className="w-3.5 h-3.5" /> Web research
+        </h2>
+        <div className="flex gap-2">
+          <input
+            value={wq}
+            onChange={(e) => setWq(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && webSearch()}
+            placeholder="Search the live web (Google / Brave)…"
+            className="flex-1 bg-input border border-border rounded-lg px-3 py-2 text-sm text-fg outline-none focus:border-accent transition"
+          />
+          <button
+            onClick={webSearch}
+            disabled={webLoading}
+            className="px-4 py-2 rounded-lg bg-accent text-bg text-sm font-semibold hover:opacity-90 transition disabled:opacity-50"
+          >
+            {webLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Search"}
+          </button>
+        </div>
+        {webErr && <p className="text-xs text-danger mt-3">{webErr}</p>}
+        {web.length > 0 && (
+          <div className="mt-4 divide-y divide-border border border-border rounded-xl overflow-hidden">
+            {web.map((h, i) => (
+              <div key={i} className="flex items-start gap-3 px-4 py-3 bg-input">
+                <div className="flex-1 min-w-0">
+                  <a href={h.url} target="_blank" rel="noreferrer" className="text-sm text-accentSoft hover:underline font-medium line-clamp-1">
+                    {h.title}
+                  </a>
+                  <p className="text-xs text-muted line-clamp-2 mt-0.5">{h.snippet}</p>
+                  <p className="text-[10px] text-muted mt-1 truncate">{h.url} · {h.source}</p>
+                </div>
+                <button onClick={() => ingest(h)} title="Ingest into knowledge base"
+                  className="mt-1 p-1.5 rounded-md bg-card text-muted hover:text-accentSoft transition shrink-0">
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
 
       <div className="relative max-w-2xl mb-8">
         <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
