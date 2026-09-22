@@ -44,12 +44,12 @@ const ACTIONS: { label: string; hint: string; icon: any; run: () => Promise<stri
     },
   },
   {
-    label: "New sandbox",
+    label: "Open sandbox",
     hint: "Run code in the Cloudflare container",
     icon: TerminalSquare,
-    run: async () => {
-      const r = await fetch("/api/sandbox", { method: "POST" });
-      return r.ok ? "Sandbox created" : "Create failed";
+    run: () => {
+      location.href = "/sandbox";
+      return "Opening sandbox…";
     },
   },
   {
