@@ -13,6 +13,8 @@
   "dependencies": {
     "lucide-react": "^0.300.0",
     "next": "^15.5.24",
+    "otpauth": "^9.5.2",
+    "qrcode": "^1.5.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "recharts": "^2.10.0"
@@ -20,6 +22,7 @@
   "devDependencies": {
     "@opennextjs/cloudflare": "^1.20.6",
     "@types/node": "^20.0.0",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^18.2.0",
     "autoprefixer": "^10.4.0",
     "postcss": "^8.4.0",

@@ -43,6 +43,11 @@ function kv(action: string, key: string, value?: string) {
 export default function SettingsPage() {
   const [flags, setFlags] = useState<Record<string, boolean>>({});
   const [integration, setIntegration] = useState<string | null>(null);
+  const [totpSetup, setTotpSetup] = useState(false);
+  const [totpUri, setTotpUri] = useState("");
+  const [totpSecret, setTotpSecret] = useState("");
+  const [totpQr, setTotpQr] = useState("");
+  const [totpCode, setTotpCode] = useState("");
   const [loading, setLoading] = useState(true);
   const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
 
@@ -211,10 +216,24 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm text-fg">Two-factor auth</div>
-                <div className="text-xs text-muted">Require a TOTP code at sign-in (flagged — wired when multi-auth lands)</div>
+                <div className="text-xs text-muted">Real TOTP — an authenticator code is required at sign-in</div>
               </div>
               <button
-                onClick={() => toggle("flag:two_factor")}
+                onClick={async () => {
+                  if (flags["flag:two_factor"]) {
+                    const code = prompt("Enter your authenticator code to disable 2FA:");
+                    if (!code) return;
+                    const r = await fetch("/api/2fa", {
+                      method: "POST",
+                      headers: { "content-type": "application/json" },
+                      body: JSON.stringify({ action: "disable", code }),
+                    });
+                    if (r.ok) { setFlags((f) => ({ ...f, "flag:two_factor": false })); toast("2FA disabled"); }
+                    else toast("Invalid code — 2FA still on");
+                  } else {
+                    setTotpSetup(true);
+                  }
+                }}
                 className={`w-11 h-6 rounded-full transition relative ${flags["flag:two_factor"] ? "bg-accent" : "bg-input border border-border"}`}
               >
                 <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${flags["flag:two_factor"] ? "left-[22px]" : "left-0.5"}`} />
@@ -334,6 +353,65 @@ export default function SettingsPage() {
           </div>
         </Card>
       </div>
+
+      {totpSetup && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setTotpSetup(false)}>
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-fg mb-4">Set up two-factor auth</h2>
+            {!totpUri ? (
+              <button
+                onClick={async () => {
+                  const r = await fetch("/api/2fa", {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({ action: "setup" }),
+                  });
+                  const d = await r.json();
+                  setTotpUri(d.uri);
+                  setTotpSecret(d.secret);
+                  const QR = await import("qrcode");
+                  setTotpQr(await QR.toDataURL(d.uri, { margin: 1, width: 200, color: { dark: "#FAFAFA", light: "#141419" } }));
+                }}
+                className="w-full bg-accent hover:bg-accentSoft text-white text-sm font-semibold py-2.5 rounded-lg transition"
+              >
+                Generate secret
+              </button>
+            ) : (
+              <>
+                {totpQr && <img src={totpQr} alt="TOTP QR" className="mx-auto rounded-lg mb-4" />}
+                <div className="text-xs text-muted mb-1">Or enter manually:</div>
+                <code className="block bg-input rounded-lg px-3 py-2 text-xs text-accentSoft font-mono break-all mb-4">{totpSecret}</code>
+                <label className="text-xs text-muted">Enter the 6-digit code to confirm</label>
+                <input
+                  value={totpCode}
+                  onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  inputMode="numeric"
+                  className="w-full bg-input border border-border rounded-lg px-3.5 py-2.5 mt-1.5 text-sm text-fg font-mono tracking-[0.3em] text-center outline-none focus:border-accent transition"
+                  placeholder="000000"
+                />
+                <button
+                  onClick={async () => {
+                    const r = await fetch("/api/2fa", {
+                      method: "POST",
+                      headers: { "content-type": "application/json" },
+                      body: JSON.stringify({ action: "confirm", code: totpCode }),
+                    });
+                    if (r.ok) {
+                      setFlags((f) => ({ ...f, "flag:two_factor": true }));
+                      setTotpSetup(false); setTotpUri(""); setTotpCode("");
+                      toast("2FA enabled — code required at sign-in");
+                    } else toast("Invalid code");
+                  }}
+                  disabled={totpCode.length !== 6}
+                  className="w-full mt-3 bg-accent hover:bg-accentSoft disabled:opacity-50 text-white text-sm font-semibold py-2.5 rounded-lg transition"
+                >
+                  Confirm &amp; enable
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }

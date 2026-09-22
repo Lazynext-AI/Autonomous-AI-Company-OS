@@ -6,6 +6,8 @@ import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const [pass, setPass] = useState("");
+  const [code, setCode] = useState("");
+  const [totpStep, setTotpStep] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [show, setShow] = useState(false);
@@ -18,14 +20,17 @@ export default function LoginPage() {
     const r = await fetch("/api/login", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ passphrase: pass }),
+      body: JSON.stringify({ passphrase: pass, code: code || undefined }),
     });
+    const d = await r.json().catch(() => ({}));
     setBusy(false);
     if (r.ok) {
       router.push("/");
       router.refresh();
+    } else if (d.totp) {
+      setTotpStep(true);
     } else {
-      setError("Wrong passphrase");
+      setError(d.error === "invalid authenticator code" ? "Invalid code" : "Wrong passphrase");
     }
   };
 
@@ -66,6 +71,21 @@ export default function LoginPage() {
               </button>
             </div>
           </div>
+          {totpStep && (
+            <div>
+              <label className="text-xs text-muted">Authenticator code</label>
+              <input
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                inputMode="numeric"
+                autoFocus
+                autoComplete="one-time-code"
+                className="w-full bg-input border border-border rounded-lg px-3.5 py-2.5 mt-1.5 text-sm text-fg font-mono tracking-[0.3em] text-center outline-none focus:border-accent transition"
+                placeholder="000000"
+              />
+              <p className="text-[10px] text-muted mt-1.5">6-digit code from your authenticator app</p>
+            </div>
+          )}
           {error && <div className="text-xs text-bad">{error}</div>}
           <button
             type="submit"
