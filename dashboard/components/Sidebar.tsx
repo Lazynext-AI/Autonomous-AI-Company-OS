@@ -7,7 +7,7 @@ import { queryApi } from "@/lib/api";
 import ThemeToggle from "@/components/ThemeToggle";
 import {
   LayoutDashboard, Users, ListTodo, Brain, FileText, BookOpen,
-  Activity, Key, Settings, Menu, X, BarChart3, Package, Bell, Search,
+  Activity, Key, Settings, Menu, X, BarChart3, Package, Bell, Search, ChevronDown, Plus,
   Rocket, Code2, MessageSquare, TerminalSquare, ShieldCheck, ScrollText,
   LogOut, CreditCard, Zap, Palette,
 } from "lucide-react";
@@ -43,6 +43,8 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [avatarMenu, setAvatarMenu] = useState(false);
+  const [productMenu, setProductMenu] = useState(false);
+  const [product, setProduct] = useState("LaunchDeck");
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
@@ -53,6 +55,10 @@ export default function Sidebar() {
           "SELECT id FROM bus_messages WHERE channel IN ('alerts','milestones','deploys') ORDER BY id DESC LIMIT 50"
         );
         setUnread(rows.filter((r) => !read.has(`e-${r.id}`)).length);
+        const p = await queryApi<{ product_name?: string }>(
+          "SELECT product_name FROM company_brain LIMIT 1"
+        );
+        if (p[0]?.product_name) setProduct(p[0].product_name);
       } catch {}
     };
     load();
@@ -91,10 +97,38 @@ export default function Sidebar() {
     <>
       {/* Desktop sidebar */}
       <aside className="hidden md:flex fixed inset-y-0 left-0 w-60 bg-card border-r border-border flex-col">
-        <div className="px-7 pt-7 pb-8">
+        <div className="px-7 pt-7 pb-4">
           <Link href="/" className="text-xl font-bold text-fg">
             ◆ Lazynext
           </Link>
+        </div>
+        <div className="px-4 pb-4">
+          <button
+            onClick={() => setProductMenu((o) => !o)}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-[10px] bg-input border border-border text-sm hover:border-accentDim transition"
+          >
+            <Package className="w-3.5 h-3.5 text-accentSoft" />
+            <span className="flex-1 text-left text-fg font-medium truncate">{product}</span>
+            <ChevronDown className={`w-3.5 h-3.5 text-muted transition ${productMenu ? "rotate-180" : ""}`} />
+          </button>
+          {productMenu && (
+            <div className="mt-1 bg-card border border-border rounded-xl shadow-xl py-1.5">
+              <Link
+                href="/products"
+                onClick={() => setProductMenu(false)}
+                className="flex items-center gap-2.5 px-4 py-2 text-xs text-fg/80 hover:bg-cardHover transition"
+              >
+                <Package className="w-3.5 h-3.5 text-accentSoft" /> {product}
+              </Link>
+              <Link
+                href="/products"
+                onClick={() => setProductMenu(false)}
+                className="flex items-center gap-2.5 px-4 py-2 text-xs text-muted hover:bg-cardHover hover:text-fg transition"
+              >
+                <Plus className="w-3.5 h-3.5" /> New product…
+              </Link>
+            </div>
+          )}
         </div>
         {nav}
         <div className="px-7 pb-6 flex items-center gap-2 text-xs text-muted relative">
