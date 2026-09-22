@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
+  const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [code, setCode] = useState("");
   const [totpStep, setTotpStep] = useState(false);
@@ -17,10 +18,15 @@ export default function LoginPage() {
     e.preventDefault();
     setBusy(true);
     setError("");
-    const r = await fetch("/api/login", {
+    // Email present → user login. Password-only → owner passphrase.
+    const url = email ? "/api/auth" : "/api/login";
+    const body = email
+      ? { action: "login", email, password: pass, code: code || undefined }
+      : { passphrase: pass, code: code || undefined };
+    const r = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ passphrase: pass, code: code || undefined }),
+      body: JSON.stringify(body),
     });
     const d = await r.json().catch(() => ({}));
     setBusy(false);
@@ -30,7 +36,7 @@ export default function LoginPage() {
     } else if (d.totp) {
       setTotpStep(true);
     } else {
-      setError(d.error === "invalid authenticator code" ? "Invalid code" : "Wrong passphrase");
+      setError(d.error ?? (email ? "Invalid credentials" : "Wrong passphrase"));
     }
   };
 
@@ -48,8 +54,18 @@ export default function LoginPage() {
           className="bg-card border border-border rounded-[14px] p-6 space-y-4"
         >
           <div>
+            <label className="text-xs text-muted">Email <span className="text-muted/60">(leave blank for owner passphrase)</span></label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full bg-input border border-border rounded-lg px-3.5 py-2.5 mt-1.5 text-sm text-fg outline-none focus:border-accent transition"
+              placeholder="you@company.com"
+            />
+          </div>
+          <div>
             <div className="flex items-center justify-between">
-              <label className="text-xs text-muted">Passphrase</label>
+              <label className="text-xs text-muted">{email ? "Password" : "Passphrase"}</label>
               <a href="/forgot" className="text-xs text-accentSoft hover:underline">Forgot?</a>
             </div>
             <div className="relative mt-1.5">
@@ -94,6 +110,9 @@ export default function LoginPage() {
           >
             {busy ? "Signing in…" : "Sign in"}
           </button>
+          <p className="text-center text-xs text-muted">
+            New here? <a href="/signup" className="text-accentSoft">Create an account</a>
+          </p>
         </form>
         <p className="text-center text-xs text-muted mt-6">
           The autonomous AI company ·{" "}

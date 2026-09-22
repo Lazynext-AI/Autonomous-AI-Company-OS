@@ -1,27 +1,55 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { KeyRound } from "lucide-react";
 
 export default function ForgotPage() {
+  const [email, setEmail] = useState("");
+  const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    await fetch("/api/auth", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "forgot", email }),
+    });
+    setBusy(false);
+    setDone(true);
+  };
+
   return (
     <div className="min-h-screen bg-bg flex items-center justify-center px-4">
-      <div className="w-full max-w-sm text-center">
-        <div className="w-14 h-14 rounded-2xl bg-accentBg flex items-center justify-center mx-auto mb-6">
-          <KeyRound className="w-6 h-6 text-accentSoft" />
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="text-2xl font-bold"><span className="text-accentSoft">◆</span> Lazynext</div>
+          <p className="text-sm text-muted mt-2">Reset your password</p>
         </div>
-        <h1 className="text-xl font-bold text-fg mb-2">Forgot passphrase</h1>
-        <p className="text-sm text-muted mb-6">
-          This is a single-owner deployment — there's no email reset flow. Your passphrase lives in your
-          own infrastructure:
-        </p>
-        <div className="bg-card border border-border rounded-xl p-4 text-left mb-6">
-          <div className="text-xs text-muted mb-1">Check your env</div>
-          <code className="text-xs text-accentSoft font-mono">DASHBOARD_PASSPHRASE in .env</code>
-          <div className="text-xs text-muted mt-3 mb-1">Or ask your deployment</div>
-          <code className="text-xs text-accentSoft font-mono">wrangler secret list</code>
-        </div>
-        <Link href="/login" className="text-sm text-accentSoft hover:underline">
-          ← Back to sign in
-        </Link>
+        {done ? (
+          <div className="bg-card border border-border rounded-[14px] p-6 text-center">
+            <div className="text-4xl mb-3">📧</div>
+            <p className="text-xs text-muted mb-4">If that email has an account, a reset link is on its way.</p>
+            <Link href="/login" className="text-sm text-accentSoft hover:underline">Back to sign in</Link>
+          </div>
+        ) : (
+          <form onSubmit={submit} className="bg-card border border-border rounded-[14px] p-6 space-y-4">
+            <div>
+              <label className="text-xs text-muted">Email</label>
+              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-input border border-border rounded-lg px-3.5 py-2.5 mt-1.5 text-sm text-fg outline-none focus:border-accent transition"
+                placeholder="you@company.com" />
+            </div>
+            <button type="submit" disabled={busy}
+              className="w-full bg-accent hover:bg-accentSoft disabled:opacity-50 text-white font-semibold rounded-lg py-2.5 text-sm transition">
+              {busy ? "Sending…" : "Send reset link"}
+            </button>
+            <p className="text-center text-xs text-muted">
+              <Link href="/login" className="text-accentSoft">Back to sign in</Link>
+            </p>
+          </form>
+        )}
       </div>
     </div>
   );

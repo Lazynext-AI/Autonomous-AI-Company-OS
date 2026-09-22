@@ -9,7 +9,10 @@ export function middleware(req: NextRequest) {
     pathname === "/login" ||
     pathname === "/forgot" ||
     pathname === "/signup" ||
+    pathname === "/verify" ||
+    pathname === "/reset" ||
     pathname === "/api/login" ||
+    pathname === "/api/auth" ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
     pathname.includes(".")
@@ -17,7 +20,8 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
   const token = req.cookies.get("lazynext_session")?.value;
-  if (token === process.env.DASHBOARD_SESSION_TOKEN) {
+  const userSession = req.cookies.get("lz_user_session")?.value;
+  if (token === process.env.DASHBOARD_SESSION_TOKEN || userSession) {
     return NextResponse.next();
   }
   const url = req.nextUrl.clone();
