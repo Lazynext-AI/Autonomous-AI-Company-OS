@@ -17,7 +17,7 @@ id = "15bccb97f4aa4f9c8c1a1b97b54a558f"
 binding = "VECTORS"
 index_name = "company-knowledge"
 
-# Workers AI — free-tier Llama model as a stand-in brain until Atlas is funded.
+# Workers AI — free-tier Llama model — the agent brain.
 [ai]
 binding = "AI"
 

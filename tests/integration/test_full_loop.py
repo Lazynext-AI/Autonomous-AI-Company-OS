@@ -55,5 +55,5 @@ async def test_config_model_registry() -> None:
     """Test model registry."""
     from core.config import get_model_for_role
 
-    assert get_model_for_role("ceo") == "deepseek-ai/DeepSeek-V3.1-Terminus"
-    assert get_model_for_role("backend") == "deepseek-ai/DeepSeek-V3.1-Terminus"
+    assert get_model_for_role("ceo") == "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+    assert get_model_for_role("backend") == "@cf/meta/llama-3.3-70b-instruct-fp8-fast"

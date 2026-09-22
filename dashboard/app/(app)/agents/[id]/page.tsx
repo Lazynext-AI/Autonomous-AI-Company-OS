@@ -95,7 +95,7 @@ export default function AgentDetailPage() {
             <input
               value={cfg.model}
               onChange={(e) => setCfg({ ...cfg, model: e.target.value })}
-              placeholder="auto (Atlas default)"
+              placeholder="auto (Workers AI default)"
               className="mt-1.5 mb-4 w-full bg-input border border-border rounded-lg px-3.5 py-2.5 text-sm text-fg outline-none focus:border-accent"
             />
             <label className="text-xs text-muted">Loop interval (seconds)</label>

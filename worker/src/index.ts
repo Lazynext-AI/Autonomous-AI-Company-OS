@@ -154,7 +154,7 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
     }
 
     case "/agent/generate": {
-      // Stand-in codegen: Workers AI generates an artifact until Atlas is funded.
+      // Stand-in codegen: Workers AI generates an artifact .
       if (!env.AI) return json({ error: "AI binding not configured" }, 503);
       const b = await readBody<{ system: string; prompt: string; max_tokens?: number }>(req);
       const res = await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
@@ -322,14 +322,14 @@ export default {
   },
 
   // Continuous agent loop: a Cloudflare cron tick makes agents act
-  // autonomously on a schedule until the Atlas runtime takes over.
+  // autonomously on a schedule .
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(agentTick(env, ctx).then(() => undefined).catch(() => {}));
   },
 };
 
 // Stand-in brain: free-tier Workers AI Llama generates a real agent
-// message until Atlas Cloud is funded.
+// message .
 const TICK_AGENTS = [
   { id: "ceo_agent", persona: "the CEO prioritising the product sprint" },
   { id: "builder_agent", persona: "an engineer who just shipped a feature" },

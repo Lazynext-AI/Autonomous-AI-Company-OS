@@ -17,12 +17,12 @@ const STEPS = [
   {
     icon: Plug,
     title: "Integrations",
-    body: "Atlas Cloud (LLM), Cloudflare (data), GitHub (code), Resend (email), E2B (sandboxes), Firecrawl (research) — all wired.",
+    body: "Cloudflare (brain + data + code exec), GitHub (code), Resend (email), Serper (research) — all wired.",
   },
   {
     icon: Rocket,
     title: "Launch",
-    body: "Fund Atlas Cloud, then run `make dev` locally. Agents register, pick a product, and start shipping.",
+    body: "Run `make dev` locally — Workers AI brain is ready, no credits needed. Agents register, pick a product, and start shipping.",
   },
 ];
 

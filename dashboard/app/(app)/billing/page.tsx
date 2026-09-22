@@ -92,7 +92,7 @@ export default function BillingPage() {
             <span className="text-xs font-semibold text-accentSoft bg-accentBg px-2 py-1 rounded-md">current</span>
           </div>
           <p className="text-xs text-muted mt-2">
-            Self-hosted runtime on your own credentials — Atlas Cloud (LLM), Cloudflare (infra),
+            Self-hosted runtime on your own credentials — Cloudflare (brain + infra),
             E2B (sandboxes), Resend (email). Costs are your provider usage.
           </p>
           <button

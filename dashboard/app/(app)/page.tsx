@@ -135,7 +135,7 @@ export default function DashboardPage() {
         </div>
         {tasks.length === 0 && !loading ? (
           <div className="p-5">
-            <Empty title="No tasks yet" hint="Fund Atlas and run make dev — the company starts." />
+            <Empty title="No tasks yet" hint="Run make dev — the company starts on Workers AI." />
           </div>
         ) : (
           tasks.slice(0, 10).map((t) => (

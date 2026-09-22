@@ -328,7 +328,7 @@ export default function SettingsPage() {
         <Card className="border-badDim">
           <h2 className="text-sm font-semibold mb-1 text-bad">Danger zone</h2>
           <p className="text-xs text-muted mb-4">
-            Seeded demo rows (agents, tasks, product, messages) — clear before Atlas goes live.
+            Seeded demo rows (agents, tasks, product, messages) — clear before going live.
           </p>
           <button
             onClick={async () => {

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 
 const STEPS = [
-  { label: "Fund Atlas Cloud", detail: "Add credits — the brain needs a working LLM", done: false },
+  { label: "Brain ready", detail: "Cloudflare Workers AI — no credits needed", done: true },
   { label: "Run make dev", detail: "Boot the local agent runtime", done: false },
   { label: "Agents register", detail: "Crew shows up in Agents + starts working", done: false },
   { label: "First briefing", detail: "Weekly founder report lands in email + here", done: false },

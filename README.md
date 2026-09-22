@@ -2,7 +2,7 @@
 
 A production-grade, self-running organization of AI agents that autonomously builds, deploys, markets, and grows software products with zero human intervention after initial setup. The system operates as a complete virtual company with strategic leadership, engineering teams, growth functions, and infrastructure agents, all coordinated through an event-driven message bus architecture.
 
-The entire backend runs on Cloudflare's serverless platform (D1, Workers KV, Vectorize, Workers) and Atlas Cloud for LLM inference — no local services required.
+The entire backend runs on Cloudflare's serverless platform (D1, Workers KV, Vectorize, Workers) and Cloudflare Workers AI for LLM inference — no local services required.
 
 ## Table of Contents
 
@@ -127,14 +127,14 @@ Agents build products in a **separate isolated repository**:
 ### Strategic Agents
 
 #### CEO Agent
-- **Model**: DeepSeek V3.1 Terminus (via Atlas Cloud)
+- **Model**: Llama-3.3-70b (Cloudflare Workers AI)
 - **Responsibilities**: Strategic direction, market analysis, goal setting
 - **Output**: Strategic directives with priorities and deadlines
 - **Frequency**: Runs every 5 minutes (configurable)
 - **Channels**: Publishes to `ceo.directives`
 
 #### CTO Agent
-- **Model**: DeepSeek V3.1 Terminus (cost-optimized)
+- **Model**: Llama-3.3-70b (Cloudflare Workers AI)
 - **Responsibilities**: Technical orchestration, task decomposition, routing
 - **Output**: 5-10 executable tasks per directive with acceptance criteria
 - **Frequency**: Runs every 2 minutes (configurable)
@@ -143,28 +143,28 @@ Agents build products in a **separate isolated repository**:
 ### Engineering Agents
 
 #### Backend Agent
-- **Model**: DeepSeek V3.1 Terminus
+- **Model**: Llama-3.3-70b
 - **Responsibilities**: FastAPI endpoints, database schemas, server logic
 - **Capabilities**: Code generation, local sandboxed test execution, file writing, git commits
 - **Channels**: Subscribes to `cto.tasks.backend`
 - **Output**: Python/FastAPI code with validation and testing
 
 #### Frontend Agent
-- **Model**: DeepSeek V3.1 Terminus
+- **Model**: Llama-3.3-70b
 - **Responsibilities**: Next.js pages, React components, UI implementation
 - **Capabilities**: TypeScript/React code generation, file writing
 - **Channels**: Subscribes to `cto.tasks.frontend`
 - **Output**: TypeScript/React/Next.js code
 
 #### DevOps Agent
-- **Model**: DeepSeek V3.1 Terminus
+- **Model**: Llama-3.3-70b
 - **Responsibilities**: CI/CD pipelines, deployments, infrastructure
 - **Capabilities**: Cloudflare Pages/Workers deployments, deployment verification, live-URL health monitoring
 - **Channels**: Subscribes to `cto.tasks.devops`
 - **Output**: wrangler configs, deployment records
 
 #### QA Agent
-- **Model**: DeepSeek V3.1 Terminus
+- **Model**: Llama-3.3-70b
 - **Responsibilities**: Continuous testing, health monitoring, bug detection
 - **Frequency**: Runs health suite every 15 minutes
 - **Channels**: Publishes to `qa.alerts`
@@ -173,19 +173,19 @@ Agents build products in a **separate isolated repository**:
 ### Growth Agents
 
 #### Marketing Agent
-- **Model**: DeepSeek V4 Flash
+- **Model**: Llama-3.3-70b
 - **Responsibilities**: Content creation, SEO, campaigns, messaging
 - **Channels**: Subscribes to `cto.tasks.marketing`
 - **Output**: Marketing content, campaign strategies
 
 #### Sales Agent
-- **Model**: DeepSeek V4 Flash
+- **Model**: Llama-3.3-70b
 - **Responsibilities**: Outreach, demos, pipeline management
 - **Channels**: Subscribes to `cto.tasks.sales`
 - **Output**: Sales outreach templates, demo scripts
 
 #### Customer Success Agent
-- **Model**: DeepSeek V4 Flash
+- **Model**: Llama-3.3-70b
 - **Responsibilities**: Support, onboarding, feedback processing
 - **Channels**: Subscribes to `cto.tasks.customer_success`
 - **Output**: Support responses, onboarding guides
@@ -193,19 +193,19 @@ Agents build products in a **separate isolated repository**:
 ### Infrastructure Agents
 
 #### Knowledge Agent
-- **Model**: DeepSeek V4 Flash
+- **Model**: Llama-3.3-70b
 - **Responsibilities**: RAG queries, document ingestion, knowledge retrieval
 - **Channels**: Subscribes to `knowledge.requests`
 - **Output**: Answers to knowledge queries, document summaries
 
 #### HR Agent
-- **Model**: DeepSeek V4 Flash
+- **Model**: Llama-3.3-70b
 - **Responsibilities**: Agent scaling, resource allocation, team management
 - **Channels**: Subscribes to `hr.requests`
 - **Output**: Scaling recommendations, resource allocation plans
 
 #### Finance Agent
-- **Model**: DeepSeek V4 Flash
+- **Model**: Llama-3.3-70b
 - **Responsibilities**: Financial reporting, metrics analysis, budget tracking
 - **Frequency**: Generates weekly finance reports
 - **Output**: Financial reports, revenue analysis
@@ -222,7 +222,7 @@ Agents build products in a **separate isolated repository**:
 
 2. **Task Decomposition Phase**
    - CTO agent consumes directive from `ceo.directives`
-   - Uses DeepSeek V3.1 Terminus to decompose into 5-10 technical tasks
+   - Uses Llama-3.3-70b to decompose into 5-10 technical tasks
    - Each task includes: description, acceptance criteria, estimated minutes, assign_to field
    - Publishes tasks to role-specific channels (e.g., `cto.tasks.backend`)
 
@@ -338,7 +338,7 @@ When significant milestones are achieved (e.g., first deployment, 100 users, rev
 | Component | Technology | Purpose |
 |-----------|------------|---------|
 | Language | Python 3.11+ | Agent runtime and core logic |
-| LLM Provider | Atlas Cloud (OpenAI-compatible) | Language model for all agents |
+| LLM Provider | Cloudflare Workers AI | Language model for all agents |
 | Database | Cloudflare D1 (SQLite) | Persistent company state and task logs |
 | Cache | Cloudflare Workers KV | Company brain cache (60s TTL) |
 | Message Bus | Cloudflare D1 via Worker | Streams + consumer-group emulation |
@@ -350,10 +350,7 @@ When significant milestones are achieved (e.g., first deployment, 100 users, rev
 
 | Agent Role | Model | Approx. Cost (per 1M tokens) | Rationale |
 |------------|-------|------------------------------|-----------|
-| Backend, Frontend, Fullstack | DeepSeek V3.1 Terminus | $0.30 / $0.95 | Code generation |
-| CTO | DeepSeek V3.1 Terminus | $0.30 / $0.95 | Task decomposition |
-| CEO, DevOps, QA, Code Review | DeepSeek V3.1 Terminus | $0.30 / $0.95 | Strategic thinking and infrastructure automation |
-| Marketing, Sales, Support, HR, Finance, Knowledge | DeepSeek V4 Flash | $0.14 / $0.28 | Simple tasks optimized for cost efficiency |
+| All roles | Llama-3.3-70b (Workers AI) | Free tier | All agent work |
 
 ### Development Tools
 
@@ -370,7 +367,7 @@ When significant milestones are achieved (e.g., first deployment, 100 users, rev
 
 | Service | Purpose | Required |
 |---------|---------|----------|
-| Atlas Cloud API | LLM provider | Yes |
+| Cloudflare Workers AI | LLM provider | Built-in |
 | Cloudflare (Worker + D1 + KV + Vectorize + Pages + Containers) | All persistent state and deployments | Yes |
 | GitHub | Remote repos, push triggers, Actions CI monitoring | Optional |
 | Resend | Weekly founder briefing emails (also on dashboard) | Optional |
@@ -453,7 +450,7 @@ make validate-env
 | `KNOWLEDGE_BASE_DIR` | Knowledge base PDF directory | `./knowledge_base` |
 | `CEO_LOOP_INTERVAL` | CEO strategic loop interval (seconds) | `300` |
 | `CTO_LOOP_INTERVAL` | CTO orchestration loop interval (seconds) | `120` |
-No optional service keys needed - everything runs on Cloudflare + Atlas Cloud + local git.
+No optional service keys needed - everything runs on Cloudflare + local git.
 
 ### Database Schema
 
@@ -515,7 +512,7 @@ autonomous-ai-company/
 │   ├── growth/               Marketing, Sales, Customer Success agents
 │   └── infrastructure/       Knowledge, HR, Finance agents
 ├── core/                      Core infrastructure
-│   ├── llm/                  Atlas Cloud client, local embeddings
+│   ├── llm/                  Workers AI client, local embeddings
 │   ├── memory/               Company brain, agent memory, episodic memory
 │   ├── messaging/            D1-backed bus, channels, message schemas
 │   ├── knowledge/            RAG engine (Vectorize), document ingestion
@@ -540,7 +537,7 @@ autonomous-ai-company/
 
 ### Optimization Strategies
 
-**Model Selection**: Cost-optimized tiered model usage. DeepSeek V3.1 Terminus for code generation, DeepSeek V4 Flash for simple tasks.
+**Model Selection**: Cost-optimized tiered model usage. Llama-3.3-70b for code generation, Llama-3.3-70b for simple tasks.
 
 **Caching**: 
 - Company brain: 60-second Workers KV cache reduces D1 reads by ~90%
@@ -557,7 +554,7 @@ autonomous-ai-company/
 
 ### Rate Limiting
 
-Atlas Cloud client includes automatic retry logic for 429 (rate limit) errors:
+Workers AI brain runs via the company worker /agent/generate:
 
 - **Backoff Strategy**: Exponential backoff (15s → 30s → 60s → 90s → 120s)
 - **Retry Count**: Up to 5 retries before failure
@@ -567,8 +564,7 @@ Atlas Cloud client includes automatic retry logic for 429 (rate limit) errors:
 
 **Estimated Monthly Costs** (1000 tasks/day):
 
-- DeepSeek V3.1 Terminus (coding/strategy): ~$20-50/month
-- DeepSeek V4 Flash (simple tasks): ~$5-15/month
+- Llama-3.3-70b (all agents): free Workers AI tier
 - Cloudflare (D1 + KV + Vectorize + Workers): free tier covers most workloads
 - **Total**: ~$25-65/month
 
