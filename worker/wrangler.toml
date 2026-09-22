@@ -1,6 +1,7 @@
 name = "ai-company-os"
 main = "src/index.ts"
 compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
 preview_urls = false
 
 [[d1_databases]]
@@ -19,6 +20,10 @@ index_name = "company-knowledge"
 # Workers AI — free-tier Llama model as a stand-in brain until Atlas is funded.
 [ai]
 binding = "AI"
+
+# Browser Rendering — headless Chromium for page scraping (replaces Firecrawl).
+[browser]
+binding = "BROWSER"
 
 # Continuous agent loop — cron fires agentTick every 10 minutes.
 [triggers]

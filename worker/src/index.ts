@@ -13,6 +13,7 @@ import { handleA2a } from "./a2a";
 import { handleBilling } from "./billing";
 import { handleOAuth } from "./oauth";
 import { handleWebSearch } from "./websearch";
+import { handleScrape } from "./scrape";
 import { handleWidget } from "./widget";
 import { fanOut, handleWebhooks, publishToBus } from "./webhooks";
 
@@ -271,6 +272,9 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
     }
     case "/websearch": {
       return handleWebSearch(req, env);
+    }
+    case "/scrape": {
+      return handleScrape(req, env);
     }
 
     default:

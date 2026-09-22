@@ -9,6 +9,7 @@ export interface Env {
   EPHEMERAL: KVNamespace;
   VECTORS: VectorizeIndex;
   AI?: Ai;
+  BROWSER?: Fetcher;
   API_TOKEN?: string;
   RESEND_API_KEY?: string;
   DODO_API_KEY?: string;
