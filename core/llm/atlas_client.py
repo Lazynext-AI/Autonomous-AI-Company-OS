@@ -149,9 +149,17 @@ class AtlasClient:
         system_prompt: str | None = None,
         max_tokens: int = 4096,
     ) -> str:
-        """Get chat completion from Atlas Cloud."""
+        """Get chat completion — Cloudflare Workers AI is the primary brain;
+        Atlas Cloud is an optional fallback if configured."""
+        if self._fallback_available():
+            try:
+                return await self._workers_ai_fallback(messages, system_prompt, max_tokens)
+            except Exception as e:
+                logger.warning("workers_ai_primary_failed", error=str(e))
+                if not self._api_key:
+                    raise
         if not self._api_key:
-            raise RuntimeError("ATLASCLOUD_API_KEY not set. Add to .env")
+            raise RuntimeError("No LLM backend: Workers AI unavailable and ATLASCLOUD_API_KEY not set.")
         model = model or self._settings.atlas_model
         url = self._url()
         body = self._build_request(model, messages, system_prompt, max_tokens)
