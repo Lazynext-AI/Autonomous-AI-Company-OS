@@ -8,6 +8,7 @@ from core.config import get_settings
 from core.messaging.channels import Channels
 from core.messaging.schemas import DirectiveMessage, MilestoneMessage, TaskMessage
 from core.tools.search_tool import search_web
+from core.tools.scrape_tool import research_topic
 
 
 CEO_SYSTEM_PROMPT = """You are the CEO of an autonomous AI startup. Your job is to set strategic direction,
@@ -78,6 +79,11 @@ class CEOAgent(BaseAgent):
             f"- {r.get('title', '')}: {r.get('snippet', '')[:100]}"
             for r in (search_results + market_results)[:5]
         )
+
+        # Firecrawl deep-read: pull full content from the top competitor pages.
+        deep = await research_topic(f"{product_name} competitors", max_results=2)
+        if deep:
+            search_context += f"\n\nCompetitor deep-dive:\n{deep[:2500]}"
 
         directive = await self.generate_directive(search_context, brain)
         await self.message_bus.publish(Channels.CEO_DIRECTIVES, directive)
