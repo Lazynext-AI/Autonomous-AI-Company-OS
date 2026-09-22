@@ -10,6 +10,7 @@ import { Env, json, cors, preflight } from "./gateway";
 import { handlePublicApi } from "./public_api";
 import { handleMcp } from "./mcp";
 import { handleA2a } from "./a2a";
+import { handleBilling } from "./billing";
 import { handleOAuth } from "./oauth";
 import { handleWidget } from "./widget";
 import { fanOut, handleWebhooks, publishToBus } from "./webhooks";
@@ -288,6 +289,8 @@ export default {
         return cors(req, await handleOAuth(req, env, path, url));
       if (path === "/widget.js" || path === "/api/v1/widget/chat")
         return cors(req, await handleWidget(req, env, ctx, path));
+      if (path.startsWith("/api/v1/billing"))
+        return cors(req, await handleBilling(req, env, ctx, path));
       if (path.startsWith("/api/v1/webhooks"))
         return cors(req, await handleWebhooks(req, env, ctx, path));
       if (path.startsWith("/api/")) return cors(req, await handlePublicApi(req, env, ctx, path));

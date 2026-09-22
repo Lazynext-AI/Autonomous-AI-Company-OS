@@ -6,7 +6,7 @@ import { queryApi } from "@/lib/api";
 import { toast } from "@/components/Toast";
 import Link from "next/link";
 import {
-  GitBranch, Mail, TerminalSquare, Globe, Database, Palette, Cpu,
+  GitBranch, Mail, TerminalSquare, Globe, Database, Palette, Cpu, CreditCard,
 } from "lucide-react";
 
 const INTEGRATIONS = [
@@ -17,6 +17,7 @@ const INTEGRATIONS = [
   { name: "Cloudflare", desc: "Workers + D1 + KV + Vectorize", icon: Globe, ok: true },
   { name: "Penpot", desc: "Design system — penpot.lazynext.com", icon: Palette, ok: true },
   { name: "Firecrawl", desc: "Market + competitor research", icon: Database, ok: true },
+  { name: "Dodo Payments", desc: "Billing — merchant of record", icon: CreditCard, ok: false },
 ];
 
 const FLAGS = [

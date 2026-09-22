@@ -48,13 +48,28 @@ export default function BillingPage() {
   }, []);
 
   const changePlan = async (name: string) => {
-    const r = await fetch("/api/kv", {
+    // Free plan → record locally. Paid plans → real Dodo checkout.
+    if (name === "Founder") {
+      const r = await fetch("/api/kv", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "put", key: "plan", value: JSON.stringify({ name }) }),
+      });
+      if (r.ok) { setPlan(name); setPlanOpen(false); toast(`Plan → ${name}`); }
+      else toast("Plan change failed");
+      return;
+    }
+    const r = await fetch("/api/billing", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ action: "put", key: "plan", value: JSON.stringify({ name }) }),
+      body: JSON.stringify({ plan: name }),
     });
-    if (r.ok) { setPlan(name); setPlanOpen(false); toast(`Plan → ${name}`); }
-    else toast("Plan change failed");
+    const d = await r.json();
+    if (r.ok && d.checkout_url) {
+      window.location.href = d.checkout_url; // real Dodo checkout
+    } else {
+      toast(d.error ?? "Billing not configured — set DODO_API_KEY + product IDs");
+    }
   };
 
   const USAGE = [
@@ -125,7 +140,7 @@ export default function BillingPage() {
                 </button>
               ))}
             </div>
-            <p className="text-[10px] text-muted mt-4">Self-hosted — plan selection is recorded locally; billing is your provider usage.</p>
+            <p className="text-[10px] text-muted mt-4">Paid plans check out via <b>Dodo Payments</b> — merchant of record, tax handled.</p>
           </div>
         </div>
       )}

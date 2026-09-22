@@ -11,6 +11,8 @@ export interface Env {
   AI?: Ai;
   API_TOKEN?: string;
   RESEND_API_KEY?: string;
+  DODO_API_KEY?: string;
+  DODO_WEBHOOK_SECRET?: string;
 }
 
 export interface ApiKey {
