@@ -5,6 +5,7 @@
   "description": "Watch and command your autonomous AI company from the toolbar.",
   "action": { "default_popup": "popup.html", "default_title": "Lazynext" },
   "options_page": "options.html",
-  "permissions": ["storage"],
+  "background": { "service_worker": "background.js" },
+  "permissions": ["storage", "alarms"],
   "host_permissions": ["https://ai-company.lazynext.com/*"]
 }

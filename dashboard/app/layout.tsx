@@ -30,7 +30,7 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{document.documentElement.dataset.theme=localStorage.getItem('lz_theme')||'dark';document.documentElement.dataset.density=localStorage.getItem('lz_density')||'comfortable'}catch(e){}`,
+            __html: `try{var t=localStorage.getItem('lz_theme')||'system';document.documentElement.dataset.theme=t==='system'?(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):t;document.documentElement.dataset.density=localStorage.getItem('lz_density')||'comfortable'}catch(e){}`,
           }}
         />
       </head>
