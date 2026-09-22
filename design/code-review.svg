@@ -205,7 +205,7 @@
                     </pattern>
                   </defs>
                   <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba80b549c74">
-                    <text x="4180" y="7387" dominant-baseline="ideographic" textLength="353.59375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:22px;text-decoration:none;direction:ltr;fill:#fafafa">PR #47 — feat: stripe webhook handler</text>
+                    <text x="4180" y="7387" dominant-baseline="ideographic" textLength="353.59375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:22px;text-decoration:none;direction:ltr;fill:#fafafa">PR #47 — feat: dodo webhook handler</text>
                   </g>
                 </g>
               </g>
@@ -310,7 +310,7 @@
                     </pattern>
                   </defs>
                   <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba80c078393">
-                    <text x="4210" y="7558.5" dominant-baseline="ideographic" textLength="233.4921875" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#34d399">+ const sig = c.req.header(&quot;stripe-signature&quot;);</text>
+                    <text x="4210" y="7558.5" dominant-baseline="ideographic" textLength="233.4921875" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#34d399">+ const sig = c.req.header(&quot;dodo-signature&quot;);</text>
                   </g>
                 </g>
               </g>
@@ -331,7 +331,7 @@
                     </pattern>
                   </defs>
                   <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba80c2dbf6a">
-                    <text x="4210" y="7592.5" dominant-baseline="ideographic" textLength="250.0625" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#34d399">+ const event = stripe.webhooks.constructEvent(</text>
+                    <text x="4210" y="7592.5" dominant-baseline="ideographic" textLength="250.0625" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#34d399">+ const event = dodo.webhooks.constructEvent(</text>
                   </g>
                 </g>
               </g>
@@ -352,7 +352,7 @@
                     </pattern>
                   </defs>
                   <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba80c5449cf">
-                    <text x="4210" y="7626.5" dominant-baseline="ideographic" textLength="238.1875" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#34d399">+ await c.req.text(), sig, env.STRIPE_SECRET);</text>
+                    <text x="4210" y="7626.5" dominant-baseline="ideographic" textLength="238.1875" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#34d399">+ await c.req.text(), sig, env.DODO_SECRET);</text>
                   </g>
                 </g>
               </g>
@@ -718,7 +718,7 @@
         </pattern>
       </defs>
       <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba80b549c74">
-        <text x="4180" y="7387" dominant-baseline="ideographic" textLength="353.59375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:22px;text-decoration:none;direction:ltr;fill:#fafafa">PR #47 — feat: stripe webhook handler</text>
+        <text x="4180" y="7387" dominant-baseline="ideographic" textLength="353.59375" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:22px;text-decoration:none;direction:ltr;fill:#fafafa">PR #47 — feat: dodo webhook handler</text>
       </g>
     </g>
   </g>
@@ -823,7 +823,7 @@
         </pattern>
       </defs>
       <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba80c078393">
-        <text x="4210" y="7558.5" dominant-baseline="ideographic" textLength="233.4921875" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#34d399">+ const sig = c.req.header(&quot;stripe-signature&quot;);</text>
+        <text x="4210" y="7558.5" dominant-baseline="ideographic" textLength="233.4921875" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#34d399">+ const sig = c.req.header(&quot;dodo-signature&quot;);</text>
       </g>
     </g>
   </g>
@@ -844,7 +844,7 @@
         </pattern>
       </defs>
       <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba80c2dbf6a">
-        <text x="4210" y="7592.5" dominant-baseline="ideographic" textLength="250.0625" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#34d399">+ const event = stripe.webhooks.constructEvent(</text>
+        <text x="4210" y="7592.5" dominant-baseline="ideographic" textLength="250.0625" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#34d399">+ const event = dodo.webhooks.constructEvent(</text>
       </g>
     </g>
   </g>
@@ -865,7 +865,7 @@
         </pattern>
       </defs>
       <g class="fills" id="fills-8a7393f4-edd8-8078-8008-aba80c5449cf">
-        <text x="4210" y="7626.5" dominant-baseline="ideographic" textLength="238.1875" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#34d399">+ await c.req.text(), sig, env.STRIPE_SECRET);</text>
+        <text x="4210" y="7626.5" dominant-baseline="ideographic" textLength="238.1875" lengthAdjust="spacingAndGlyphs" style="text-transform:none;font-family:sourcesanspro;letter-spacing:normal;font-style:normal;font-weight:400;white-space:pre;font-size:12px;text-decoration:none;direction:ltr;fill:#34d399">+ await c.req.text(), sig, env.DODO_SECRET);</text>
       </g>
     </g>
   </g>
