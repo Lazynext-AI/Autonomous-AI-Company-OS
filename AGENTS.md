@@ -41,6 +41,8 @@ D1 + KV (`EPHEMERAL`) + Vectorize (`VECTORS`, index `company-knowledge`, 384d)
 ## Known states
 
 - **Dodo is test-mode.** Live requires: Dodo KYC (user action) → live `DODO_API_KEY` → `DODO_API_BASE=https://live.dodopayments.com` → recreate product + webhook in live mode. Webhook: Svix-style signature verify + `whseen:` replay dedup; `past_due` sets `pastdue:` KV + bus event, no immediate revoke.
+- **14-day free trial is live** — `/billing/products` + `/billing/checkout` accept `trial_days` (→ `price.trial_period_days` / `subscription_data.trial_period_days`); product `/checkout` sends `trial_days:14`. `metadata.trial=1` stamps `trial:<email>` on `subscription.active`; any later billing event clears it; the daily sweep sends one 3-day reminder at day 11 (`trial:<email>:reminded`).
+- **`/query` endpoint rejects bare Python `urllib`** (403) — send a `User-Agent` header; also avoid inlined literal-heavy SQL, prefer `?` params.
 - **Brevo is the only email provider** — Resend is fully removed (code, config, secrets). Do not reintroduce.
 - **Email sequence** — lead capture → email 1 immediately, sweeps send 2/3 at +3d/+7d (`seq:last_run` in KV).
 - **Launchdeck** is a live empty product scaffold (404 root) — awaiting a build.
