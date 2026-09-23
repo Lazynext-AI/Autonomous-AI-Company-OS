@@ -987,7 +987,9 @@ async function verifyArtifact(
     html: [["python3", "-c", "import sys; from html.parser import HTMLParser; HTMLParser().feed(open(sys.argv[1]).read())", path]],
     md: [["python3", "-c", "import sys; assert len(open(sys.argv[1]).read().strip())>20,'empty'", path]],
   };
-  const command = commands[ext];
+  // .mjs is already ESM — node --check parses it natively, so it reuses the
+  // js commands without needing the .check.mjs copy.
+  const command = commands[ext === "mjs" ? "js" : ext];
   if (command && env.CODE_EXEC) {
     try {
       const repo = (safeJson<Record<string, string>>(brain.live_urls) ?? {}).repo
@@ -1010,6 +1012,12 @@ async function verifyArtifact(
       if (r.ok && out.success) return { ok: true, how: "exec" };
       // Container unavailable → fall through to LLM review.
     } catch {}
+  }
+
+  // A test file that never actually ran is how broken tests shipped to main —
+  // when no runtime check produced a verdict, reject rather than guess.
+  if (isTest) {
+    return { ok: false, how: "exec", issue: "verification container unavailable for test file" };
   }
 
   const res = await env.AI!.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {

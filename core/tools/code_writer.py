@@ -79,6 +79,18 @@ def infer_filename(code: str, language: str, task_description: str) -> Optional[
     return None
 
 
+# Core product files are owned by the deployed product, not by task output —
+# regenerating them churns the live surface (the cloud loop enforces the same
+# set). Agents extend the product via new modules instead.
+PROTECTED_FILES = {
+    "index.html",
+    "worker.js",
+    "src/scanner.js",
+    "package.json",
+    "test/scanner.test.mjs",
+}
+
+
 class CodeWriter:
     """Write code to files and commit to git. One repo per product in company brain."""
 
@@ -120,6 +132,7 @@ class CodeWriter:
 
         files_written = []
         validation_errors = []
+        skipped_protected = []
         seen_filenames = set()  # Track to prevent duplicates
         
         for block in blocks:
@@ -136,6 +149,12 @@ class CodeWriter:
                 logger.debug("skipping_duplicate_file", file=filename, task_id=task_id)
                 continue
             seen_filenames.add(filename)
+
+            rel = filename.lstrip("./").replace("\\", "/")
+            if rel in PROTECTED_FILES or rel.startswith(".github/"):
+                logger.info("protected_file_skipped", file=filename, task_id=task_id)
+                skipped_protected.append(filename)
+                continue
 
             # Validate code before writing
             is_valid, error_msg, validation_details = self.validator.validate(code, language)
@@ -199,6 +218,9 @@ class CodeWriter:
             "git_pushed": git_info.get("pushed", False),
             "repo_root": str(repo_root),
         }
+
+        if skipped_protected:
+            result["skipped_protected"] = skipped_protected
         
         if validation_errors:
             result["validation_errors"] = validation_errors
