@@ -8,6 +8,7 @@ import Link from "next/link";
 import {
   GitBranch, Mail, TerminalSquare, Globe, Database, Palette, Cpu, CreditCard,
   Share2, Briefcase, ShoppingCart, Phone, LifeBuoy, Send, CalendarClock, MessageCircle,
+  FileCheck2,
 } from "lucide-react";
 
 const INTEGRATIONS = [
@@ -38,6 +39,12 @@ const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; nam
     items: [
       { id: "twilio", name: "Twilio", hint: "Account SID + auth token + number — SMS/voice" },
       { id: "whatsapp", name: "WhatsApp Business", hint: "API token + phone id — chat notifications" },
+    ],
+  },
+  {
+    group: "Legal signing", icon: FileCheck2,
+    items: [
+      { id: "pandadoc", name: "PandaDoc", hint: "API key — legal-grade e-sign (native signing is free/basic)" },
     ],
   },
 ];

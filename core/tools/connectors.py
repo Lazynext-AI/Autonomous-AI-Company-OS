@@ -127,9 +127,46 @@ async def _whatsapp(payload: dict, cred: str) -> dict:
 
 # --- Scheduling & signing -------------------------------------------------
 
+async def _pandadoc(payload: dict, cred: str) -> dict:
+    # cred = PandaDoc API key (API access requires Essentials+ plan; the free
+    # eSign plan is UI-only). Creates a document then sends it for signature.
+    headers = {"authorization": f"API-Key {cred}", "content-type": "application/json"}
+    signer = payload.get("signer_email", payload.get("email", ""))
+    doc = await _post(
+        "https://api.pandadoc.com/public/v1/documents",
+        headers=headers,
+        json_body={
+            "name": payload.get("title", "Signature request"),
+            "recipients": [{"email": signer, "role": "signer", "signing_order": 1}],
+            "content_sections": [{
+                "name": "Document",
+                "default": True,
+                "recipients": [signer],
+                "content": [{"block_type": "text", "text": payload.get("doc_text", "")}],
+            }],
+            "tags": ["lazynext"],
+        },
+    )
+    if not doc.get("ok"):
+        return doc
+    doc_id = doc.get("body", {}).get("id")
+    if not doc_id:
+        return {"ok": False, "error": "pandadoc returned no document id", "body": doc.get("body")}
+    return await _post(
+        f"https://api.pandadoc.com/public/v1/documents/{doc_id}/send",
+        headers=headers,
+        json_body={
+            "subject": payload.get("subject", payload.get("title", "Signature request")),
+            "message": payload.get("message", "Please review and sign."),
+            "silent": False,
+        },
+    )
+
+
 _DISPATCH = {
     "x": _x, "linkedin": _linkedin, "meta": _meta,
     "twilio": _twilio, "whatsapp": _whatsapp,
+    "pandadoc": _pandadoc,
     }
 
 
