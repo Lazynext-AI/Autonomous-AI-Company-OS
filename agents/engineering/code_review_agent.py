@@ -155,7 +155,10 @@ class CodeReviewAgent(BaseAgent):
             if not critical_issues and not warnings:
                 output += "✅ Code review passed! No critical issues found.\n"
             
-            success = len(critical_issues) == 0
+            # The task is the review itself — completing it is success.
+            # Critical findings are the deliverable, not a task failure
+            # (marking it failed retried + escalated the same audit 4x).
+            success = True
             
             return TaskResult(
                 task_id=task.task_id,
