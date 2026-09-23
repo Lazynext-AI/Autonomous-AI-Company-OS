@@ -386,7 +386,8 @@ async function agentTick(env: Env, ctx: ExecutionContext) {
 
   const out: Record<string, unknown> = { phase: "operating" };
   if (!urls.site) out.site = await ensureSite(env, ctx, brain, urls);
-  if (!urls.api) out.api = await deployProduct(env, ctx, brain, urls);
+  // Deploy the product worker — or redeploy once with the repo-module build.
+  if (!urls.api || !urls.api_full) out.api = await deployProduct(env, ctx, brain, urls);
   if (pending) out.executed = await executeTask(env, ctx, brain, urls, pending);
   if ((remaining?.c ?? 0) < 5) out.generated = await operate(env, ctx, brain, urls);
   return out;
@@ -607,12 +608,26 @@ async function ensureSite(env: Env, ctx: ExecutionContext, brain: Brain, urls: R
 async function deployProduct(env: Env, ctx: ExecutionContext, brain: Brain, urls: Record<string, string>) {
   if (!env.AI || !env.CF_ACCOUNT_ID || !env.CF_API_TOKEN) return { error: "cf creds or AI missing" };
   const name = slugify(brain.product_name!);
+  const repo = (urls.repo ?? "").replace("https://github.com/", "").replace(/\.git$/, "");
+
+  // The repo's own scanner module ships inside the Worker — the deployed API
+  // runs the same verified code the repo carries, not a one-off script.
+  let scannerSrc = "";
+  if (repo.includes("/")) {
+    const s = await gh(env, "GET", `/repos/${repo}/contents/src/scanner.js`);
+    const c = s.data?.content as string | undefined;
+    if (s.ok && c) scannerSrc = atob(c.replace(/\n/g, ""));
+  }
 
   const res = await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
     messages: [
       {
         role: "system",
-        content: `You are a senior Cloudflare engineer building "${brain.product_name}" (${brain.product_description ?? ""}). Write a complete, self-contained Cloudflare Worker (ES module: export default { async fetch(req) {...} }) that implements the product's core feature as a real API. POST /<action> accepts JSON input, does the real work (fetch external URLs if the product needs to inspect them — workers have outbound fetch), and returns a JSON result. GET / returns a minimal HTML page with a working form that calls the API. No imports, no dependencies, no placeholders — it must run as-is. Reply with ONLY the code — no fences, no commentary.`,
+        content: `You are a senior Cloudflare engineer building "${brain.product_name}" (${brain.product_description ?? ""}). Write worker.js — a Cloudflare Worker ES module (export default { async fetch(req) {...} }) implementing the product's core feature as a real API.${
+          scannerSrc
+            ? ` The repo ships src/scanner.js exporting scanHtml(html: string) → issues[] ({rule, message}) and score(issues) → number. You MUST \`import { scanHtml, score } from './src/scanner.js'\` and use them for the checks.`
+            : ""
+        } POST /scan accepts {"url": "..."} or {"html": "..."} — fetch the HTML when given a URL (workers have outbound fetch), run the scanner, return JSON {score, issues}. GET / returns a minimal HTML page with a working form that POSTs to /scan. No other imports, no dependencies, no placeholders — it must run as-is. Reply with ONLY the code — no fences, no commentary.`,
       },
       { role: "user", content: "Write the worker." },
     ],
@@ -625,20 +640,26 @@ async function deployProduct(env: Env, ctx: ExecutionContext, brain: Brain, urls
     return { error: "worker generation failed", got: code.slice(0, 120) };
   }
 
-  // Verify in the container before it deploys — the worker is self-contained,
-  // so it gets checked standalone (the repo's own files are irrelevant here).
+  // Verify in the container before it deploys — just the worker plus the
+  // scanner module it imports, so the check isn't dragged down by unrelated
+  // repo files (their deps aren't needed to load this module).
   const pseudoTask: Task = { id: "", task_id: "deploy", agent_id: "devops_1", description: `Deployable Cloudflare Worker for ${brain.product_name}`, attempts: 0 };
-  const v = await verifyArtifact(env, { ...brain, live_urls: "{}" }, pseudoTask, "worker.js", code);
+  const v = await verifyArtifact(
+    env, { ...brain, live_urls: "{}" }, pseudoTask, "worker.js", code,
+    scannerSrc ? { "src/scanner.js": scannerSrc } : undefined,
+  );
   if (!v.ok) return { error: `worker verification failed: ${v.issue}` };
 
   // Commit to the product repo, then deploy via the Cloudflare API.
-  const repo = (urls.repo ?? "").replace("https://github.com/", "").replace(/\.git$/, "");
   if (repo.includes("/")) await ghPutFile(env, repo, "worker.js", code, `devops_1: product worker (${name})`);
 
   const acct = env.CF_ACCOUNT_ID, tok = env.CF_API_TOKEN;
   const fd = new FormData();
   fd.append("metadata", new Blob([JSON.stringify({ main_module: "worker.js", compatibility_date: "2026-09-01" })], { type: "application/json" }));
   fd.append("worker.js", new Blob([code], { type: "application/javascript+module" }), "worker.js");
+  if (scannerSrc) {
+    fd.append("src/scanner.js", new Blob([scannerSrc], { type: "application/javascript+module" }), "src/scanner.js");
+  }
   const up = await fetch(`https://api.cloudflare.com/client/v4/accounts/${acct}/workers/scripts/${name}`, {
     method: "PUT", headers: { authorization: `Bearer ${tok}` }, body: fd,
   });
@@ -656,7 +677,7 @@ async function deployProduct(env: Env, ctx: ExecutionContext, brain: Brain, urls
   const sub = subData.result?.subdomain ?? "workers.dev";
   const api = `https://${name}.${sub}.workers.dev`;
 
-  const newUrls = { ...urls, api };
+  const newUrls = { ...urls, api, api_full: "1" };
   await env.DB.prepare("UPDATE company_brain SET live_urls=?, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')")
     .bind(JSON.stringify(newUrls)).run();
   await env.DB.prepare("INSERT INTO milestone_log (milestone_type, description) VALUES ('api_deployed', ?)")
@@ -838,6 +859,7 @@ async function executeTask(env: Env, ctx: ExecutionContext, brain: Brain, urls: 
 // An LLM task-fit review is the fallback when the container is unavailable.
 async function verifyArtifact(
   env: Env, brain: Brain, task: Task, path: string, content: string,
+  extraFiles?: Record<string, string>,
 ): Promise<{ ok: boolean; how?: string; issue?: string }> {
   const ext = path.split(".").pop()?.toLowerCase() ?? "";
   const fname = path.split("/").pop() ?? `artifact.${ext}`;
@@ -864,7 +886,9 @@ async function verifyArtifact(
     try {
       const repo = (safeJson<Record<string, string>>(brain.live_urls) ?? {}).repo
         ?.replace("https://github.com/", "").replace(/\.git$/, "");
-      const files = repo?.includes("/") ? await fetchRepoFiles(env, repo) : {};
+      // Whole-repo verification for repo artifacts; a targeted file set when
+      // the caller supplies it (e.g. the product worker + its own modules).
+      const files = repo?.includes("/") ? await fetchRepoFiles(env, repo) : { ...(extraFiles ?? {}) };
       files[path] = content;
       if (jsCheckPath !== path) files[jsCheckPath] = content;
       const container = getContainer(env.CODE_EXEC);
