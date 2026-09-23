@@ -207,6 +207,10 @@ class CodeWriter:
         tests_failed = None
         if files_written and any(f.endswith((".mjs", ".js")) for f in files_written):
             tests_failed = await self._run_node_tests(repo_root)
+            if tests_failed:
+                # Broken artifacts left in the tree poison the next task's
+                # test run — undo this round's writes.
+                await self._revert_files(repo_root, files_written)
 
         # Commit to git if files were written
         git_info = {"committed": False, "branch": None, "pushed": False}
@@ -246,8 +250,10 @@ class CodeWriter:
         if not test_dir.is_dir() or not any(test_dir.glob("*.test.mjs")):
             return None
         try:
+            # Bare `node --test` auto-discovers test files — same invocation
+            # as CI. (`node --test test/` resolves the dir as a module path.)
             proc = await asyncio.create_subprocess_exec(
-                "node", "--test", "test/",
+                "node", "--test",
                 cwd=str(repo_root),
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
@@ -264,3 +270,26 @@ class CodeWriter:
             return tail
         except FileNotFoundError:
             return None  # node not installed locally — CI remains the backstop
+
+    async def _revert_files(self, repo_root: Path, files: list[str]) -> None:
+        """Undo this round's writes: tracked files restore from HEAD, new
+        files delete (with empty parent dirs pruned)."""
+        for rel in files:
+            proc = await asyncio.create_subprocess_exec(
+                "git", "checkout", "HEAD", "--", rel,
+                cwd=str(repo_root),
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            rc = await proc.wait()
+            path = repo_root / rel
+            if rc != 0 and path.exists():
+                path.unlink()
+                for parent in path.parents:
+                    if parent == repo_root:
+                        break
+                    try:
+                        parent.rmdir()  # only removes when empty
+                    except OSError:
+                        break
+        logger.info("files_reverted", files=files)
