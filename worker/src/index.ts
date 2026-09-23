@@ -386,6 +386,7 @@ async function agentTick(env: Env, ctx: ExecutionContext) {
 
   const out: Record<string, unknown> = { phase: "operating" };
   if (!urls.site) out.site = await ensureSite(env, ctx, brain, urls);
+  if (!urls.api) out.api = await deployProduct(env, ctx, brain, urls);
   if (pending) out.executed = await executeTask(env, ctx, brain, urls, pending);
   if ((remaining?.c ?? 0) < 5) out.generated = await operate(env, ctx, brain, urls);
   return out;
@@ -599,6 +600,71 @@ async function ensureSite(env: Env, ctx: ExecutionContext, brain: Brain, urls: R
   return { site };
 }
 
+// Phase 2c: the product gets a real backend — the company generates a
+// self-contained Cloudflare Worker implementing its core feature, verifies it
+// in the exec container, commits it to the repo, deploys it to the account's
+// workers.dev subdomain via the Cloudflare API, and stores the live URL.
+async function deployProduct(env: Env, ctx: ExecutionContext, brain: Brain, urls: Record<string, string>) {
+  if (!env.AI || !env.CF_ACCOUNT_ID || !env.CF_API_TOKEN) return { error: "cf creds or AI missing" };
+  const name = slugify(brain.product_name!);
+
+  const res = await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
+    messages: [
+      {
+        role: "system",
+        content: `You are a senior Cloudflare engineer building "${brain.product_name}" (${brain.product_description ?? ""}). Write a complete, self-contained Cloudflare Worker (ES module: export default { async fetch(req) {...} }) that implements the product's core feature as a real API. POST /<action> accepts JSON input, does the real work (fetch external URLs if the product needs to inspect them — workers have outbound fetch), and returns a JSON result. GET / returns a minimal HTML page with a working form that calls the API. No imports, no dependencies, no placeholders — it must run as-is. Reply with ONLY the code — no fences, no commentary.`,
+      },
+      { role: "user", content: "Write the worker." },
+    ],
+    max_tokens: 3500,
+  });
+  const cRaw = (res as { response?: unknown }).response;
+  const code = (typeof cRaw === "string" ? cRaw : JSON.stringify(cRaw ?? "")).trim()
+    .replace(/^```(?:js|javascript|typescript|ts)?\n?/i, "").replace(/```\s*$/, "");
+  if (!code.includes("export default") || code.length < 200) {
+    return { error: "worker generation failed", got: code.slice(0, 120) };
+  }
+
+  // Verify in the container before it deploys — the worker is self-contained,
+  // so it gets checked standalone (the repo's own files are irrelevant here).
+  const pseudoTask: Task = { id: "", task_id: "deploy", agent_id: "devops_1", description: `Deployable Cloudflare Worker for ${brain.product_name}`, attempts: 0 };
+  const v = await verifyArtifact(env, { ...brain, live_urls: "{}" }, pseudoTask, "worker.js", code);
+  if (!v.ok) return { error: `worker verification failed: ${v.issue}` };
+
+  // Commit to the product repo, then deploy via the Cloudflare API.
+  const repo = (urls.repo ?? "").replace("https://github.com/", "").replace(/\.git$/, "");
+  if (repo.includes("/")) await ghPutFile(env, repo, "worker.js", code, `devops_1: product worker (${name})`);
+
+  const acct = env.CF_ACCOUNT_ID, tok = env.CF_API_TOKEN;
+  const fd = new FormData();
+  fd.append("metadata", new Blob([JSON.stringify({ main_module: "worker.js", compatibility_date: "2026-09-01" })], { type: "application/json" }));
+  fd.append("worker.js", new Blob([code], { type: "application/javascript+module" }), "worker.js");
+  const up = await fetch(`https://api.cloudflare.com/client/v4/accounts/${acct}/workers/scripts/${name}`, {
+    method: "PUT", headers: { authorization: `Bearer ${tok}` }, body: fd,
+  });
+  const upData = (await up.json().catch(() => ({}))) as { success?: boolean; errors?: unknown };
+  if (!up.ok || upData.success === false) return { error: "worker upload failed", detail: upData };
+
+  await fetch(`https://api.cloudflare.com/client/v4/accounts/${acct}/workers/scripts/${name}/subdomain`, {
+    method: "POST", headers: { authorization: `Bearer ${tok}`, "content-type": "application/json" },
+    body: JSON.stringify({ enabled: true }),
+  });
+  const subRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${acct}/workers/subdomain`, {
+    headers: { authorization: `Bearer ${tok}` },
+  });
+  const subData = (await subRes.json().catch(() => ({}))) as { result?: { subdomain?: string } };
+  const sub = subData.result?.subdomain ?? "workers.dev";
+  const api = `https://${name}.${sub}.workers.dev`;
+
+  const newUrls = { ...urls, api };
+  await env.DB.prepare("UPDATE company_brain SET live_urls=?, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')")
+    .bind(JSON.stringify(newUrls)).run();
+  await env.DB.prepare("INSERT INTO milestone_log (milestone_type, description) VALUES ('api_deployed', ?)")
+    .bind(`Deployed ${brain.product_name} API to ${api}`).run();
+  await publishToBus(env, ctx, "conversations", JSON.stringify({ from: "devops_1", agent: "devops_1", text: `Shipped the API: ${api} is live`, model: "workers-ai/llama-3.3-70b", event: "api_deployed" }));
+  return { api };
+}
+
 function slugify(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "product";
 }
@@ -776,14 +842,19 @@ async function verifyArtifact(
   const ext = path.split(".").pop()?.toLowerCase() ?? "";
   const fname = path.split("/").pop() ?? `artifact.${ext}`;
   const isTest = /(^|\/)(tests?|test_|.*\.test\.|.*\.spec\.)/i.test(path) || /^test_/.test(fname);
+  // ES-module syntax (export/import) makes node --check fail on .js (parsed as
+  // CJS), so ESM content is also written as a .mjs copy to check against.
+  // The load step uses dynamic import() which handles both module systems.
+  const isEsm = /\bexport\s+(default\b|\{|const|function|class|async)|\bimport\s+[\w*{]/.test(content);
+  const jsCheckPath = ext === "js" && isEsm ? `${path}.check.mjs` : path;
   const pyLoad = `import importlib.util as u; s=u.spec_from_file_location('m','${path}'); m=u.module_from_spec(s); s.loader.exec_module(m)`;
   const commands: Record<string, string[][]> = {
     py: isTest
       ? [["python3", "-m", "py_compile", path], ["python3", "-m", "pytest", "-q", path]]
       : [["python3", "-m", "py_compile", path], ["python3", "-c", pyLoad]],
     js: isTest
-      ? [["node", "--check", path], ["node", "--test", path]]
-      : [["node", "--check", path], ["node", "-e", `require('./${path}')`]],
+      ? [["node", "--check", jsCheckPath], ["node", "--test", jsCheckPath]]
+      : [["node", "--check", jsCheckPath], ["node", "-e", `import('./${jsCheckPath}').then(()=>{},e=>{console.error(e);process.exit(1)})`]],
     json: [["python3", "-c", "import json,sys; json.load(open(sys.argv[1]))", path]],
     html: [["python3", "-c", "import sys; from html.parser import HTMLParser; HTMLParser().feed(open(sys.argv[1]).read())", path]],
     md: [["python3", "-c", "import sys; assert len(open(sys.argv[1]).read().strip())>20,'empty'", path]],
@@ -795,6 +866,7 @@ async function verifyArtifact(
         ?.replace("https://github.com/", "").replace(/\.git$/, "");
       const files = repo?.includes("/") ? await fetchRepoFiles(env, repo) : {};
       files[path] = content;
+      if (jsCheckPath !== path) files[jsCheckPath] = content;
       const container = getContainer(env.CODE_EXEC);
       const r = await container.fetch(new Request("https://exec.local/exec", {
         method: "POST",

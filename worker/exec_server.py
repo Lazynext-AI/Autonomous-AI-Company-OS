@@ -46,21 +46,37 @@ PY_IMPORT_TO_PKG = {
 }
 
 
+def _local_names(files: dict) -> set:
+    """Names resolvable inside the file set itself — local modules and dirs."""
+    local = set()
+    for rel in files:
+        parts = str(rel).split("/")
+        for i, seg in enumerate(parts):
+            if i < len(parts) - 1:
+                local.add(seg)  # directory names ("from src.api import x" -> "src")
+            stem = seg.rsplit(".", 1)[0]
+            if stem and stem != "__init__":
+                local.add(stem)
+    return local
+
+
 def _detect_py_deps(files: dict) -> list:
     mods = set()
     stdlib = set(getattr(sys, "stdlib_module_names", ()))
+    local = _local_names(files)
     for rel, content in files.items():
         if not str(rel).endswith(".py") or not isinstance(content, str):
             continue
         for m in re.finditer(r"^\s*(?:import|from)\s+([A-Za-z_][A-Za-z0-9_]*)", content, re.M):
             top = m.group(1)
-            if top not in stdlib and not top.startswith("_"):
+            if top not in stdlib and not top.startswith("_") and top not in local:
                 mods.add(PY_IMPORT_TO_PKG.get(top, top))
     return sorted(mods)
 
 
 def _detect_js_deps(files: dict) -> list:
     mods = set()
+    local = _local_names(files)
     for rel, content in files.items():
         if not str(rel).endswith((".js", ".mjs", ".cjs")) or not isinstance(content, str):
             continue
@@ -71,7 +87,7 @@ def _detect_js_deps(files: dict) -> list:
             if name.startswith((".", "/", "node:")):
                 continue
             top = name.split("/")[0] if not name.startswith("@") else "/".join(name.split("/")[:2])
-            if top and top not in NODE_BUILTINS:
+            if top and top not in NODE_BUILTINS and top not in local:
                 mods.add(top)
     return sorted(mods)
 

@@ -4,6 +4,10 @@ compatibility_date = "2025-09-01"
 compatibility_flags = ["nodejs_compat"]
 preview_urls = false
 
+[vars]
+# Cloudflare account for deploying the company's product worker.
+CF_ACCOUNT_ID = "85953070bae00da372951a8833bd3459"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "ai-company-db"
