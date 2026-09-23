@@ -4,7 +4,7 @@
 // Host: test.dodopayments.com (test mode) or live.dodopayments.com.
 import { Env, json } from "./gateway";
 
-const DODO_API = "https://test.dodopayments.com"; // swap to live.dodopayments.com for live mode
+const DODO_API_DEFAULT = "https://test.dodopayments.com"; // set env.DODO_API_BASE to https://live.dodopayments.com when the account leaves test mode
 
 // Standard Webhooks (Svix) verification for Dodo. The whsec_ secret is
 // base64; the signed payload is `${webhook-id}.${webhook-timestamp}.${body}`.
@@ -38,7 +38,7 @@ async function verifyDodo(
 async function dodoFetch(env: Env, path: string, body: unknown): Promise<Response> {
   const key = env.DODO_API_KEY;
   if (!key) return json({ error: "DODO_API_KEY not configured" }, 503);
-  return fetch(`${DODO_API}${path}`, {
+  return fetch(`${env.DODO_API_BASE ?? DODO_API_DEFAULT}${path}`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -94,6 +94,26 @@ export async function handleBilling(
     return json({ ok: true });
   }
 
+  // Register this worker's webhook URL with Dodo — internal token only.
+  // Without this, real payment events never reach /api/v1/billing/webhook.
+  if (req.method === "POST" && path === "/api/v1/billing/webhooks") {
+    const auth = req.headers.get("authorization") ?? "";
+    if (auth !== `Bearer ${env.API_TOKEN}`) return json({ error: "unauthorized" }, 401);
+    const r = await dodoFetch(env, "/webhooks", {
+      url: "https://ai-company-os.dry-hall-6a50.workers.dev/api/v1/billing/webhook",
+      description: "Lazynext platform billing",
+      events: [
+        "payment.succeeded", "payment.failed",
+        "subscription.active", "subscription.renewed",
+        "subscription.cancelled", "subscription.expired", "subscription.on_hold",
+      ],
+      metadata: {},
+    });
+    const d = (await r.json()) as Record<string, unknown>;
+    if (!r.ok) return json({ error: "webhook register failed", detail: d }, r.status === 404 ? 501 : 502);
+    return json({ ok: true, webhook: d });
+  }
+
   // Create a Dodo product — internal token only. Returns the product_id used
   // by /api/v1/billing/checkout and product workers' /checkout redirects.
   if (req.method === "POST" && path === "/api/v1/billing/products") {
@@ -128,7 +148,7 @@ export async function handleBilling(
     if (!b.product_id) return json({ error: "product_id required" }, 400);
     const r = await dodoFetch(env, "/checkouts", {
       product_cart: [{ product_id: b.product_id, quantity: 1 }],
-      return_url: "https://dashboard.lazynext.com/billing?success=1",
+      return_url: "https://lazynext-platform.github.io/accessibility-checker/?upgraded=1",
       metadata: { plan: b.plan ?? "" },
     });
     const d = (await r.json()) as { checkout_url?: string; session_id?: string };

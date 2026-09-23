@@ -254,6 +254,22 @@ export async function brevoSend(
   return { ok: r.ok, status: r.status, messageId: d.messageId, error: d.message };
 }
 
+// Add/update a Brevo contact — lead capture for product outbound.
+export async function brevoAddContact(
+  env: Env, email: string, attrs?: Record<string, unknown>,
+): Promise<{ ok: boolean; status: number; error?: string }> {
+  const cred = await brevoCred(env);
+  if (!cred)
+    return { ok: false, status: 503, error: "brevo not connected" };
+  const r = await fetch("https://api.brevo.com/v3/contacts", {
+    method: "POST",
+    headers: { "api-key": cred.key, "content-type": "application/json" },
+    body: JSON.stringify({ email, updateEnabled: true, attributes: attrs ?? {} }),
+  });
+  const d = (await r.json().catch(() => ({}))) as { message?: string };
+  return { ok: r.ok || r.status === 204, status: r.status, error: d.message };
+}
+
 // Reads conn:signwell from KV (bare API key; "test:" prefix → test_mode sends
 // are free, unlimited and not legally binding), then calls the SignWell API.
 // Returns {connected:false} when no credential is set.

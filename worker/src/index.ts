@@ -18,7 +18,7 @@ import { getContainer } from "@cloudflare/containers";
 export { CodeExecContainer } from "./exec_container";
 import { handleWidget } from "./widget";
 import { fanOut, handleWebhooks, publishToBus } from "./webhooks";
-import { handleServices, handleSignwellWebhook, brevoSend } from "./services";
+import { handleServices, handleSignwellWebhook, brevoSend, brevoAddContact } from "./services";
 
 export { Env };
 
@@ -179,6 +179,20 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
       const r = await brevoSend(env, b.to, b.subject, b.html);
       if (!r.ok) return json({ error: r.error ?? "send failed" }, r.status);
       return json({ ok: true, id: r.messageId });
+    }
+
+    case "/leads": {
+      // Lead capture: product workers relay signups here; we store the lead
+      // and sync it into Brevo so the marketing agent can reach them.
+      const b = await readBody<{ email: string; source?: string }>(req);
+      if (!b.email?.includes("@")) return json({ error: "valid email required" }, 400);
+      const email = b.email.toLowerCase();
+      await env.EPHEMERAL.put(`lead:${email}`, b.source ?? "unknown", { expirationTtl: 31_536_000 });
+      const br = await brevoAddContact(env, email, { SOURCE: b.source ?? "unknown" });
+      await env.DB.prepare(
+        "INSERT INTO bus_messages (channel, payload, created_at) VALUES ('leads.events', ?, datetime('now'))",
+      ).bind(JSON.stringify({ email, source: b.source, brevo: br.ok })).run();
+      return json({ ok: true, brevo: br.ok });
     }
 
     case "/bus/ack": {
