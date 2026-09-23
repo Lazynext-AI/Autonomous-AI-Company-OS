@@ -152,11 +152,12 @@ class CTOAgent(BaseAgent):
             if not client.is_configured():
                 return []
             
-            # Get tasks from last 2 hours
-            cutoff = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
+            # Get tasks from last 24h — a 2h window lets the same idea
+            # regenerate once older attempts scroll out of view.
+            cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
             
             def _fetch():
-                r = client.table("task_log").select("description,status,agent_id").gte("created_at", cutoff).order("created_at", ascending=False).limit(20).execute()
+                r = client.table("task_log").select("description,status,agent_id").gte("created_at", cutoff).order("created_at", ascending=False).limit(50).execute()
                 return r.data or []
             
             return await asyncio.to_thread(_fetch)
@@ -171,31 +172,37 @@ class CTOAgent(BaseAgent):
             desc_lower = description.lower().strip()
             
             # Check for similar tasks
+            stop = {"task", "the", "and", "for", "with", "that", "this", "into",
+                    "from", "conduct", "implement", "setup", "set", "add",
+                    "create", "build", "review"}
+            def content_words(desc: str) -> set:
+                return {w.strip(".,:;()") for w in desc.split()
+                        if len(w) > 3 and w not in stop}
+
             for task in recent_tasks:
                 task_desc = (task.get("description") or "").lower().strip()
-                task_agent = task.get("agent_id", "")
                 status = task.get("status", "")
-                
+
                 if not task_desc or len(desc_lower) < 15:
                     continue
-                
-                # Check if same agent and similar description
-                if task_agent == assign_to:
-                    # Simple similarity: if one contains the other (for hook setup, etc.)
-                    if (desc_lower in task_desc or task_desc in desc_lower):
-                        # If pending or in_progress, definitely duplicate
-                        if status in ("pending", "in_progress"):
-                            return True
-                        # If completed within last hour, also consider duplicate
-                        if status == "completed":
-                            return True
-                
-                # Special case: hook setup tasks - only one needed
-                hook_keywords = ["hook", "git hook", "deployment hook", "github actions workflow"]
-                if any(kw in desc_lower for kw in hook_keywords) and any(kw in task_desc for kw in hook_keywords):
-                    if status in ("pending", "in_progress", "completed"):
-                        return True
-            
+
+                # Substring match, then content-word overlap for paraphrases
+                # ("security scan" vs "security audit" vs "vulnerability
+                # assessment" — the same task reworded).
+                similar = desc_lower in task_desc or task_desc in desc_lower
+                if not similar:
+                    a, b = content_words(desc_lower), content_words(task_desc)
+                    if a and b:
+                        smaller, larger = (a, b) if len(a) <= len(b) else (b, a)
+                        similar = len(smaller & larger) >= max(2, (len(smaller) + 1) // 2)
+                if not similar:
+                    continue
+
+                # Every status counts: a failed/escalated task is a signal the
+                # approach needs changing, not that it should regenerate under
+                # new wording on the next planning cycle.
+                return True
+
             return False
         except Exception as e:
             self.logger.warning("duplicate_check_failed", error=str(e))

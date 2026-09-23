@@ -173,17 +173,14 @@ class GitManager:
         branch_name = "".join(c if c.isalnum() or c in "-_" else "-" for c in branch_name)
         branch_name = branch_name[:50]  # Limit length
 
-        current_branch = await self.get_current_branch()
-        if current_branch != "main" and current_branch != "master":
-            # Already on a feature branch, use it
-            branch_name = current_branch
-            branch_created = False
-        else:
-            # Create new branch
-            branch_created = await self.create_branch(branch_name)
-
-        if not branch_created and current_branch == branch_name:
-            branch_created = True  # Branch already exists and we're on it
+        # Always fork a fresh branch from the base — reusing whatever feature
+        # branch happens to be checked out piles every task onto one mega-PR
+        # that mixes unrelated (and possibly stale) work.
+        branch_created = await self.create_branch(branch_name)
+        if not branch_created:
+            # Branch already exists (task retry) — check it out directly.
+            rc, _, _ = await self._run_git("checkout", branch_name)
+            branch_created = rc == 0
 
         commit_msg = f"[{task_id}] {description[:72]}"
         committed = await self.commit(files, commit_msg)
@@ -201,6 +198,11 @@ class GitManager:
             result["pushed"] = pushed
             if pushed:
                 result["pr_url"] = await self._open_pr(branch_name, description)
+
+        # Leave the repo on the base branch so the next task forks cleanly.
+        rc, _, _ = await self._run_git("checkout", "main")
+        if rc != 0:
+            await self._run_git("checkout", "master")
 
         return result
 
