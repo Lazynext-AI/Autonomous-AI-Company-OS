@@ -342,6 +342,15 @@ interface Brain {
   product_description?: string | null;
   mission?: string | null;
   metrics?: string | null;
+  live_urls?: string | null;
+}
+
+interface Task {
+  id: string;
+  task_id: string;
+  agent_id: string;
+  description: string;
+  attempts: number;
 }
 
 async function agentTick(env: Env, ctx: ExecutionContext) {
@@ -350,7 +359,33 @@ async function agentTick(env: Env, ctx: ExecutionContext) {
     .first<Brain>()
     .catch(() => null);
   if (!brain?.product_name) return pickProduct(env, ctx);
-  return operate(env, ctx, brain);
+
+  // Product picked but no repo yet — bootstrap it before anything else.
+  const urls = safeJson<Record<string, string>>(brain.live_urls) ?? {};
+  if (!urls.repo) return bootstrapRepo(env, ctx, brain);
+
+  // Execute the oldest pending task (real work: GitHub commit), and keep the
+  // queue topped up by generating a task when it's running shallow.
+  const pending = await env.DB.prepare(
+    "SELECT id, task_id, agent_id, description, attempts FROM task_log WHERE status='pending' ORDER BY created_at LIMIT 1",
+  )
+    .first<Task>()
+    .catch(() => null);
+  const remaining = await env.DB.prepare(
+    "SELECT COUNT(*) c FROM task_log WHERE status IN ('pending','in_progress')",
+  )
+    .first<{ c: number }>()
+    .catch(() => ({ c: 0 }));
+
+  const out: Record<string, unknown> = { phase: "operating" };
+  if (pending) out.executed = await executeTask(env, ctx, brain, urls, pending);
+  if ((remaining?.c ?? 0) < 5) out.generated = await operate(env, ctx, brain);
+  return out;
+}
+
+function safeJson<T>(s: string | null | undefined): T | null {
+  if (!s) return null;
+  try { return JSON.parse(s) as T; } catch { return null; }
 }
 
 // Phase 1: pick a real product. Real Serper market research feeds the model,
@@ -456,4 +491,163 @@ async function operate(env: Env, ctx: ExecutionContext, brain: Brain) {
   const payload = JSON.stringify({ from: a.id, agent: a.id, text: status, model: "workers-ai/llama-3.3-70b", ...(task ? { task } : {}) });
   const id = await publishToBus(env, ctx, "conversations", payload);
   return { phase: "operating", id, agent: a.id, text: status, task };
+}
+
+// --- GitHub execution -------------------------------------------------------
+// The company's build output lands in the product repo on GitHub. Token lives
+// in KV as conn:github (Settings → Connect or seeded), env fallback.
+async function githubCred(env: Env): Promise<string | null> {
+  return (await env.EPHEMERAL.get("conn:github")) ?? env.GITHUB_TOKEN ?? null;
+}
+
+async function gh(env: Env, method: string, path: string, body?: unknown): Promise<{ ok: boolean; status: number; data: Record<string, unknown> }> {
+  const token = await githubCred(env);
+  if (!token) return { ok: false, status: 503, data: { error: "github not connected" } };
+  const r = await fetch(`https://api.github.com${path}`, {
+    method,
+    headers: {
+      authorization: `Bearer ${token}`,
+      accept: "application/vnd.github+json",
+      "content-type": "application/json",
+      "user-agent": "lazynext-worker",
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  const data = (await r.json().catch(() => ({}))) as Record<string, unknown>;
+  return { ok: r.ok, status: r.status, data };
+}
+
+function b64(s: string): string {
+  const bytes = new TextEncoder().encode(s);
+  let bin = "";
+  const chunk = 8192;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(bin);
+}
+
+async function ghPutFile(env: Env, repo: string, path: string, content: string, message: string): Promise<{ ok: boolean; url?: string; error?: string }> {
+  const existing = await gh(env, "GET", `/repos/${repo}/contents/${path}`);
+  const body: Record<string, unknown> = { message, content: b64(content) };
+  if (existing.ok && existing.data.sha) body.sha = existing.data.sha;
+  const r = await gh(env, "PUT", `/repos/${repo}/contents/${path}`, body);
+  if (!r.ok) return { ok: false, error: JSON.stringify(r.data).slice(0, 300) };
+  return { ok: true, url: (r.data.content as { html_url?: string } | undefined)?.html_url };
+}
+
+function slugify(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "product";
+}
+
+function sanitizePath(p: string | undefined): string {
+  const clean = (p ?? "").replace(/\\/g, "/").replace(/^\/+/, "").replace(/\.\.+/g, "").slice(0, 200);
+  return clean || `docs/output-${Date.now()}.md`;
+}
+
+// Phase 2a: product picked but no repo — create it on GitHub with a generated
+// README + landing page, record it in company_brain.live_urls.
+async function bootstrapRepo(env: Env, ctx: ExecutionContext, brain: Brain) {
+  if (!env.AI) return { error: "AI binding not configured" };
+  const owner = await gh(env, "GET", "/user");
+  if (!owner.ok || !owner.data.login) return { phase: "bootstrap", error: "github not connected", detail: owner.data };
+  const login = String(owner.data.login);
+  const repo = `${login}/${slugify(brain.product_name!)}`;
+
+  const created = await gh(env, "POST", "/user/repos", {
+    name: slugify(brain.product_name!),
+    private: false,
+    description: `${brain.product_name} — ${(brain.product_description ?? "").slice(0, 200)}`,
+    auto_init: false,
+  });
+  // 422 = repo already exists — that's fine, we use it.
+  if (!created.ok && created.status !== 422) {
+    return { phase: "bootstrap", error: "repo create failed", detail: created.data };
+  }
+
+  const res = await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
+    messages: [
+      {
+        role: "system",
+        content: `You are the founding engineer of "${brain.product_name}" (${brain.product_description ?? ""}). Reply with ONLY JSON: {"files": [{"path": "README.md", "content": "..."}, {"path": "index.html", "content": "a minimal landing page"}]}. Markdown for README, full standalone HTML for index.html. No markdown fences.`,
+      },
+      { role: "user", content: "Generate the repo's initial files." },
+    ],
+    max_tokens: 3000,
+  });
+  const raw0 = (res as { response?: unknown }).response;
+  const raw = (typeof raw0 === "string" ? raw0 : JSON.stringify(raw0 ?? "")).trim();
+  const m = raw.match(/\{[\s\S]*\}/);
+  let files: { path: string; content: string }[] = [];
+  if (m) {
+    try {
+      const parsed = JSON.parse(m[0]) as { files?: { path: string; content: string }[] };
+      files = (parsed.files ?? []).filter((f) => f.path && f.content).slice(0, 4);
+    } catch {}
+  }
+  if (!files.length) files = [{ path: "README.md", content: `# ${brain.product_name}\n\n${brain.product_description ?? ""}\n` }];
+
+  const committed: string[] = [];
+  for (const f of files) {
+    const p = sanitizePath(f.path);
+    const r = await ghPutFile(env, repo, p, f.content, `bootstrap: add ${p}`);
+    if (r.ok) committed.push(p);
+  }
+
+  const repoUrl = `https://github.com/${repo}`;
+  const newUrls = { ...(safeJson<Record<string, string>>(brain.live_urls) ?? {}), repo: repoUrl };
+  await env.DB.prepare("UPDATE company_brain SET live_urls=?, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')")
+    .bind(JSON.stringify(newUrls)).run();
+  await env.DB.prepare("INSERT INTO milestone_log (milestone_type, description) VALUES ('repo_created', ?)")
+    .bind(`Created GitHub repo ${repoUrl} for ${brain.product_name} (${committed.length} files)`).run();
+  const text = `Created our repo: ${repoUrl} — committed ${committed.join(", ") || "nothing (exists)"}`;
+  await publishToBus(env, ctx, "conversations", JSON.stringify({ from: "devops_1", agent: "devops_1", text, model: "workers-ai/llama-3.3-70b", event: "repo_created" }));
+  return { phase: "repo_created", repo: repoUrl, committed };
+}
+
+// Phase 2b: execute one pending task — Workers AI produces a file artifact
+// (code or doc) which is committed to the product repo, then the task is
+// marked completed with the commit URL as its result.
+async function executeTask(env: Env, ctx: ExecutionContext, brain: Brain, urls: Record<string, string>, task: Task) {
+  if (!env.AI) return { error: "AI binding not configured" };
+  const repo = (urls.repo ?? "").replace("https://github.com/", "").replace(/\.git$/, "");
+  if (!repo.includes("/")) return { task: task.task_id, error: "no repo" };
+
+  await env.DB.prepare("UPDATE task_log SET status='in_progress', attempts=attempts+1, started_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?")
+    .bind(task.id).run();
+
+  const res = await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
+    messages: [
+      {
+        role: "system",
+        content: `You are ${task.agent_id}, an agent at an autonomous software company building "${brain.product_name}" (${brain.product_description ?? ""}). Execute this task by producing ONE file artifact for the repo — code under src/, docs under docs/, marketing copy under marketing/, research under docs/research/. Reply with ONLY JSON: {"path": "relative/file/path", "content": "full file contents", "summary": "one line"}. No markdown fences around the JSON.`,
+      },
+      { role: "user", content: `Task: ${task.description}` },
+    ],
+    max_tokens: 3000,
+  });
+  const raw0 = (res as { response?: unknown }).response;
+  const raw = (typeof raw0 === "string" ? raw0 : JSON.stringify(raw0 ?? "")).trim();
+  const m = raw.match(/\{[\s\S]*\}/);
+  let artifact: { path?: string; content?: string; summary?: string } | null = null;
+  if (m) { try { artifact = JSON.parse(m[0]); } catch {} }
+  if (!artifact?.content) {
+    await env.DB.prepare("UPDATE task_log SET status='failed', error_log=json_insert(error_log,'$[#]',?), completed_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?")
+      .bind("no artifact produced", task.id).run();
+    return { task: task.task_id, error: "no artifact produced" };
+  }
+
+  const path = sanitizePath(artifact.path);
+  const put = await ghPutFile(env, repo, path, artifact.content, `${task.agent_id}: ${(artifact.summary ?? task.description).slice(0, 60)}`);
+  if (!put.ok) {
+    await env.DB.prepare("UPDATE task_log SET status='failed', error_log=json_insert(error_log,'$[#]',?), completed_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?")
+      .bind(put.error ?? "github commit failed", task.id).run();
+    return { task: task.task_id, error: put.error };
+  }
+
+  await env.DB.prepare("UPDATE task_log SET status='completed', result=?, completed_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?")
+    .bind(put.url ?? `https://github.com/${repo}/blob/main/${path}`, task.id).run();
+  const text = `Done: ${task.description.slice(0, 80)} → ${put.url ?? path}`;
+  await publishToBus(env, ctx, "conversations", JSON.stringify({ from: task.agent_id, agent: task.agent_id, text, model: "workers-ai/llama-3.3-70b", event: "task_completed", task: task.task_id }));
+  return { task: task.task_id, agent: task.agent_id, path, url: put.url };
 }

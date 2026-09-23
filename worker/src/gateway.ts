@@ -16,6 +16,7 @@ export interface Env {
   DODO_API_KEY?: string;
   DODO_WEBHOOK_SECRET?: string;
   SERPER_API_KEY?: string;
+  GITHUB_TOKEN?: string;
 }
 
 export interface ApiKey {
