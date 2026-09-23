@@ -182,17 +182,26 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
     }
 
     case "/leads": {
-      // Lead capture: product workers relay signups here; we store the lead
-      // and sync it into Brevo so the marketing agent can reach them.
+      // Lead capture: product workers relay signups here; we store the lead,
+      // sync it into Brevo and start the Pro conversion sequence (email 1
+      // immediately; a daily sweep in scheduled() sends emails 2 and 3).
       const b = await readBody<{ email: string; source?: string }>(req);
       if (!b.email?.includes("@")) return json({ error: "valid email required" }, 400);
       const email = b.email.toLowerCase();
+      const existing = await env.EPHEMERAL.get(`lead:${email}:stage`);
       await env.EPHEMERAL.put(`lead:${email}`, b.source ?? "unknown", { expirationTtl: 31_536_000 });
       const br = await brevoAddContact(env, email, { SOURCE: b.source ?? "unknown" });
+      let sent = false;
+      if (!existing) {
+        await env.EPHEMERAL.put(`lead:${email}:joined`, String(Date.now()), { expirationTtl: 31_536_000 });
+        const s = await brevoSend(env, email, SEQUENCE[0].subject, SEQUENCE[0].html);
+        sent = s.ok;
+        await env.EPHEMERAL.put(`lead:${email}:stage`, s.ok ? "1" : "0", { expirationTtl: 31_536_000 });
+      }
       await env.DB.prepare(
         "INSERT INTO bus_messages (channel, payload, created_at) VALUES ('leads.events', ?, datetime('now'))",
-      ).bind(JSON.stringify({ email, source: b.source, brevo: br.ok })).run();
-      return json({ ok: true, brevo: br.ok });
+      ).bind(JSON.stringify({ email, source: b.source, brevo: br.ok, seq_sent: sent })).run();
+      return json({ ok: true, brevo: br.ok, seq_sent: sent });
     }
 
     case "/bus/ack": {
@@ -335,8 +344,46 @@ export default {
   // autonomously on a schedule .
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(agentTick(env, ctx).then(() => undefined).catch(() => {}));
+    ctx.waitUntil(advanceLeadSequence(env).then(() => undefined).catch(() => {}));
   },
 };
+
+// Pro conversion sequence (drafted by sales_1 — marketing/pro_sequence.md):
+// email 1 at capture, email 2 at +3d, email 3 at +7d.
+const SEQUENCE = [
+  {
+    subject: "Unlock full accessibility scanning",
+    html: `<p>Thanks for trying Accessibility Checker — you ran a real rendered-page WCAG scan.</p><p><b>Pro ($9/mo)</b> removes the 3-scans-a-day limit: unlimited rendered scans, shareable reports, and reports delivered to your inbox.</p><p><a href="https://accessibility-checker.dry-hall-6a50.workers.dev/checkout">Upgrade to Pro →</a></p>`,
+  },
+  {
+    subject: "What teams fix first after their first scan",
+    html: `<p>The most common issues our rendered scans surface: missing landmarks, keyboard-inaccessible pages, and contrast that looks fine in the stylesheet but fails once CSS actually paints.</p><p>Pro runs unlimited scans — iterate on fixes and watch your score climb.</p><p><a href="https://accessibility-checker.dry-hall-6a50.workers.dev/checkout">Go Pro →</a></p>`,
+  },
+  {
+    subject: "Last call: unlimited scans for $9/mo",
+    html: `<p>Your free tier is capped at 3 rendered scans a day. Pro is $9/month, cancels anytime, and every report is shareable with your team.</p><p><a href="https://accessibility-checker.dry-hall-6a50.workers.dev/checkout">Upgrade →</a></p>`,
+  },
+];
+const SEQ_DAYS = [0, 3, 7];
+
+async function advanceLeadSequence(env: Env) {
+  const last = await env.EPHEMERAL.get("seq:last_run");
+  if (last && Date.now() - parseInt(last, 10) < 20 * 3_600_000) return; // ~daily
+  await env.EPHEMERAL.put("seq:last_run", String(Date.now()));
+  const list = await env.EPHEMERAL.list({ prefix: "lead:" });
+  for (const k of list.keys) {
+    if (k.name.endsWith(":stage") || k.name.endsWith(":joined")) continue;
+    const email = k.name.slice(5);
+    const stage = parseInt((await env.EPHEMERAL.get(`lead:${email}:stage`)) ?? "0", 10);
+    const joined = parseInt((await env.EPHEMERAL.get(`lead:${email}:joined`)) ?? "0", 10);
+    if (!joined || stage >= SEQUENCE.length) continue;
+    const days = (Date.now() - joined) / 86_400_000;
+    if (days >= SEQ_DAYS[stage]) {
+      const s = await brevoSend(env, email, SEQUENCE[stage].subject, SEQUENCE[stage].html);
+      if (s.ok) await env.EPHEMERAL.put(`lead:${email}:stage`, String(stage + 1), { expirationTtl: 31_536_000 });
+    }
+  }
+}
 
 // Autonomous agent loop: a Cloudflare cron tick makes the company act
 // continuously. Phase 1 — no product picked yet: the CEO agent does real

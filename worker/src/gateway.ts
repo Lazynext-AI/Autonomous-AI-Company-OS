@@ -14,6 +14,7 @@ export interface Env {
   API_TOKEN?: string;
   BREVO_API_KEY?: string;
   DODO_API_KEY?: string;
+  DODO_API_BASE?: string;
   DODO_WEBHOOK_SECRET?: string;
   SERPER_API_KEY?: string;
   GITHUB_TOKEN?: string;
