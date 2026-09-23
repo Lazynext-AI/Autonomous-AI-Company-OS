@@ -47,6 +47,14 @@ D1 + KV (`EPHEMERAL`) + Vectorize (`VECTORS`, index `company-knowledge`, 384d)
 - **`wcag-2.1.2`** trap detector is conservative; a one-link page can trip it — intentional warn-over-miss.
 - Stale `agent-*` remote branches on the product repo are closed/merged PR leftovers — delete only with confirmation.
 
+## Product worker deploys
+
+`accessibility-checker` has no wrangler.toml — it deploys via the Cloudflare scripts Upload API (multipart). Two traps, both hit and verified:
+
+- `bindings` omitted from upload metadata **silently drops them at runtime** — the settings API still lists them but `env.PLATFORM` is undefined (error 1101). Always re-send the full binding set.
+- `secret_text` bindings must include `text` in the re-sent metadata or upload fails 10021. `PLATFORM_TOKEN` = the worker bearer = `.env`'s `CLOUDFLARE_API_TOKEN`.
+- Multipart part `filename=` is the module path — `-F "src/scanner.js=@src/scanner.js;filename=src/scanner.js"`.
+
 ## Failure classes already fixed (don't regress)
 
-Core-file regen → protected sets. Broken tests shipping → mandatory exec verdicts. `.mjs` unverified → mapped. Mega-PRs → branch-per-task. Paraphrase regen → content-word dedup. Workflow-fix floods → run-id dedup + branch guard. Review self-failure → findings are the deliverable (`success=True`). Orphan poisoning → `_revert_files`. Fleet multiplication → `pkill -f`. Stack divergence → prompts defer to `company_brain.tech_stack`. httpx `ReadTimeout` logs `error=` blank → log `type(e).__name__`.
+Core-file regen → protected sets. Broken tests shipping → mandatory exec verdicts. `.mjs` unverified → mapped. Mega-PRs → branch-per-task. Paraphrase regen → content-word dedup. Workflow-fix floods → run-id dedup + branch guard. Review self-failure → findings are the deliverable (`success=True`). Orphan poisoning → `_revert_files`. Fleet multiplication → `pkill -f`. Stack divergence → prompts defer to `company_brain.tech_stack`. httpx `ReadTimeout` logs `error=` blank → log `type(e).__name__`. Fully-skipped deliverables "completing" → `post_task_hook` runs before `mark_completed`, protected-only writes veto to retry. MCP `create_task` dropped as BaseMessage → `_type: "TaskMessage"` required in bus payloads.
