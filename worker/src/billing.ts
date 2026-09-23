@@ -85,6 +85,14 @@ export async function handleBilling(
     // cancellation/failure so the plan always reflects real billing state.
     const activate = type === "payment.succeeded" || type === "subscription.active" || type === "subscription.renewed";
     const downgrade = type === "subscription.cancelled" || type === "subscription.expired" || type === "subscription.on_hold" || type === "payment.failed";
+    // Dunning: a renewal payment failed but Dodo is still retrying. Flag the
+    // account without revoking access — on_hold/expired do the real downgrade.
+    if (type === "subscription.past_due" && email) {
+      await env.EPHEMERAL.put(`pastdue:${email}`, "1", { expirationTtl: 604_800 });
+      await env.DB.prepare(
+        "INSERT INTO bus_messages (channel, payload, created_at) VALUES ('billing.events', ?, datetime('now'))",
+      ).bind(JSON.stringify({ type, plan, email })).run();
+    }
     if (plan && (activate || downgrade)) {
       const name = activate ? plan : "Founder";
       await env.EPHEMERAL.put("plan", JSON.stringify({ name }));
@@ -110,7 +118,7 @@ export async function handleBilling(
       description: "Lazynext platform billing",
       events: [
         "payment.succeeded", "payment.failed",
-        "subscription.active", "subscription.renewed",
+        "subscription.active", "subscription.renewed", "subscription.past_due",
         "subscription.cancelled", "subscription.expired", "subscription.on_hold",
       ],
       metadata: {},

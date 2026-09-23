@@ -115,22 +115,21 @@ class GitManager:
                 logger.error("failed_to_configure_remote", message="Set GITHUB_TOKEN in .env to enable automatic repo creation")
                 return False
         
-        # Remote URL should already have token embedded (set by GitHubRepoManager)
-        # If not, try to inject it for this push
+        # Inject the token into the push URL only — never persist it in
+        # .git/config via remote URLs or -u upstream tracking.
         settings = get_settings()
+        push_target = remote
         if settings.github_token:
             returncode, remote_url, _ = await self._run_git("remote", "get-url", remote)
             if returncode == 0:
                 remote_url = remote_url.strip()
-                # If URL doesn't contain token and is HTTPS, temporarily inject it
-                if remote_url.startswith("https://") and "github.com" in remote_url and "@" not in remote_url:
-                    token = settings.github_token.strip()
-                    authenticated_url = remote_url.replace("https://", f"https://{token}@")
-                    # Temporarily set authenticated URL
-                    await self._run_git("remote", "set-url", remote, authenticated_url)
-        
-        # Push with token authentication
-        returncode, _, stderr = await self._run_git("push", "-u", remote, branch_name)
+                if "@" in remote_url:
+                    remote_url = f"https://{remote_url.split('@')[-1]}"
+                    await self._run_git("remote", "set-url", remote, remote_url)
+                if remote_url.startswith("https://") and "github.com" in remote_url:
+                    push_target = remote_url.replace("https://", f"https://{settings.github_token.strip()}@")
+
+        returncode, _, stderr = await self._run_git("push", push_target, branch_name)
         if returncode == 0:
             logger.info("branch_pushed", branch=branch_name, remote=remote)
             return True
@@ -147,8 +146,8 @@ class GitManager:
                 # Create repo and configure remote
                 if await github_manager.ensure_remote_configured():
                     logger.info("repo_created_and_remote_configured", message="Retrying push after repo creation")
-                    # Retry push
-                    returncode, _, stderr = await self._run_git("push", "-u", remote, branch_name)
+                    # Retry push against the freshly configured remote
+                    returncode, _, stderr = await self._run_git("push", push_target, branch_name)
                     if returncode == 0:
                         logger.info("branch_pushed_after_repo_creation", branch=branch_name, remote=remote)
                         return True

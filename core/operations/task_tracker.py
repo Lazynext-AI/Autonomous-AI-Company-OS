@@ -44,6 +44,15 @@ class TaskTracker:
 
         return await self._run_sync(_fetch)
 
+    async def get_tasks_by_status(self, status: str, limit: int = 100) -> list[dict[str, Any]]:
+        """Fetch task_log rows by status."""
+
+        def _fetch():
+            r = self._client.table("task_log").select("*").eq("status", status).limit(limit).execute()
+            return r.data or []
+
+        return await self._run_sync(_fetch)
+
     async def create_task(
         self,
         task_id: str,

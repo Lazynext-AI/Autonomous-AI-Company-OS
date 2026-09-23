@@ -28,8 +28,11 @@ class GitHubRepoManager:
         # Check if remote already exists
         returncode, stdout, _ = await self._run_git("remote", "get-url", "origin")
         if returncode == 0:
-            logger.info("remote_already_configured", remote_url=stdout.strip())
-            await self._set_deploy_secrets(stdout.strip())
+            existing = stdout.strip()
+            if "@" in existing:
+                await self._run_git("remote", "set-url", "origin", f"https://{existing.split('@')[-1]}")
+            logger.info("remote_already_configured", remote_url=existing.split("@")[-1])
+            await self._set_deploy_secrets(existing)
             return True
 
         # No remote exists - create one
@@ -46,15 +49,9 @@ class GitHubRepoManager:
         if not repo_url:
             return False
 
-        # Add remote with token authentication embedded in URL
-        # Format: https://TOKEN@github.com/user/repo.git
-        if repo_url.startswith("https://") and self.token:
-            # Inject token into URL for authentication
-            authenticated_url = repo_url.replace("https://", f"https://{self.token}@")
-        else:
-            authenticated_url = repo_url
-        
-        returncode, _, stderr = await self._run_git("remote", "add", "origin", authenticated_url)
+        # Keep the remote URL clean — the token is injected transiently at push
+        # time (see git_manager.push_branch) so it never persists in .git/config.
+        returncode, _, stderr = await self._run_git("remote", "add", "origin", repo_url)
         if returncode == 0:
             logger.info("remote_added", repo_url=repo_url.split("@")[-1] if "@" in repo_url else repo_url)
             await self._set_deploy_secrets(repo_url)

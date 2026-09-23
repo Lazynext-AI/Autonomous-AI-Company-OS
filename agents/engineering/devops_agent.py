@@ -491,8 +491,9 @@ class DevOpsAgent(BaseAgent):
 
             # Check if we already created a task for this workflow run
             existing_tasks = await self.task_tracker.get_tasks_by_status("pending")
+            existing_tasks += await self.task_tracker.get_tasks_by_status("in_progress")
             for task in existing_tasks:
-                if f"workflow {run_id}" in task.get("description", "").lower():
+                if f"run {run_id}" in task.get("description", ""):
                     return  # Already have a task for this
 
             # Create fix task
