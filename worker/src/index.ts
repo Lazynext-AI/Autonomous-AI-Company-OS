@@ -435,6 +435,14 @@ async function agentTick(env: Env, ctx: ExecutionContext) {
     "UPDATE task_log SET status='pending' WHERE id=(SELECT id FROM task_log WHERE status='failed' AND attempts<3 ORDER BY created_at LIMIT 1)",
   ).run().catch(() => {});
 
+  // Sweep stale in_progress claims to failed — a fleet process killed
+  // mid-task leaves its claim wedged forever (not failed → no requeue, not
+  // completed → dashboard lies and dedup counts it as recent work). Flipping
+  // to failed lets the retry budget above decide its fate.
+  await env.DB.prepare(
+    "UPDATE task_log SET status='failed', error_log=json_insert(COALESCE(error_log,'[]'),'$[#]','orphaned: in_progress claim went stale') WHERE status='in_progress' AND COALESCE(started_at, created_at) < strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 hour')",
+  ).run().catch(() => {});
+
   // Execute the oldest pending task (real work: GitHub commit), and keep the
   // queue topped up by generating a task when it's running shallow.
   const pending = await env.DB.prepare(
