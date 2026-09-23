@@ -1,5 +1,6 @@
 """Code writer - writes generated code to files and commits to git."""
 
+import asyncio
 import re
 from pathlib import Path
 from typing import Optional, Any
@@ -200,9 +201,16 @@ class CodeWriter:
                 logger.error("file_manager_not_available", file=filename, task_id=task_id)
                 continue
 
+        # Run the repo's node tests before committing — the fleet previously
+        # pushed broken PRs (missing modules, jest API in node:test files)
+        # because nothing ever executed the generated tests locally.
+        tests_failed = None
+        if files_written and any(f.endswith((".mjs", ".js")) for f in files_written):
+            tests_failed = await self._run_node_tests(repo_root)
+
         # Commit to git if files were written
         git_info = {"committed": False, "branch": None, "pushed": False}
-        if files_written and self.git_manager:
+        if files_written and self.git_manager and not tests_failed:
             try:
                 # Use git manager for branch-based commits
                 git_info = await self.git_manager.create_pr_branch_and_commit(
@@ -219,6 +227,9 @@ class CodeWriter:
             "repo_root": str(repo_root),
         }
 
+        if tests_failed:
+            result["tests_failed"] = tests_failed
+
         if skipped_protected:
             result["skipped_protected"] = skipped_protected
         
@@ -227,3 +238,29 @@ class CodeWriter:
             result["warnings"] = f"{len(validation_errors)} file(s) had validation issues"
         
         return result
+
+    async def _run_node_tests(self, repo_root: Path, timeout: int = 120) -> Optional[str]:
+        """Run `node --test test/` in the product repo. Returns the failure
+        output tail, or None when tests pass / can't run here."""
+        test_dir = repo_root / "test"
+        if not test_dir.is_dir() or not any(test_dir.glob("*.test.mjs")):
+            return None
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "node", "--test", "test/",
+                cwd=str(repo_root),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+            )
+            try:
+                out, _ = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+            except asyncio.TimeoutError:
+                proc.kill()
+                return f"node --test timed out after {timeout}s"
+            if proc.returncode == 0:
+                return None
+            tail = out.decode(errors="replace")[-1500:]
+            logger.warning("local_tests_failed", output=tail[-300:])
+            return tail
+        except FileNotFoundError:
+            return None  # node not installed locally — CI remains the backstop
