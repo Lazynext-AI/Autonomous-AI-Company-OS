@@ -10,12 +10,13 @@ async function workerEnv(): Promise<Record<string, string | undefined>> {
   }
 }
 
-export async function workerFetch(path: string, body: unknown, method = "POST") {
+export async function workerFetch(path: string, body: unknown, method = "POST", internal = false) {
   const env = await workerEnv();
   const url = env.CLOUDFLARE_API_URL || process.env.CLOUDFLARE_API_URL;
   // /api/v1/* is the public API gateway — it requires an lzk_ key, not the
-  // internal shared secret. Internal routes (/query, /kv/*) use API_TOKEN.
-  const isPublicApi = path.startsWith("/api/v1/");
+  // internal shared secret. Internal routes (/query, /kv/*) use API_TOKEN —
+  // and admin-only /api/v1/* routes (billing subscriptions etc.) can force it.
+  const isPublicApi = path.startsWith("/api/v1/") && !internal;
   const token = isPublicApi
     ? env.LAZYNEXT_API_KEY || process.env.LAZYNEXT_API_KEY
     : env.CLOUDFLARE_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;

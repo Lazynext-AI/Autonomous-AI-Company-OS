@@ -17,6 +17,7 @@ export default function BillingPage() {
   const [plan, setPlan] = useState("Founder");
   const [planOpen, setPlanOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [subs, setSubs] = useState<any[]>([]);
 
   useEffect(() => {
     Promise.all([
@@ -44,6 +45,10 @@ export default function BillingPage() {
     })
       .then((r) => r.json())
       .then((d) => { if (d.value) setPlan(JSON.parse(d.value).name ?? "Founder"); })
+      .catch(() => {});
+    fetch("/api/billing")
+      .then((r) => r.json())
+      .then((d) => { if (Array.isArray(d.subscriptions)) setSubs(d.subscriptions); })
       .catch(() => {});
   }, []);
 
@@ -114,6 +119,27 @@ export default function BillingPage() {
               </div>
             ))}
           </div>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <h2 className="text-sm font-semibold mb-3">Active subscriptions</h2>
+          {subs.length === 0 ? (
+            <p className="text-xs text-muted">None active.</p>
+          ) : (
+            <div className="space-y-2.5">
+              {subs.map((s: any) => (
+                <div key={s.subscription_id} className="flex items-center gap-3 text-xs">
+                  <span className="font-semibold text-fg flex-1 truncate">{s.customer?.email ?? "—"}</span>
+                  <span className="text-muted">{s.product_name ?? s.product_id}</span>
+                  {s.trial_period_days > 0 && (
+                    <span className="text-accentSoft bg-accentBg px-1.5 py-0.5 rounded">{s.trial_period_days}d trial</span>
+                  )}
+                  <span className="text-muted">renews {s.next_billing_date ? new Date(s.next_billing_date).toLocaleDateString() : "—"}</span>
+                  <span className="text-accentSoft font-semibold">{s.status}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
 

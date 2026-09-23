@@ -21,3 +21,8 @@ export async function POST(req: NextRequest) {
   }
   return workerFetch("/api/v1/billing/checkout", { product_id, plan });
 }
+
+// Active subscriptions, proxied to the admin route (internal token).
+export async function GET() {
+  return workerFetch("/api/v1/billing/subscriptions", undefined, "GET", true);
+}

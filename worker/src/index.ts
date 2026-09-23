@@ -244,9 +244,13 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
     }
     case "/kv/put": {
       const b = await readBody<{ key: string; value: string; ttl?: number }>(req);
-      await env.EPHEMERAL.put(b.key, b.value, {
-        expirationTtl: Math.max(b.ttl ?? 60, 60),
-      });
+      // ttl: 0 = persistent write; omitted/other values get a >=60s floor
+      // so ephemeral route writes can't silently junk the namespace.
+      await env.EPHEMERAL.put(
+        b.key,
+        b.value,
+        b.ttl === 0 ? {} : { expirationTtl: Math.max(b.ttl ?? 60, 60) },
+      );
       return json({ ok: true });
     }
     case "/kv/delete": {
