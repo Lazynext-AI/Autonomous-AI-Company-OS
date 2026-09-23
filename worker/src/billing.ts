@@ -35,16 +35,16 @@ async function verifyDodo(
   });
 }
 
-async function dodoFetch(env: Env, path: string, body: unknown): Promise<Response> {
+async function dodoFetch(env: Env, path: string, body?: unknown, method = "POST"): Promise<Response> {
   const key = env.DODO_API_KEY;
   if (!key) return json({ error: "DODO_API_KEY not configured" }, 503);
   return fetch(`${env.DODO_API_BASE ?? DODO_API_DEFAULT}${path}`, {
-    method: "POST",
+    method,
     headers: {
       "content-type": "application/json",
       authorization: `Bearer ${key}`,
     },
-    body: JSON.stringify(body),
+    ...(method === "GET" ? {} : { body: JSON.stringify(body ?? {}) }),
   });
 }
 
@@ -187,6 +187,32 @@ export async function handleBilling(
     const d = (await r.json()) as { checkout_url?: string; session_id?: string };
     if (!r.ok) return json({ error: "checkout failed", detail: d }, 502);
     return json({ checkout_url: d.checkout_url, session_id: d.session_id });
+  }
+
+  // Cancel a subscription — internal token. Immediate cancellation only:
+  // the webhook downgrades the license on subscription.cancelled, so access
+  // ends when Dodo says it ends. Pass subscription_id, or email to resolve
+  // the customer's first active subscription via the Dodo API.
+  if (req.method === "POST" && path === "/api/v1/billing/cancel") {
+    const auth = req.headers.get("authorization") ?? "";
+    if (auth !== `Bearer ${env.API_TOKEN}`) return json({ error: "unauthorized" }, 401);
+    const b = (await req.json()) as { subscription_id?: string; email?: string };
+    let subId = b.subscription_id;
+    if (!subId && b.email) {
+      const cr = await dodoFetch(env, `/customers?email=${encodeURIComponent(b.email)}`, undefined, "GET");
+      const cd = (await cr.json()) as { items?: { customer_id?: string }[] };
+      const custId = cd.items?.[0]?.customer_id;
+      if (!custId) return json({ error: "customer not found" }, 404);
+      const sr = await dodoFetch(env, `/subscriptions?customer_id=${custId}&status=active`, undefined, "GET");
+      const sd = (await sr.json()) as { items?: { subscription_id?: string }[] };
+      subId = sd.items?.[0]?.subscription_id;
+      if (!subId) return json({ error: "no active subscription" }, 404);
+    }
+    if (!subId) return json({ error: "subscription_id or email required" }, 400);
+    const r = await dodoFetch(env, `/subscriptions/${subId}`, { status: "cancelled" }, "PATCH");
+    const d = (await r.json()) as Record<string, unknown>;
+    if (!r.ok) return json({ error: "cancel failed", detail: d }, 502);
+    return json({ ok: true, subscription_id: subId, status: d.status });
   }
 
   // Current plan — public read for the dashboard.
