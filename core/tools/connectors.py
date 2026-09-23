@@ -129,9 +129,9 @@ async def _whatsapp(payload: dict, cred: str) -> dict:
 
 async def _docuseal(payload: dict, cred: str) -> dict:
     # cred format: "<base_url>:<api_key>" — hosted https://api.docuseal.com or a
-    # self-hosted instance. Open-source, legally binding (ESIGN/UETA/eIDAS),
-    # free API. If payload has template_id, submits that template directly;
-    # otherwise builds a template from doc_text via the HTML API first.
+    # self-hosted instance. Open-source, legally binding (ESIGN/UETA/eIDAS).
+    # Free API on self-host; hosted API needs Pro. If payload has template_id,
+    # submits that template directly; otherwise builds one from doc_text first.
     base, _, key = cred.partition(":")
     base = base.rstrip("/")
     headers = {"X-Auth-Token": key, "content-type": "application/json"}
@@ -168,10 +168,32 @@ async def _docuseal(payload: dict, cred: str) -> dict:
     )
 
 
+async def _inkless(payload: dict, cred: str) -> dict:
+    # cred = Inkless API key (free — email hello@useinkless.com to get one).
+    # Legally binding (ESIGN/UETA) with audit trail + webhooks. Sends a
+    # pre-created template to recipients: build the template once in their
+    # webapp (app.useinkless.com/templates), then pass template_id here.
+    headers = {"x-api-key": cred, "content-type": "application/json"}
+    template_id = payload.get("template_id")
+    if not template_id:
+        return {"ok": False, "error": "inkless requires template_id — create the template in app.useinkless.com first"}
+    return await _post(
+        "https://api.useinkless.com/createFromTemplate",
+        headers=headers,
+        json_body={
+            "templateId": template_id,
+            "recipients": [{
+                "email": payload.get("signer_email", payload.get("email", "")),
+                "name": payload.get("signer_name", payload.get("name", "")),
+            }],
+        },
+    )
+
+
 _DISPATCH = {
     "x": _x, "linkedin": _linkedin, "meta": _meta,
     "twilio": _twilio, "whatsapp": _whatsapp,
-    "docuseal": _docuseal,
+    "docuseal": _docuseal, "inkless": _inkless,
     }
 
 

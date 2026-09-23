@@ -44,7 +44,8 @@ const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; nam
   {
     group: "Legal signing", icon: FileCheck2,
     items: [
-      { id: "docuseal", name: "DocuSeal", hint: "base URL + API key — legal-grade e-sign, open source" },
+      { id: "docuseal", name: "DocuSeal", hint: "base URL + API key — self-host free, or hosted Pro" },
+      { id: "inkless", name: "Inkless", hint: "API key (email hello@useinkless.com) — free hosted legal e-sign" },
     ],
   },
 ];
