@@ -13,7 +13,7 @@ import { handleA2a } from "./a2a";
 import { handleBilling } from "./billing";
 import { handleOAuth } from "./oauth";
 import { handleWebSearch, serper } from "./websearch";
-import { handleScrape } from "./scrape";
+import { handleScrape, handleRender } from "./scrape";
 import { getContainer } from "@cloudflare/containers";
 export { CodeExecContainer } from "./exec_container";
 import { handleWidget } from "./widget";
@@ -265,6 +265,9 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
     case "/scrape": {
       return handleScrape(req, env);
     }
+    case "/render": {
+      return handleRender(req, env);
+    }
     case "/exec": {
       if (!env.CODE_EXEC) return json({ error: "exec container not configured" }, 503);
       const container = getContainer(env.CODE_EXEC);
@@ -386,8 +389,9 @@ async function agentTick(env: Env, ctx: ExecutionContext) {
 
   const out: Record<string, unknown> = { phase: "operating" };
   if (!urls.site) out.site = await ensureSite(env, ctx, brain, urls);
-  // Deploy the product worker — or redeploy once with the repo-module build.
-  if (!urls.api || !urls.api_full) out.api = await deployProduct(env, ctx, brain, urls);
+  // Deploy the product worker — or redeploy until the rendered-scan build is
+  // live (api_full: repo module shipped, api_rendered=2: env bindings used).
+  if (!urls.api || !urls.api_full || urls.api_rendered !== "3") out.api = await deployProduct(env, ctx, brain, urls);
   if (pending) out.executed = await executeTask(env, ctx, brain, urls, pending);
   if ((remaining?.c ?? 0) < 5) out.generated = await operate(env, ctx, brain, urls);
   return out;
@@ -623,11 +627,11 @@ async function deployProduct(env: Env, ctx: ExecutionContext, brain: Brain, urls
     messages: [
       {
         role: "system",
-        content: `You are a senior Cloudflare engineer building "${brain.product_name}" (${brain.product_description ?? ""}). Write worker.js — a Cloudflare Worker ES module (export default { async fetch(req) {...} }) implementing the product's core feature as a real API.${
+        content: `You are a senior Cloudflare engineer building "${brain.product_name}" (${brain.product_description ?? ""}). Write worker.js — a Cloudflare Worker ES module (export default { async fetch(request, env) {...} }) implementing the product's core feature as a real API.${
           scannerSrc
-            ? ` The repo ships src/scanner.js exporting scanHtml(html: string) → issues[] ({rule, message}) and score(issues) → number. You MUST \`import { scanHtml, score } from './src/scanner.js'\` and use them for the checks.`
+            ? ` The repo ships src/scanner.js exporting scanHtml(html: string) → issues[] ({rule, message}), checkContrast(styles: [{tag,text,color,bg,size,weight}]) → issues[], and score(issues) → number. You MUST \`import { scanHtml, checkContrast, score } from './src/scanner.js'\` and use them.`
             : ""
-        } POST /scan accepts {"url": "..."} or {"html": "..."} — fetch the HTML when given a URL (workers have outbound fetch), run the scanner, return JSON {score, issues}. GET / returns a minimal HTML page with a working form that POSTs to /scan. No other imports, no dependencies, no placeholders — it must run as-is. Reply with ONLY the code — no fences, no commentary.`,
+        } The fetch handler MUST have signature fetch(request, env) — env.PLATFORM is a service binding to the platform worker and env.PLATFORM_TOKEN is its auth token; both are required. POST /scan accepts {"url": "..."} or {"html": "..."}. When given a URL, FIRST call the render service: env.PLATFORM.fetch(new Request("https://platform.internal/render", {method:"POST", headers:{authorization:"Bearer "+env.PLATFORM_TOKEN, "content-type":"application/json"}, body:JSON.stringify({url})})) — it returns {html, styles} of the fully rendered page; run scanHtml(html) + checkContrast(styles). If it fails, fall back to plain fetch(url) HTML with scanHtml only, and include "render_error" with the failure message in the response. Return JSON {score, issues, rendered: true|false}. GET / returns a minimal HTML page with a working form that POSTs to /scan. No other imports, no dependencies, no placeholders — it must run as-is. Reply with ONLY the code — no fences, no commentary.`,
       },
       { role: "user", content: "Write the worker." },
     ],
@@ -655,7 +659,18 @@ async function deployProduct(env: Env, ctx: ExecutionContext, brain: Brain, urls
 
   const acct = env.CF_ACCOUNT_ID, tok = env.CF_API_TOKEN;
   const fd = new FormData();
-  fd.append("metadata", new Blob([JSON.stringify({ main_module: "worker.js", compatibility_date: "2026-09-01" })], { type: "application/json" }));
+  const metadata = {
+    main_module: "worker.js",
+    compatibility_date: "2026-09-01",
+    // The product worker calls back into the platform's /render endpoint for
+    // Browser-Rendering-powered scans — token scoped to this platform only.
+    bindings: [
+      // Service binding: direct worker→worker call, no public egress.
+      { name: "PLATFORM", type: "service", service: "ai-company-os" },
+      { name: "PLATFORM_TOKEN", type: "secret_text", text: env.API_TOKEN ?? "" },
+    ],
+  };
+  fd.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
   fd.append("worker.js", new Blob([code], { type: "application/javascript+module" }), "worker.js");
   if (scannerSrc) {
     fd.append("src/scanner.js", new Blob([scannerSrc], { type: "application/javascript+module" }), "src/scanner.js");
@@ -677,7 +692,7 @@ async function deployProduct(env: Env, ctx: ExecutionContext, brain: Brain, urls
   const sub = subData.result?.subdomain ?? "workers.dev";
   const api = `https://${name}.${sub}.workers.dev`;
 
-  const newUrls = { ...urls, api, api_full: "1" };
+  const newUrls = { ...urls, api, api_full: "1", api_rendered: "3" };
   await env.DB.prepare("UPDATE company_brain SET live_urls=?, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')")
     .bind(JSON.stringify(newUrls)).run();
   await env.DB.prepare("INSERT INTO milestone_log (milestone_type, description) VALUES ('api_deployed', ?)")
