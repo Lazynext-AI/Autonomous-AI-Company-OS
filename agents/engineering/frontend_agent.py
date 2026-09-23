@@ -90,6 +90,15 @@ class FrontendAgent(BaseAgent):
                     # Automatically create deploy task if code was committed and pushed
                     if write_result.get("git_committed") and write_result.get("git_pushed"):
                         await self._auto_create_deploy_task(task, write_result)
+                elif write_result.get("skipped_protected"):
+                    # Every generated file targeted a managed path — nothing
+                    # shipped, so the task must not complete (dedup would mark
+                    # the feature done forever). Retry lands as a new module.
+                    result.success = False
+                    result.error = ("Deliverable blocked: generated files only target "
+                                    "protected paths — deliver as a NEW module instead "
+                                    "(e.g. src/<feature>.js), not an edit to managed files")
+                    result.lesson = "Managed files are protected — extend via new modules"
             except Exception as e:
                 logger.error("code_write_failed", task_id=task.task_id, error=str(e))
     

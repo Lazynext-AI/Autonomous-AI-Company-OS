@@ -274,6 +274,12 @@ class BaseAgent(ABC):
                     break
 
                 if result.success:
+                    # Write hooks run before completion is recorded — a hook
+                    # may veto success (e.g. every generated file was
+                    # protected-skipped) so the task retries instead of
+                    # "completing" with nothing shipped.
+                    await self.post_task_hook(task, result)
+                if result.success:
                     self._injected_context = ""
                     await self.on_success(task, result)
                     return
@@ -387,7 +393,6 @@ class BaseAgent(ABC):
             except Exception as e:
                 self.logger.warning("reward_engine_success_path_failed", task_id=task.task_id, error=str(e))
         self.current_task = None
-        await self.post_task_hook(task, result)
 
     async def post_task_hook(self, task: TaskMessage, result: TaskResult) -> None:
         """Override in subclass for post-task logic."""
