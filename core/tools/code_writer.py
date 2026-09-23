@@ -101,6 +101,7 @@ class CodeWriter:
         self.validator = CodeValidator()
         self.file_manager: Optional[FileManager] = None
         self.git_manager: Optional[GitManager] = None
+        self._llm: Optional[Any] = None
 
     async def write_code(
         self,
@@ -207,14 +208,22 @@ class CodeWriter:
         tests_failed = None
         if files_written and any(f.endswith((".mjs", ".js")) for f in files_written):
             tests_failed = await self._run_node_tests(repo_root)
-            if tests_failed:
-                # Broken artifacts left in the tree poison the next task's
-                # test run — undo this round's writes.
-                await self._revert_files(repo_root, files_written)
+
+        # Task-fit review — catches valid-but-wrong artifacts (DOM ids that
+        # don't exist, same-origin API calls from Pages, dead code) that the
+        # test gate cannot. Same role as the cloud loop's LLM review.
+        fitness_failed = None
+        if files_written and not tests_failed:
+            fitness_failed = await self._fitness_check(task_description, files_written, repo_root)
+
+        if tests_failed or fitness_failed:
+            # Rejected artifacts left in the tree poison the next task's
+            # test run — undo this round's writes.
+            await self._revert_files(repo_root, files_written)
 
         # Commit to git if files were written
         git_info = {"committed": False, "branch": None, "pushed": False}
-        if files_written and self.git_manager and not tests_failed:
+        if files_written and self.git_manager and not tests_failed and not fitness_failed:
             try:
                 # Use git manager for branch-based commits
                 git_info = await self.git_manager.create_pr_branch_and_commit(
@@ -233,6 +242,9 @@ class CodeWriter:
 
         if tests_failed:
             result["tests_failed"] = tests_failed
+
+        if fitness_failed:
+            result["fitness_failed"] = fitness_failed
 
         if skipped_protected:
             result["skipped_protected"] = skipped_protected
@@ -293,3 +305,63 @@ class CodeWriter:
                     except OSError:
                         break
         logger.info("files_reverted", files=files)
+
+    async def _fitness_check(
+        self, task_description: str, files: list[str], repo_root: Path
+    ) -> Optional[str]:
+        """LLM task-fit review — rejects only concrete mismatches (references
+        to files/DOM ids/routes that don't exist, wrong hosts, unrelated code).
+        Returns the issue text, or None when the artifacts fit."""
+        try:
+            from core.config import get_light_model
+            from core.llm.workers_ai_client import WorkersAIClient
+
+            if self._llm is None:
+                self._llm = WorkersAIClient()
+
+            proc = await asyncio.create_subprocess_exec(
+                "git", "ls-files", cwd=str(repo_root),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            out, _ = await proc.communicate()
+            tree = out.decode(errors="replace")[:3000]
+
+            parts = []
+            for rel in files[:4]:
+                try:
+                    content = (repo_root / rel).read_text(encoding="utf-8")[:2500]
+                    parts.append(f"### {rel}\n{content}")
+                except Exception:
+                    continue
+            if not parts:
+                return None
+
+            verdict = await self._llm.chat_completion(
+                get_light_model(),
+                [{"role": "user", "content": (
+                    f"TASK: {task_description}\n\n"
+                    f"EXISTING REPO FILES:\n{tree}\n\n"
+                    f"NEW ARTIFACTS:\n" + "\n\n".join(parts)
+                )}],
+                system_prompt=(
+                    "Review whether the new artifacts concretely fit the task and this repo. "
+                    "Reject ONLY for hard defects: references to files, DOM ids, routes, or "
+                    "endpoints that do not exist; wrong API hosts (the site's API is the "
+                    "workers.dev URL, not same-origin); code unrelated to the task. "
+                    "Style, verbosity, and incompleteness are NOT defects. "
+                    'Reply JSON only: {"ok":true} or {"ok":false,"issue":"<one sentence>"}'
+                ),
+            )
+            import json as _json
+            text = str(verdict).strip()
+            start, end = text.find("{"), text.rfind("}")
+            data = _json.loads(text[start:end + 1]) if start >= 0 else {"ok": True}
+            if not data.get("ok", True):
+                issue = str(data.get("issue", "task-fit rejected"))[:300]
+                logger.warning("fitness_check_rejected", issue=issue)
+                return issue
+            return None
+        except Exception as e:
+            logger.warning("fitness_check_error", error=str(e))
+            return None  # LLM unavailable — test gate + CI remain the backstop
