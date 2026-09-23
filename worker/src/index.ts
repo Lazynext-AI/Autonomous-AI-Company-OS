@@ -541,11 +541,25 @@ async function operate(env: Env, ctx: ExecutionContext, brain: Brain, urls: Reco
     ? `Repo currently contains: ${tree.slice(0, 40).join(", ")}. Build on it — don't duplicate what exists.`
     : "Repo is nearly empty — foundational tasks (package.json, core module, tests) come first.";
 
+  // Failed/completed tasks feed back as a do-not-repeat list — exact-match
+  // dedup alone lets the same idea regenerate under slightly different wording.
+  const recent = await env.DB.prepare(
+    "SELECT description FROM task_log WHERE status IN ('failed','completed') ORDER BY created_at DESC LIMIT 15",
+  )
+    .all<{ description: string }>()
+    .catch(() => ({ results: [] as { description: string }[] }));
+  const doneCtx = (recent.results ?? [])
+    .map((r) => r.description)
+    .filter(Boolean)
+    .slice(0, 15)
+    .map((d) => d.slice(0, 60))
+    .join(" | ");
+
   const res = await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
     messages: [
       {
         role: "system",
-        content: `You are ${a.persona} at an autonomous software company building "${brain.product_name}" (${brain.product_description ?? ""}). Mission: ${brain.mission ?? "build and launch a valuable product"}. North star: the deployed site must become a WORKING version of the product — a visitor can use its core feature client-side in the browser (no backend). Build ONE coherent product — real modules that import each other, a package manifest, tests (test_*.py or *.test.js), and a functional index.html. ${repoCtx} Reply with ONLY JSON: {"status": "one line, first person, under 25 words", "task": "one concrete deliverable for the sprint or null if nothing new is needed"}. No markdown.`,
+        content: `You are ${a.persona} at an autonomous software company building "${brain.product_name}" (${brain.product_description ?? ""}). Mission: ${brain.mission ?? "build and launch a valuable product"}. North star: the deployed site must become a WORKING version of the product — a visitor can use its core feature client-side in the browser (no backend). Build ONE coherent product — real modules that import each other, a package manifest, tests (test_*.py or *.test.js), and a functional index.html. ${repoCtx}${doneCtx ? ` Already shipped or dead — do NOT repeat or rephrase: ${doneCtx}.` : ""} Reply with ONLY JSON: {"status": "one line, first person, under 25 words", "task": "one concrete deliverable for the sprint or null if nothing new is needed"}. No markdown.`,
       },
       { role: "user", content: "What are you doing right now, and what single task most needs doing next?" },
     ],
@@ -892,7 +906,14 @@ async function executeTask(env: Env, ctx: ExecutionContext, brain: Brain, urls: 
       max_tokens: 3000,
     });
     const cRaw = (res as { response?: unknown }).response;
-    const content = (typeof cRaw === "string" ? cRaw : JSON.stringify(cRaw ?? "")).trim();
+    let content = (typeof cRaw === "string" ? cRaw : JSON.stringify(cRaw ?? "")).trim();
+    // LLMs keep wrapping whole files in ```lang fences; HTMLParser tolerates a
+    // leading fence as text, so fenced HTML has shipped broken before. Unwrap
+    // a single whole-file fence for non-markdown artifacts before verifying.
+    if (meta?.path && !meta.path.endsWith(".md")) {
+      const fenced = content.match(/^```[\w-]*\s*\n([\s\S]*?)\n?```\s*$/);
+      if (fenced) content = fenced[1].trim();
+    }
     if (!content || content.length < 20) {
       await env.DB.prepare("UPDATE task_log SET status='failed', error_log=json_insert(error_log,'$[#]',?), completed_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?")
         .bind("no artifact produced", task.id).run();
@@ -900,6 +921,14 @@ async function executeTask(env: Env, ctx: ExecutionContext, brain: Brain, urls: 
     }
 
     const path = sanitizePath(meta?.path ?? (ext ? `docs/output.${ext}` : `docs/output-${Date.now()}.md`));
+    // Core product files are platform-managed — agents kept regenerating
+    // index.html (losing features / shipping fences). New modules, docs and
+    // tests stay fair game; the deployed runtime surface does not.
+    const PROTECTED = new Set(["index.html", "worker.js", "src/scanner.js", "package.json"]);
+    if (PROTECTED.has(path)) {
+      feedback = `${path} is a managed core file — deliver this as a new module, doc, or test instead`;
+      continue;
+    }
     const conflict = pathConflict(path);
     if (conflict) {
       feedback = `${conflict} — choose a different path`;
