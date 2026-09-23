@@ -164,5 +164,43 @@ export async function handleServices(
     return json({ ok: true, id, sent, total: contacts.length });
   }
 
+  // --- Inkless e-sign -------------------------------------------------------
+  // The only signing path — credential lives in KV as conn:inkless in
+  // "base_url:api_key" form (bare key → hosted api.useinkless.com).
+  if (path === "/api/v1/inkless/documents" && req.method === "GET")
+    return inkless(env, "GET", "/getAllDocuments");
+  if (path === "/api/v1/inkless/send" && req.method === "POST") {
+    if (!b.template_id || !b.signer_email)
+      return json({ error: "template_id and signer_email required" }, 400);
+    return inkless(env, "POST", "/createFromTemplate", {
+      templateId: String(b.template_id),
+      emailSubject: b.subject ? String(b.subject) : undefined,
+      recipients: [{
+        email: String(b.signer_email),
+        name: String(b.signer_name ?? b.signer_email),
+      }],
+    });
+  }
+
   return json({ error: "not found" }, 404);
+}
+
+// Reads conn:inkless from KV, splits on the LAST ':' so https:// URLs survive,
+// then calls the Inkless API. {connected:false} when no credential is set.
+async function inkless(
+  env: Env, method: string, endpoint: string, body?: unknown,
+): Promise<Response> {
+  const cred = await env.EPHEMERAL.get("conn:inkless");
+  if (!cred) return json({ connected: false, error: "inkless not connected — set it in Settings → Connector library" });
+  const i = cred.lastIndexOf(":");
+  const maybeBase = i > 0 ? cred.slice(0, i) : "";
+  const base = (/^https?:\/\//.test(maybeBase) ? maybeBase : "https://api.useinkless.com").replace(/\/+$/, "");
+  const key = /^https?:\/\//.test(maybeBase) ? cred.slice(i + 1) : cred;
+  const r = await fetch(`${base}${endpoint}`, {
+    method,
+    headers: { "x-api-key": key, "content-type": "application/json" },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  const data = (await r.json().catch(() => ({}))) as Record<string, unknown>;
+  return json({ connected: true, ok: r.ok, status: r.status, ...data }, r.ok ? 200 : r.status);
 }

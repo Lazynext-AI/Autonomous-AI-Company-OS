@@ -311,7 +311,7 @@ export default {
         return cors(req, await handleWebhooks(req, env, ctx, path));
       if (path.startsWith("/api/v1/crm") || path.startsWith("/api/v1/support") ||
           path.startsWith("/api/v1/booking") || path.startsWith("/api/v1/store") ||
-          path.startsWith("/api/v1/marketing"))
+          path.startsWith("/api/v1/marketing") || path.startsWith("/api/v1/inkless"))
         return cors(req, await handleServices(req, env, ctx, path));
       if (path.startsWith("/api/")) return cors(req, await handlePublicApi(req, env, ctx, path));
 
