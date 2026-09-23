@@ -153,7 +153,9 @@ class CodeWriter:
             seen_filenames.add(filename)
 
             rel = filename.lstrip("./").replace("\\", "/")
-            if rel in PROTECTED_FILES or rel.startswith(".github/"):
+            # .github/ is devops-only territory — workflow fixes go through
+            # the gated PR path where CI validates the workflow itself.
+            if rel in PROTECTED_FILES or (rel.startswith(".github/") and agent_role != "devops"):
                 logger.info("protected_file_skipped", file=filename, task_id=task_id)
                 skipped_protected.append(filename)
                 continue
