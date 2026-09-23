@@ -578,7 +578,7 @@ async function operate(env: Env, ctx: ExecutionContext, brain: Brain, urls: Reco
     } catch {}
   }
 
-  if (task && (pending?.c ?? 0) < 25) {
+  if (task && (pending?.c ?? 0) < 25 && !(await taskAlreadyTried(env, task))) {
     // Dedupe: skip if the same task is already queued or running.
     await env.DB.prepare(
       "INSERT INTO task_log (task_id, agent_id, description, status, created_at) SELECT lower(hex(randomblob(4))), ?, ?, 'pending', strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE NOT EXISTS (SELECT 1 FROM task_log WHERE description=? AND status IN ('pending','in_progress'))",
@@ -589,6 +589,36 @@ async function operate(env: Env, ctx: ExecutionContext, brain: Brain, urls: Reco
   const payload = JSON.stringify({ from: a.id, agent: a.id, text: status, model: "workers-ai/llama-3.3-70b", ...(task ? { task } : {}) });
   const id = await publishToBus(env, ctx, "conversations", payload);
   return { phase: "operating", id, agent: a.id, text: status, task };
+}
+
+// Was this task already tried recently — in ANY status? Exact-match dedup on
+// pending only lets the same idea respawn under new wording forever (three
+// tasks rewrote the same doc file). Substring + content-word overlap catches
+// paraphrases; completed/failed count because the outcome exists already.
+const TASK_STOP = new Set(["task", "the", "and", "for", "with", "that", "this", "into", "from", "conduct", "implement", "setup", "set", "add", "create", "build", "review"]);
+function contentWords(d: string): Set<string> {
+  return new Set(d.toLowerCase().split(/\s+/).map((w) => w.replace(/[.,:;()]/g, "")).filter((w) => w.length > 3 && !TASK_STOP.has(w)));
+}
+async function taskAlreadyTried(env: Env, desc: string): Promise<boolean> {
+  const rows = await env.DB.prepare(
+    "SELECT description FROM task_log WHERE created_at > datetime('now','-24 hours') ORDER BY created_at DESC LIMIT 60",
+  )
+    .all<{ description: string }>()
+    .catch(() => ({ results: [] as { description: string }[] }));
+  const d = desc.toLowerCase().trim();
+  const a = contentWords(d);
+  for (const r of rows.results ?? []) {
+    const t = (r.description ?? "").toLowerCase().trim();
+    if (!t) continue;
+    if (d.includes(t) || t.includes(d)) return true;
+    const b = contentWords(t);
+    if (!a.size || !b.size) continue;
+    const [sm, lg] = a.size <= b.size ? [a, b] : [b, a];
+    let inter = 0;
+    for (const w of sm) if (lg.has(w)) inter++;
+    if (inter >= Math.max(2, Math.floor((sm.size + 1) / 2))) return true;
+  }
+  return false;
 }
 
 // --- GitHub execution -------------------------------------------------------
