@@ -383,6 +383,21 @@ async function advanceLeadSequence(env: Env) {
       if (s.ok) await env.EPHEMERAL.put(`lead:${email}:stage`, String(stage + 1), { expirationTtl: 31_536_000 });
     }
   }
+  // Trial-expiry reminders — stamped at subscription.active for trialing
+  // checkouts (see billing.ts). At day 11 of the 14-day trial, warn once.
+  const trials = await env.EPHEMERAL.list({ prefix: "trial:" });
+  for (const k of trials.keys) {
+    if (k.name.endsWith(":reminded")) continue;
+    const email = k.name.slice(6);
+    const started = parseInt((await env.EPHEMERAL.get(k.name)) ?? "0", 10);
+    if (!started || (Date.now() - started) / 86_400_000 < 11) continue;
+    const s = await brevoSend(
+      env, email,
+      "Your Accessibility Checker Pro trial ends in 3 days",
+      "<p>Your 14-day Pro trial ends in 3 days. Your subscription then continues at $9/mo automatically — cancel any time before then to keep the free tier.</p>",
+    );
+    if (s.ok) await env.EPHEMERAL.put(`trial:${email}:reminded`, "1", { expirationTtl: 31_536_000 });
+  }
 }
 
 // Autonomous agent loop: a Cloudflare cron tick makes the company act

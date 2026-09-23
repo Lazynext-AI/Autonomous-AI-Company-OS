@@ -76,7 +76,7 @@ export async function handleBilling(
 
     const evt = JSON.parse(raw) as {
       type?: string;
-      data?: { metadata?: { plan?: string }; status?: string; customer?: { email?: string } };
+      data?: { metadata?: { plan?: string; trial?: string }; status?: string; customer?: { email?: string } };
     };
     const plan = evt.data?.metadata?.plan;
     const email = evt.data?.customer?.email?.toLowerCase();
@@ -92,6 +92,17 @@ export async function handleBilling(
       await env.DB.prepare(
         "INSERT INTO bus_messages (channel, payload, created_at) VALUES ('billing.events', ?, datetime('now'))",
       ).bind(JSON.stringify({ type, plan, email })).run();
+    }
+    // Free-trial lifecycle: checkout sets metadata.trial='1'; on activation we
+    // stamp trial:<email> so the daily sweep can email a 3-day warning. Any
+    // later terminal event (renewal payment, cancel, expiry, failure) clears
+    // it so converted/expired trials are never reminded.
+    if (email) {
+      if (type === "subscription.active" && evt.data?.metadata?.trial === "1") {
+        await env.EPHEMERAL.put(`trial:${email}`, String(Date.now()), { expirationTtl: 31_536_000 });
+      } else if (type !== "subscription.active") {
+        await env.EPHEMERAL.delete(`trial:${email}`);
+      }
     }
     if (plan && (activate || downgrade)) {
       const name = activate ? plan : "Founder";
@@ -133,7 +144,7 @@ export async function handleBilling(
   if (req.method === "POST" && path === "/api/v1/billing/products") {
     const auth = req.headers.get("authorization") ?? "";
     if (auth !== `Bearer ${env.API_TOKEN}`) return json({ error: "unauthorized" }, 401);
-    const b = (await req.json()) as { name?: string; description?: string; price_cents?: number; currency?: string; recurring?: boolean };
+    const b = (await req.json()) as { name?: string; description?: string; price_cents?: number; currency?: string; recurring?: boolean; trial_days?: number };
     if (!b.name || !b.price_cents) return json({ error: "name and price_cents required" }, 400);
     const r = await dodoFetch(env, "/products", {
       name: b.name,
@@ -146,7 +157,11 @@ export async function handleBilling(
         discount: 0,
         purchasing_power_parity: false,
         tax_inclusive: false,
-        ...(b.recurring === false ? {} : { payment_frequency_count: 1, payment_frequency_interval: "Month", subscription_period_count: 1, subscription_period_interval: "Month" }),
+        ...(b.recurring === false ? {} : {
+          payment_frequency_count: 1, payment_frequency_interval: "Month",
+          subscription_period_count: 1, subscription_period_interval: "Month",
+          ...(b.trial_days ? { trial_period_days: b.trial_days } : {}),
+        }),
       },
     });
     const d = (await r.json()) as { product_id?: string; id?: string };
@@ -158,12 +173,16 @@ export async function handleBilling(
   if (req.method === "POST" && path === "/api/v1/billing/checkout") {
     const auth = req.headers.get("authorization") ?? "";
     if (auth !== `Bearer ${env.API_TOKEN}`) return json({ error: "unauthorized" }, 401);
-    const b = (await req.json()) as { product_id?: string; plan?: string };
+    const b = (await req.json()) as { product_id?: string; plan?: string; trial_days?: number };
     if (!b.product_id) return json({ error: "product_id required" }, 400);
+    const trial = (b.trial_days ?? 0) > 0;
     const r = await dodoFetch(env, "/checkouts", {
       product_cart: [{ product_id: b.product_id, quantity: 1 }],
       return_url: "https://lazynext-platform.github.io/accessibility-checker/?upgraded=1",
-      metadata: { plan: b.plan ?? "" },
+      metadata: { plan: b.plan ?? "", ...(trial ? { trial: "1" } : {}) },
+      // Card-upfront free trial: Dodo collects the payment method now and
+      // auto-converts to the recurring price when trial_period_days elapse.
+      ...(trial ? { subscription_data: { trial_period_days: b.trial_days } } : {}),
     });
     const d = (await r.json()) as { checkout_url?: string; session_id?: string };
     if (!r.ok) return json({ error: "checkout failed", detail: d }, 502);
