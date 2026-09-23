@@ -130,7 +130,14 @@ class MessageBus:
                     logger.warning("message_deserialize_failed", error=str(e))
             return result
         except Exception as e:
-            logger.error("read_messages_failed", channel=channel.value, error=str(e))
+            # httpx timeouts carry no message — log the type so the cause is
+            # visible. Long-poll timeouts are transient; unacked messages stay
+            # pending and the next cycle retries, so this is a warning.
+            logger.warning(
+                "read_messages_failed",
+                channel=channel.value,
+                error=f"{type(e).__name__}: {e}",
+            )
             return []
 
     async def acknowledge(self, channel: Channels, consumer_group: str, message_id: str) -> None:
