@@ -606,8 +606,9 @@ async function bootstrapRepo(env: Env, ctx: ExecutionContext, brain: Brain) {
 }
 
 // Phase 2b: execute one pending task — Workers AI produces a file artifact
-// (code or doc) which is committed to the product repo, then the task is
-// marked completed with the commit URL as its result.
+// which is verified (real syntax check via the exec container where the file
+// type allows, plus an LLM task-fit review), retried once on failure, then
+// committed to the product repo and the task marked completed.
 async function executeTask(env: Env, ctx: ExecutionContext, brain: Brain, urls: Record<string, string>, task: Task) {
   if (!env.AI) return { error: "AI binding not configured" };
   const repo = (urls.repo ?? "").replace("https://github.com/", "").replace(/\.git$/, "");
@@ -616,38 +617,118 @@ async function executeTask(env: Env, ctx: ExecutionContext, brain: Brain, urls: 
   await env.DB.prepare("UPDATE task_log SET status='in_progress', attempts=attempts+1, started_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?")
     .bind(task.id).run();
 
-  const res = await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
+  let feedback = "";
+  for (let attempt = 0; attempt < 2; attempt++) {
+    // Two-step generation: a tiny JSON for path+summary (always parses), then
+    // the raw file contents (no envelope — can't be truncated mid-JSON).
+    const metaRes = await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
+      messages: [
+        {
+          role: "system",
+          content: `You are ${task.agent_id} at a software company building "${brain.product_name}". Choose where this task's deliverable belongs in the repo — code under src/, docs under docs/, marketing under marketing/, research under docs/research/. Reply with ONLY JSON: {"path": "relative/file/path", "summary": "one line"}.`,
+        },
+        { role: "user", content: `Task: ${task.description}` },
+      ],
+      max_tokens: 80,
+    });
+    const metaRaw0 = (metaRes as { response?: unknown }).response;
+    const metaRaw = (typeof metaRaw0 === "string" ? metaRaw0 : JSON.stringify(metaRaw0 ?? "")).trim();
+    const mm = metaRaw.match(/\{[\s\S]*\}/);
+    let meta: { path?: string; summary?: string } | null = null;
+    if (mm) { try { meta = JSON.parse(mm[0]); } catch {} }
+
+    const ext = meta?.path?.split(".").pop()?.toLowerCase();
+    const res = await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
+      messages: [
+        {
+          role: "system",
+          content: `You are ${task.agent_id} at a software company building "${brain.product_name}" (${brain.product_description ?? ""}). Write the complete contents of the file "${meta?.path ?? "docs/output.md"}" for this task — real, working content, no placeholders. Reply with ONLY the file contents — no JSON wrapper, no preamble, no markdown fences.${feedback ? ` Previous attempt was rejected: ${feedback}. Fix it.` : ""}`,
+        },
+        { role: "user", content: `Task: ${task.description}` },
+      ],
+      max_tokens: 3000,
+    });
+    const cRaw = (res as { response?: unknown }).response;
+    const content = (typeof cRaw === "string" ? cRaw : JSON.stringify(cRaw ?? "")).trim();
+    if (!content || content.length < 20) {
+      await env.DB.prepare("UPDATE task_log SET status='failed', error_log=json_insert(error_log,'$[#]',?), completed_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?")
+        .bind("no artifact produced", task.id).run();
+      return { task: task.task_id, error: "no artifact produced" };
+    }
+
+    const path = sanitizePath(meta?.path ?? (ext ? `docs/output.${ext}` : `docs/output-${Date.now()}.md`));
+    const v = await verifyArtifact(env, brain, task, path, content);
+    if (v.ok) {
+      const put = await ghPutFile(env, repo, path, content, `${task.agent_id}: ${(meta?.summary ?? task.description).slice(0, 60)}`);
+      if (!put.ok) {
+        await env.DB.prepare("UPDATE task_log SET status='failed', error_log=json_insert(error_log,'$[#]',?), completed_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?")
+          .bind(put.error ?? "github commit failed", task.id).run();
+        return { task: task.task_id, error: put.error };
+      }
+      await env.DB.prepare("UPDATE task_log SET status='completed', result=?, completed_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?")
+        .bind(put.url ?? `https://github.com/${repo}/blob/main/${path}`, task.id).run();
+      const text = `Done: ${task.description.slice(0, 80)} → ${put.url ?? path}`;
+      await publishToBus(env, ctx, "conversations", JSON.stringify({ from: task.agent_id, agent: task.agent_id, text, model: "workers-ai/llama-3.3-70b", event: "task_completed", task: task.task_id }));
+      return { task: task.task_id, agent: task.agent_id, path, url: put.url, verified: v.how, attempts: attempt + 1 };
+    }
+    feedback = v.issue ?? "verification failed";
+  }
+
+  await env.DB.prepare("UPDATE task_log SET status='failed', error_log=json_insert(error_log,'$[#]',?), completed_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?")
+    .bind(`verification failed: ${feedback}`.slice(0, 400), task.id).run();
+  return { task: task.task_id, error: `verification failed: ${feedback}` };
+}
+
+// Verify an artifact before it touches the repo. Deterministic syntax checks
+// run inside the exec container (Python) when the file type allows; otherwise
+// an LLM review judges task fit. Returns the failure reason when rejected.
+async function verifyArtifact(
+  env: Env, brain: Brain, task: Task, path: string, content: string,
+): Promise<{ ok: boolean; how?: string; issue?: string }> {
+  const ext = path.split(".").pop()?.toLowerCase() ?? "";
+  const encoded = b64(content);
+  const checks: Record<string, string> = {
+    py: `import base64\ncompile(base64.b64decode("${encoded}").decode("utf-8","replace"),"a.py","exec")\nprint("ok")`,
+    json: `import base64,json\njson.loads(base64.b64decode("${encoded}").decode("utf-8","replace"))\nprint("ok")`,
+    html: `import base64\nfrom html.parser import HTMLParser\np=HTMLParser()\np.feed(base64.b64decode("${encoded}").decode("utf-8","replace"))\nassert "<" in base64.b64decode("${encoded}").decode("utf-8","replace")\nprint("ok")`,
+    md: `import base64\nassert len(base64.b64decode("${encoded}").decode("utf-8","replace").strip())>20,"empty"\nprint("ok")`,
+  };
+  const check = checks[ext];
+  if (check && env.CODE_EXEC) {
+    try {
+      const container = getContainer(env.CODE_EXEC);
+      const r = await container.fetch(new Request("https://exec.local/exec", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ code: check, timeout: 30 }),
+      }));
+      const out = (await r.json().catch(() => ({}))) as { success?: boolean; error?: string; stderr?: string };
+      if (r.ok && out.success === false) {
+        return { ok: false, how: "exec", issue: (out.error ?? out.stderr ?? "syntax check failed").slice(0, 300) };
+      }
+      if (r.ok && out.success) return { ok: true, how: "exec" };
+      // Container unavailable → fall through to LLM review.
+    } catch {}
+  }
+
+  const res = await env.AI!.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
     messages: [
       {
         role: "system",
-        content: `You are ${task.agent_id}, an agent at an autonomous software company building "${brain.product_name}" (${brain.product_description ?? ""}). Execute this task by producing ONE file artifact for the repo — code under src/, docs under docs/, marketing copy under marketing/, research under docs/research/. Reply with ONLY JSON: {"path": "relative/file/path", "content": "full file contents", "summary": "one line"}. No markdown fences around the JSON.`,
+        content: `You are a reviewer at a software company building "${brain.product_name}". Reject ONLY for clear problems: empty/stub content, placeholder text (TODO, "implement this"), wrong file type for its extension, malformed syntax, or content unrelated to the task. Cross-module references are fine — files may import helpers defined elsewhere in the repo. Reply with ONLY JSON: {"ok": true} or {"ok": false, "issue": "one line"}.`,
       },
-      { role: "user", content: `Task: ${task.description}` },
+      { role: "user", content: `Task: ${task.description}\nFile: ${path}\n\n${content.slice(0, 4000)}` },
     ],
-    max_tokens: 3000,
+    max_tokens: 100,
   });
   const raw0 = (res as { response?: unknown }).response;
   const raw = (typeof raw0 === "string" ? raw0 : JSON.stringify(raw0 ?? "")).trim();
   const m = raw.match(/\{[\s\S]*\}/);
-  let artifact: { path?: string; content?: string; summary?: string } | null = null;
-  if (m) { try { artifact = JSON.parse(m[0]); } catch {} }
-  if (!artifact?.content) {
-    await env.DB.prepare("UPDATE task_log SET status='failed', error_log=json_insert(error_log,'$[#]',?), completed_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?")
-      .bind("no artifact produced", task.id).run();
-    return { task: task.task_id, error: "no artifact produced" };
+  if (m) {
+    try {
+      const v = JSON.parse(m[0]) as { ok?: boolean; issue?: string };
+      return v.ok ? { ok: true, how: "llm" } : { ok: false, how: "llm", issue: (v.issue ?? "review failed").slice(0, 300) };
+    } catch {}
   }
-
-  const path = sanitizePath(artifact.path);
-  const put = await ghPutFile(env, repo, path, artifact.content, `${task.agent_id}: ${(artifact.summary ?? task.description).slice(0, 60)}`);
-  if (!put.ok) {
-    await env.DB.prepare("UPDATE task_log SET status='failed', error_log=json_insert(error_log,'$[#]',?), completed_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?")
-      .bind(put.error ?? "github commit failed", task.id).run();
-    return { task: task.task_id, error: put.error };
-  }
-
-  await env.DB.prepare("UPDATE task_log SET status='completed', result=?, completed_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?")
-    .bind(put.url ?? `https://github.com/${repo}/blob/main/${path}`, task.id).run();
-  const text = `Done: ${task.description.slice(0, 80)} → ${put.url ?? path}`;
-  await publishToBus(env, ctx, "conversations", JSON.stringify({ from: task.agent_id, agent: task.agent_id, text, model: "workers-ai/llama-3.3-70b", event: "task_completed", task: task.task_id }));
-  return { task: task.task_id, agent: task.agent_id, path, url: put.url };
+  return { ok: false, how: "llm", issue: "review not parseable" };
 }
