@@ -679,32 +679,35 @@ async function executeTask(env: Env, ctx: ExecutionContext, brain: Brain, urls: 
   return { task: task.task_id, error: `verification failed: ${feedback}` };
 }
 
-// Verify an artifact before it touches the repo. Deterministic syntax checks
-// run inside the exec container (Python) when the file type allows; otherwise
-// an LLM review judges task fit. Returns the failure reason when rejected.
+// Verify an artifact before it touches the repo. The file is written into
+// the exec container and checked in its real runtime — py_compile for .py,
+// node --check for .js, json.load for .json, HTMLParser for .html — with an
+// LLM task-fit review as fallback when the container is unavailable or the
+// type has no runtime check.
 async function verifyArtifact(
   env: Env, brain: Brain, task: Task, path: string, content: string,
 ): Promise<{ ok: boolean; how?: string; issue?: string }> {
   const ext = path.split(".").pop()?.toLowerCase() ?? "";
-  const encoded = b64(content);
-  const checks: Record<string, string> = {
-    py: `import base64\ncompile(base64.b64decode("${encoded}").decode("utf-8","replace"),"a.py","exec")\nprint("ok")`,
-    json: `import base64,json\njson.loads(base64.b64decode("${encoded}").decode("utf-8","replace"))\nprint("ok")`,
-    html: `import base64\nfrom html.parser import HTMLParser\np=HTMLParser()\np.feed(base64.b64decode("${encoded}").decode("utf-8","replace"))\nassert "<" in base64.b64decode("${encoded}").decode("utf-8","replace")\nprint("ok")`,
-    md: `import base64\nassert len(base64.b64decode("${encoded}").decode("utf-8","replace").strip())>20,"empty"\nprint("ok")`,
+  const fname = path.split("/").pop() ?? `artifact.${ext}`;
+  const commands: Record<string, string[]> = {
+    py: ["python3", "-m", "py_compile", fname],
+    js: ["node", "--check", fname],
+    json: ["python3", "-c", "import json,sys; json.load(open(sys.argv[1]))", fname],
+    html: ["python3", "-c", "import sys; from html.parser import HTMLParser; HTMLParser().feed(open(sys.argv[1]).read())", fname],
+    md: ["python3", "-c", "import sys; assert len(open(sys.argv[1]).read().strip())>20,'empty'", fname],
   };
-  const check = checks[ext];
-  if (check && env.CODE_EXEC) {
+  const command = commands[ext];
+  if (command && env.CODE_EXEC) {
     try {
       const container = getContainer(env.CODE_EXEC);
       const r = await container.fetch(new Request("https://exec.local/exec", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ code: check, timeout: 30 }),
+        body: JSON.stringify({ files: { [fname]: content }, command, timeout: 30 }),
       }));
       const out = (await r.json().catch(() => ({}))) as { success?: boolean; error?: string; stderr?: string };
       if (r.ok && out.success === false) {
-        return { ok: false, how: "exec", issue: (out.error ?? out.stderr ?? "syntax check failed").slice(0, 300) };
+        return { ok: false, how: "exec", issue: (out.error ?? out.stderr ?? "runtime check failed").slice(0, 300) };
       }
       if (r.ok && out.success) return { ok: true, how: "exec" };
       // Container unavailable → fall through to LLM review.
