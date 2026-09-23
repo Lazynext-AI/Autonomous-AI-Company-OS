@@ -44,7 +44,7 @@ const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; nam
   {
     group: "Legal signing", icon: FileCheck2,
     items: [
-      { id: "pandadoc", name: "PandaDoc", hint: "API key — legal-grade e-sign (native signing is free/basic)" },
+      { id: "docuseal", name: "DocuSeal", hint: "base URL + API key — legal-grade e-sign, open source" },
     ],
   },
 ];

@@ -127,38 +127,43 @@ async def _whatsapp(payload: dict, cred: str) -> dict:
 
 # --- Scheduling & signing -------------------------------------------------
 
-async def _pandadoc(payload: dict, cred: str) -> dict:
-    # cred = PandaDoc API key (API access requires Essentials+ plan; the free
-    # eSign plan is UI-only). Creates a document then sends it for signature.
-    headers = {"authorization": f"API-Key {cred}", "content-type": "application/json"}
+async def _docuseal(payload: dict, cred: str) -> dict:
+    # cred format: "<base_url>:<api_key>" — hosted https://api.docuseal.com or a
+    # self-hosted instance. Open-source, legally binding (ESIGN/UETA/eIDAS),
+    # free API. If payload has template_id, submits that template directly;
+    # otherwise builds a template from doc_text via the HTML API first.
+    base, _, key = cred.partition(":")
+    base = base.rstrip("/")
+    headers = {"X-Auth-Token": key, "content-type": "application/json"}
     signer = payload.get("signer_email", payload.get("email", ""))
-    doc = await _post(
-        "https://api.pandadoc.com/public/v1/documents",
-        headers=headers,
-        json_body={
-            "name": payload.get("title", "Signature request"),
-            "recipients": [{"email": signer, "role": "signer", "signing_order": 1}],
-            "content_sections": [{
-                "name": "Document",
-                "default": True,
-                "recipients": [signer],
-                "content": [{"block_type": "text", "text": payload.get("doc_text", "")}],
-            }],
-            "tags": ["lazynext"],
-        },
-    )
-    if not doc.get("ok"):
-        return doc
-    doc_id = doc.get("body", {}).get("id")
-    if not doc_id:
-        return {"ok": False, "error": "pandadoc returned no document id", "body": doc.get("body")}
+    submitter = {"role": payload.get("role", "Signer"), "email": signer}
+    if payload.get("signer_name"):
+        submitter["name"] = payload["signer_name"]
+    template_id = payload.get("template_id")
+    if not template_id:
+        tpl = await _post(
+            f"{base}/templates/html",
+            headers=headers,
+            json_body={
+                "name": payload.get("title", "Signature request"),
+                "html": f"<h3>{payload.get('title', 'Signature request')}</h3>"
+                        f"<p>{payload.get('doc_text', '')}</p>",
+            },
+        )
+        if not tpl.get("ok"):
+            return tpl
+        template_id = tpl.get("body", {}).get("id")
+        if not template_id:
+            return {"ok": False, "error": "docuseal returned no template id", "body": tpl.get("body")}
     return await _post(
-        f"https://api.pandadoc.com/public/v1/documents/{doc_id}/send",
+        f"{base}/submissions",
         headers=headers,
         json_body={
-            "subject": payload.get("subject", payload.get("title", "Signature request")),
-            "message": payload.get("message", "Please review and sign."),
-            "silent": False,
+            "template_id": template_id,
+            "send_email": True,
+            "submitters": [submitter],
+            **({"message": {"subject": payload["subject"], "body": payload["message"]}}
+               if payload.get("subject") or payload.get("message") else {}),
         },
     )
 
@@ -166,7 +171,7 @@ async def _pandadoc(payload: dict, cred: str) -> dict:
 _DISPATCH = {
     "x": _x, "linkedin": _linkedin, "meta": _meta,
     "twilio": _twilio, "whatsapp": _whatsapp,
-    "pandadoc": _pandadoc,
+    "docuseal": _docuseal,
     }
 
 
