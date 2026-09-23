@@ -155,81 +155,71 @@ export async function handleServices(
     return json({ ok: true, id, sent, total: contacts.length });
   }
 
-  // --- Inkless e-sign -------------------------------------------------------
-  // The only signing path — credential lives in KV as conn:inkless in
-  // "base_url:api_key" form (bare key → hosted api.useinkless.com).
-  if (path === "/api/v1/inkless/documents" && req.method === "GET") {
-    ctx.waitUntil(ensureInklessWebhook(req, env));
-    return inkless(env, "GET", "/getAllDocuments");
+  // --- SignWell e-sign ------------------------------------------------------
+  // The only signing path — credential lives in KV as conn:signwell (bare API
+  // key from signwell.com/app → API; prefix "test:" for unlimited free
+  // test-mode sends). SignWell's free plan includes a legal production API.
+  if (path === "/api/v1/signwell/documents" && req.method === "GET") {
+    ctx.waitUntil(ensureSignwellSecret(env));
+    return signwell(env, "GET", "/documents/");
   }
-  if (path === "/api/v1/inkless/send" && req.method === "POST") {
+  if (path === "/api/v1/signwell/send" && req.method === "POST") {
     if (!b.template_id || !b.signer_email)
       return json({ error: "template_id and signer_email required" }, 400);
-    return inkless(env, "POST", "/createFromTemplate", {
-      templateId: String(b.template_id),
-      emailSubject: b.subject ? String(b.subject) : undefined,
+    // SignWell requires each recipient's placeholder_name to match a named
+    // placeholder on the template — fetch the template and map the signer to
+    // the first placeholder (or an explicit placeholder_name if provided).
+    const t = await signwellFetch(env, "GET", `/document_templates/${b.template_id}/`);
+    if (!t.connected) return json(t, 503);
+    if (!t.ok) return json({ connected: true, ...t.data }, t.status);
+    const phs = ((t.data.placeholders ?? []) as { name?: string }[]);
+    return signwell(env, "POST", "/document_templates/documents/", {
+      template_id: String(b.template_id),
+      subject: b.subject ? String(b.subject) : undefined,
       recipients: [{
+        id: String(b.recipient_id ?? "1"),
+        placeholder_name: String(b.placeholder_name ?? phs[0]?.name ?? "signer"),
         email: String(b.signer_email),
         name: String(b.signer_name ?? b.signer_email),
       }],
     });
   }
-  if (path === "/api/v1/inkless/events" && req.method === "GET")
-    return json({ events: JSON.parse((await env.EPHEMERAL.get("inkless:events")) ?? "[]") });
+  if (path === "/api/v1/signwell/events" && req.method === "GET") {
+    const sec = await env.EPHEMERAL.get("signwell:whsec");
+    return json({
+      events: JSON.parse((await env.EPHEMERAL.get("signwell:events")) ?? "[]"),
+      webhook_url: sec ? `${new URL(req.url).origin}/api/v1/signwell/webhook/${sec}` : null,
+    });
+  }
 
   return json({ error: "not found" }, 404);
 }
 
-// Public receiver for Inkless webhook events (document.signed / finalized).
-// The secret path segment is generated at registration, so only Inkless (or
-// whoever holds it) can post here — no API key required.
-export async function handleInklessWebhook(
+// Public receiver for SignWell webhook events (document_completed etc.).
+// The secret path segment is generated once; paste the webhook URL (shown by
+// GET /signwell/events) into SignWell → API → your application's webhook.
+export async function handleSignwellWebhook(
   req: Request, env: Env, path: string,
 ): Promise<Response> {
   if (req.method !== "POST") return json({ error: "method" }, 405);
   const sec = path.split("/").pop() ?? "";
-  const expected = await env.EPHEMERAL.get("inkless:whsec");
+  const expected = await env.EPHEMERAL.get("signwell:whsec");
   if (!expected || sec !== expected) return json({ error: "forbidden" }, 403);
   const event = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-  const list = JSON.parse((await env.EPHEMERAL.get("inkless:events")) ?? "[]") as unknown[];
+  const list = JSON.parse((await env.EPHEMERAL.get("signwell:events")) ?? "[]") as unknown[];
   list.unshift({ ...event, received_at: new Date().toISOString() });
-  await env.EPHEMERAL.put("inkless:events", JSON.stringify(list.slice(0, 50)));
+  await env.EPHEMERAL.put("signwell:events", JSON.stringify(list.slice(0, 50)));
   return json({ ok: true });
 }
 
-// Registers our webhook URL with Inkless once per credential so signed/
-// finalized events arrive in real time. Secret lives in KV.
-async function ensureInklessWebhook(req: Request, env: Env): Promise<void> {
-  const cred = await env.EPHEMERAL.get("conn:inkless");
-  if (!cred || (await env.EPHEMERAL.get("inkless:whreg"))) return;
-  let sec = await env.EPHEMERAL.get("inkless:whsec");
-  if (!sec) {
-    sec = crypto.randomUUID();
-    await env.EPHEMERAL.put("inkless:whsec", sec);
-  }
-  const { base, key } = parseInkless(cred);
-  const url = `${new URL(req.url).origin}/api/v1/inkless/webhook/${sec}`;
-  for (const eventType of ["document.signed", "document.finalized"]) {
-    const r = await fetch(`${base}/registerWebhook`, {
-      method: "POST",
-      headers: { "x-api-key": key, "content-type": "application/json" },
-      body: JSON.stringify({ url, eventType }),
-    });
-    if (!r.ok) return; // leave whreg unset → retried on next call
-  }
-  await env.EPHEMERAL.put("inkless:whreg", "1");
+// Generates the webhook secret once so the receiver URL is stable — SignWell
+// webhooks are configured in their app, not via API, so we just expose the URL.
+async function ensureSignwellSecret(env: Env): Promise<void> {
+  const cred = await env.EPHEMERAL.get("conn:signwell");
+  if (!cred || (await env.EPHEMERAL.get("signwell:whsec"))) return;
+  await env.EPHEMERAL.put("signwell:whsec", crypto.randomUUID());
 }
 
-function parseInkless(cred: string): { base: string; key: string } {
-  const i = cred.lastIndexOf(":");
-  const maybeBase = i > 0 ? cred.slice(0, i) : "";
-  if (/^https?:\/\//.test(maybeBase))
-    return { base: maybeBase.replace(/\/+$/, ""), key: cred.slice(i + 1) };
-  return { base: "https://api.useinkless.com", key: cred };
-}
-
-// Reads conn:inkless from KV, splits on the LAST ':' so https:// URLs survive,
-// then calls the Inkless API. {connected:false} when no credential is set.
 // --- Transactional + campaign email (Brevo — the only email path) ----------
 // Credential lives in KV as conn:brevo in "sender@domain.com:api_key" form
 // (bare key → support@lazynext.com sender), falling back to the
@@ -264,17 +254,30 @@ export async function brevoSend(
   return { ok: r.ok, status: r.status, messageId: d.messageId, error: d.message };
 }
 
-async function inkless(
-  env: Env, method: string, endpoint: string, body?: unknown,
-): Promise<Response> {
-  const cred = await env.EPHEMERAL.get("conn:inkless");
-  if (!cred) return json({ connected: false, error: "inkless not connected — set it in Settings → Connector library" });
-  const { base, key } = parseInkless(cred);
-  const r = await fetch(`${base}${endpoint}`, {
+// Reads conn:signwell from KV (bare API key; "test:" prefix → test_mode sends
+// are free, unlimited and not legally binding), then calls the SignWell API.
+// Returns {connected:false} when no credential is set.
+async function signwellFetch(
+  env: Env, method: string, endpoint: string, body?: Record<string, unknown>,
+): Promise<{ connected: boolean; ok: boolean; status: number; data: Record<string, unknown> }> {
+  const cred = await env.EPHEMERAL.get("conn:signwell");
+  if (!cred) return { connected: false, ok: false, status: 503, data: { error: "signwell not connected — set it in Settings → Connector library" } };
+  const test = cred.startsWith("test:");
+  const key = test ? cred.slice(5) : cred;
+  if (test && body) body = { ...body, test_mode: true };
+  const r = await fetch(`https://www.signwell.com/api/v1${endpoint}`, {
     method,
-    headers: { "x-api-key": key, "content-type": "application/json" },
+    headers: { "X-Api-Key": key, "content-type": "application/json" },
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
   const data = (await r.json().catch(() => ({}))) as Record<string, unknown>;
-  return json({ connected: true, ok: r.ok, status: r.status, ...data }, r.ok ? 200 : r.status);
+  return { connected: true, ok: r.ok, status: r.status, data };
+}
+
+async function signwell(
+  env: Env, method: string, endpoint: string, body?: Record<string, unknown>,
+): Promise<Response> {
+  const r = await signwellFetch(env, method, endpoint, body);
+  if (!r.connected) return json({ connected: false, ...r.data }, 503);
+  return json({ connected: true, ok: r.ok, status: r.status, ...r.data }, r.ok ? 200 : r.status);
 }

@@ -150,28 +150,41 @@ async def _brevo(payload: dict, cred: str) -> dict:
 
 # --- Scheduling & signing -------------------------------------------------
 
-async def _inkless(payload: dict, cred: str) -> dict:
-    # cred format: "<base_url>:<api_key>" — hosted https://api.useinkless.com
-    # (free key via hello@useinkless.com). A bare key falls back to the hosted
-    # URL. Legally binding (ESIGN/UETA) with audit trail + webhooks. Sends a
-    # pre-created template to recipients: build the template once in their
-    # webapp (app.useinkless.com/templates), then pass template_id here.
-    base, sep, key = cred.rpartition(":")
-    if not (sep and base.startswith(("http://", "https://"))):
-        base, key = "https://api.useinkless.com", cred
-    base = base.rstrip("/")
-    headers = {"x-api-key": key, "content-type": "application/json"}
+async def _signwell(payload: dict, cred: str) -> dict:
+    # cred: bare SignWell API key (signwell.com/app → Settings → API). The free
+    # plan includes a legal production API — 25 docs/month free. Prefix "test:"
+    # for unlimited test-mode sends (not legally binding, no quota used).
+    test = cred.startswith("test:")
+    key = cred[5:] if test else cred
     template_id = payload.get("template_id")
     if not template_id:
-        return {"ok": False, "error": "inkless requires template_id — create the template in app.useinkless.com first"}
+        return {"ok": False, "error": "signwell requires template_id — create a template at signwell.com/app first"}
+    headers = {"X-Api-Key": key}
+    # Recipients must carry the placeholder_name of a template placeholder —
+    # fetch the template and map the signer to its first placeholder unless an
+    # explicit placeholder_name was provided.
+    placeholder = payload.get("placeholder_name")
+    if not placeholder:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            t = await client.get(
+                f"https://www.signwell.com/api/v1/document_templates/{template_id}/",
+                headers=headers,
+            )
+        if t.status_code == 200:
+            phs = t.json().get("placeholders") or []
+            placeholder = phs[0].get("name") if phs else None
     return await _post(
-        f"{base}/createFromTemplate",
+        "https://www.signwell.com/api/v1/document_templates/documents/",
         headers=headers,
         json_body={
-            "templateId": template_id,
+            "test_mode": test or bool(payload.get("test_mode")),
+            "template_id": template_id,
+            **({"subject": payload["subject"]} if payload.get("subject") else {}),
             "recipients": [{
-                "email": payload.get("signer_email", payload.get("email", "")),
+                "id": str(payload.get("recipient_id", "1")),
+                **({"placeholder_name": placeholder} if placeholder else {}),
                 "name": payload.get("signer_name", payload.get("name", "")),
+                "email": payload.get("signer_email", payload.get("email", "")),
             }],
         },
     )
@@ -181,7 +194,7 @@ _DISPATCH = {
     "x": _x, "linkedin": _linkedin, "meta": _meta,
     "twilio": _twilio, "whatsapp": _whatsapp,
     "brevo": _brevo,
-    "inkless": _inkless,
+    "signwell": _signwell,
     }
 
 

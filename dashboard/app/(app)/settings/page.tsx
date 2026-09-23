@@ -25,7 +25,7 @@ const INTEGRATIONS = [
 // Connector library — only genuinely-external services remain. CRM, support,
 // scheduling, commerce, and email marketing are all native on D1 now.
 // What's left are destination networks Cloudflare can't reach, Brevo for
-// email delivery, plus Inkless for legal-grade e-signatures.
+// email delivery, plus SignWell for legal-grade e-signatures.
 const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; name: string; hint: string }[] }[] = [
   {
     group: "Social posting", icon: Share2,
@@ -51,7 +51,7 @@ const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; nam
   {
     group: "Legal signing", icon: FileCheck2,
     items: [
-      { id: "inkless", name: "Inkless", hint: "url:api_key — hosted legal e-sign (key via hello@useinkless.com)" },
+      { id: "signwell", name: "SignWell", hint: "api_key — free legal e-sign API, 25 docs/mo (signwell.com → Settings → API)" },
     ],
   },
 ];

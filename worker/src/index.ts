@@ -18,7 +18,7 @@ import { getContainer } from "@cloudflare/containers";
 export { CodeExecContainer } from "./exec_container";
 import { handleWidget } from "./widget";
 import { fanOut, handleWebhooks, publishToBus } from "./webhooks";
-import { handleServices, handleInklessWebhook, brevoSend } from "./services";
+import { handleServices, handleSignwellWebhook, brevoSend } from "./services";
 
 export { Env };
 
@@ -295,11 +295,11 @@ export default {
         return cors(req, await handleBilling(req, env, ctx, path));
       if (path.startsWith("/api/v1/webhooks"))
         return cors(req, await handleWebhooks(req, env, ctx, path));
-      if (path.startsWith("/api/v1/inkless/webhook/"))
-        return cors(req, await handleInklessWebhook(req, env, path));
+      if (path.startsWith("/api/v1/signwell/webhook/"))
+        return cors(req, await handleSignwellWebhook(req, env, path));
       if (path.startsWith("/api/v1/crm") || path.startsWith("/api/v1/support") ||
           path.startsWith("/api/v1/booking") || path.startsWith("/api/v1/store") ||
-          path.startsWith("/api/v1/marketing") || path.startsWith("/api/v1/inkless"))
+          path.startsWith("/api/v1/marketing") || path.startsWith("/api/v1/signwell"))
         return cors(req, await handleServices(req, env, ctx, path));
       if (path.startsWith("/api/")) return cors(req, await handlePublicApi(req, env, ctx, path));
 
