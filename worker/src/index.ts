@@ -922,10 +922,11 @@ async function executeTask(env: Env, ctx: ExecutionContext, brain: Brain, urls: 
 
     const path = sanitizePath(meta?.path ?? (ext ? `docs/output.${ext}` : `docs/output-${Date.now()}.md`));
     // Core product files are platform-managed — agents kept regenerating
-    // index.html (losing features / shipping fences). New modules, docs and
-    // tests stay fair game; the deployed runtime surface does not.
-    const PROTECTED = new Set(["index.html", "worker.js", "src/scanner.js", "package.json"]);
-    if (PROTECTED.has(path)) {
+    // index.html (losing features / shipping fences) and CI config (a
+    // generated workflow broke main). New modules, docs and tests stay
+    // fair game; the deployed runtime + CI surface does not.
+    const PROTECTED = new Set(["index.html", "worker.js", "src/scanner.js", "package.json", "test/scanner.test.mjs"]);
+    if (PROTECTED.has(path) || path.startsWith(".github/")) {
       feedback = `${path} is a managed core file — deliver this as a new module, doc, or test instead`;
       continue;
     }

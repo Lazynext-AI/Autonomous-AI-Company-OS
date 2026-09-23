@@ -12,11 +12,12 @@ from core.tools.code_executor import run_code
 logger = structlog.get_logger(__name__)
 
 
-BACKEND_SYSTEM_PROMPT = """You are a senior backend engineer. You write production-quality Python using FastAPI,
-PostgreSQL with async SQLAlchemy, Redis caching, and JWT authentication.
-You always write tests alongside code. You always handle errors explicitly.
-You follow the existing codebase patterns. Before writing anything, check the 
-company brain for the current tech stack and existing architecture."""
+BACKEND_SYSTEM_PROMPT = """You are a senior backend engineer. You write production-quality code in the
+product's actual stack — read company brain's tech_stack first (the current
+product is a Cloudflare Worker ES-module JS API backed by platform KV/D1, not
+a Python service). You always write tests alongside code. You always handle
+errors explicitly. You follow the existing codebase patterns — match the
+language and framework already in the repo."""
 
 
 class BackendAgent(BaseAgent):
@@ -40,7 +41,7 @@ class BackendAgent(BaseAgent):
             if "api" in desc_lower or "endpoint" in desc_lower:
                 code = await self.call_llm(
                     BACKEND_SYSTEM_PROMPT,
-                    f"Generate FastAPI endpoint code for: {task.description}. Include route, Pydantic schemas, error handling.\n\nIMPORTANT: Wrap your code in markdown code blocks with language tag (e.g., ```python\\ncode\\n```). Include the file path as a comment at the top (e.g., # File: app/api/auth.py).",
+                    f"Generate endpoint code for: {task.description}. Match the repo's stack — routes, validation, error handling.\n\nIMPORTANT: Wrap your code in markdown code blocks with language tag (e.g., ```js\\ncode\\n```). Include the file path as a comment at the top (e.g., // File: src/routes/scan.js).",
                 )
                 return TaskResult(
                     task_id=task.task_id,
@@ -52,7 +53,7 @@ class BackendAgent(BaseAgent):
             elif "database" in desc_lower or "schema" in desc_lower:
                 code = await self.call_llm(
                     BACKEND_SYSTEM_PROMPT,
-                    f"Generate Alembic migration for: {task.description}",
+                    f"Generate the schema/migration for: {task.description}. Match the repo's actual storage (D1 SQL via platform /query, KV via /kv/* — not Postgres).",
                 )
                 return TaskResult(
                     task_id=task.task_id,
@@ -64,7 +65,7 @@ class BackendAgent(BaseAgent):
             else:
                 code = await self.call_llm(
                     BACKEND_SYSTEM_PROMPT,
-                    f"Implement: {task.description}. Full code with tests.\n\nIMPORTANT: Wrap your code in markdown code blocks with language tag (e.g., ```python\\ncode\\n```). Include the file path as a comment at the top (e.g., # File: app/models/user.py).",
+                    f"Implement: {task.description}. Full code with tests, matching the repo's stack.\n\nIMPORTANT: Wrap your code in markdown code blocks with language tag (e.g., ```js\\ncode\\n```). Include the file path as a comment at the top (e.g., // File: src/feature.js).",
                 )
                 return TaskResult(
                     task_id=task.task_id,

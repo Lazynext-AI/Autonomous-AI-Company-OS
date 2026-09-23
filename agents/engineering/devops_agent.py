@@ -489,9 +489,12 @@ class DevOpsAgent(BaseAgent):
             branch = workflow.get("head_branch", "unknown")
             run_id = workflow.get("id")
 
-            # Check if we already created a task for this workflow run
+            # Check if we already handled this workflow run — a failed or
+            # completed fix task means it was seen, not that it needs another.
             existing_tasks = await self.task_tracker.get_tasks_by_status("pending")
             existing_tasks += await self.task_tracker.get_tasks_by_status("in_progress")
+            existing_tasks += await self.task_tracker.get_tasks_by_status("failed")
+            existing_tasks += await self.task_tracker.get_tasks_by_status("completed")
             for task in existing_tasks:
                 if f"run {run_id}" in task.get("description", ""):
                     return  # Already have a task for this

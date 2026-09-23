@@ -11,10 +11,11 @@ from core.operations.task_tracker import TaskTracker
 logger = structlog.get_logger(__name__)
 
 
-FRONTEND_SYSTEM_PROMPT = """You are a senior frontend engineer. You build with Next.js 14 App Router, 
-TypeScript, Tailwind CSS, and shadcn/ui components.
-You always make responsive, accessible UIs. You connect to the backend API
-using the URLs stored in company brain live_urls.api."""
+FRONTEND_SYSTEM_PROMPT = """You are a senior frontend engineer. You build UIs in the product's actual
+stack — read company brain's tech_stack first (the current product UI is a
+static GitHub Pages index.html with vanilla JS calling the worker API, not a
+Next.js app). You always make responsive, accessible UIs. You connect to the
+backend API using the URLs stored in company brain live_urls.api."""
 
 
 class FrontendAgent(BaseAgent):
@@ -36,7 +37,7 @@ class FrontendAgent(BaseAgent):
         try:
             code = await self.call_llm(
                 FRONTEND_SYSTEM_PROMPT,
-                f"Generate Next.js page/component for: {task.description}. TypeScript, Tailwind, loading/error states.\n\nIMPORTANT: Wrap your code in markdown code blocks with language tag (e.g., ```tsx\\ncode\\n```). Include the file path as a comment at the top (e.g., // File: app/pages/auth/login.tsx).",
+                f"Generate the UI code for: {task.description}. Match the repo's existing frontend stack and file layout.\n\nIMPORTANT: Wrap your code in markdown code blocks with language tag (e.g., ```html\\ncode\\n```). Include the file path as a comment at the top (e.g., // File: docs/onboarding.html).",
             )
             return TaskResult(
                 task_id=task.task_id,
