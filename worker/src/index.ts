@@ -378,8 +378,9 @@ async function agentTick(env: Env, ctx: ExecutionContext) {
     .catch(() => ({ c: 0 }));
 
   const out: Record<string, unknown> = { phase: "operating" };
+  if (!urls.site) out.site = await ensureSite(env, ctx, brain, urls);
   if (pending) out.executed = await executeTask(env, ctx, brain, urls, pending);
-  if ((remaining?.c ?? 0) < 5) out.generated = await operate(env, ctx, brain);
+  if ((remaining?.c ?? 0) < 5) out.generated = await operate(env, ctx, brain, urls);
   return out;
 }
 
@@ -449,7 +450,9 @@ async function pickProduct(env: Env, ctx: ExecutionContext) {
 
 // Phase 2: operate — an agent generates one concrete sprint task for the real
 // product and posts a status line. Skips task creation when the queue is deep.
-async function operate(env: Env, ctx: ExecutionContext, brain: Brain) {
+// The repo's file tree feeds the prompt so tasks build one coherent product —
+// real modules, package manifest, tests — instead of disconnected files.
+async function operate(env: Env, ctx: ExecutionContext, brain: Brain, urls: Record<string, string> = {}) {
   if (!env.AI) return { error: "AI binding not configured" };
   const a = TICK_AGENTS[Math.floor(Math.random() * TICK_AGENTS.length)];
   const pending = await env.DB.prepare(
@@ -458,11 +461,17 @@ async function operate(env: Env, ctx: ExecutionContext, brain: Brain) {
     .first<{ c: number }>()
     .catch(() => ({ c: 0 }));
 
+  const repo = (urls.repo ?? "").replace("https://github.com/", "").replace(/\.git$/, "");
+  const tree = repo.includes("/") ? await listRepoFiles(env, repo) : [];
+  const repoCtx = tree.length
+    ? `Repo currently contains: ${tree.slice(0, 40).join(", ")}. Build on it — don't duplicate what exists.`
+    : "Repo is nearly empty — foundational tasks (package.json, core module, tests) come first.";
+
   const res = await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
     messages: [
       {
         role: "system",
-        content: `You are ${a.persona} at an autonomous software company building "${brain.product_name}" (${brain.product_description ?? ""}). Mission: ${brain.mission ?? "build and launch a valuable product"}. Reply with ONLY JSON: {"status": "one line, first person, under 25 words", "task": "one concrete deliverable for the sprint or null if nothing new is needed"}. No markdown.`,
+        content: `You are ${a.persona} at an autonomous software company building "${brain.product_name}" (${brain.product_description ?? ""}). Mission: ${brain.mission ?? "build and launch a valuable product"}. The goal is ONE coherent deployable product — real modules that import each other, a package manifest, and tests (test_*.py or *.test.js). ${repoCtx} Reply with ONLY JSON: {"status": "one line, first person, under 25 words", "task": "one concrete deliverable for the sprint or null if nothing new is needed"}. No markdown.`,
       },
       { role: "user", content: "What are you doing right now, and what single task most needs doing next?" },
     ],
@@ -534,6 +543,52 @@ async function ghPutFile(env: Env, repo: string, path: string, content: string, 
   const r = await gh(env, "PUT", `/repos/${repo}/contents/${path}`, body);
   if (!r.ok) return { ok: false, error: JSON.stringify(r.data).slice(0, 300) };
   return { ok: true, url: (r.data.content as { html_url?: string } | undefined)?.html_url };
+}
+
+// Repo file listing + content fetch — gives generation and verification the
+// real repo state so artifacts form a coherent product.
+async function listRepoFiles(env: Env, repo: string): Promise<string[]> {
+  const r = await gh(env, "GET", `/repos/${repo}/git/trees/main?recursive=1`);
+  if (!r.ok || !Array.isArray(r.data.tree)) return [];
+  return (r.data.tree as { type: string; path: string }[])
+    .filter((t) => t.type === "blob")
+    .map((t) => t.path);
+}
+
+async function fetchRepoFiles(env: Env, repo: string): Promise<Record<string, string>> {
+  const paths = (await listRepoFiles(env, repo)).slice(0, 40);
+  const files: Record<string, string> = {};
+  let total = 0;
+  for (const p of paths) {
+    if (total > 300_000) break;
+    const r = await gh(env, "GET", `/repos/${repo}/contents/${p}`);
+    const content = r.data?.content as string | undefined;
+    if (!r.ok || !content) continue;
+    const text = atob(content.replace(/\n/g, ""));
+    total += text.length;
+    files[p] = text;
+  }
+  return files;
+}
+
+// Enable GitHub Pages on the product repo (main branch, root) — the product's
+// index.html goes live and every commit redeploys it automatically.
+async function ensureSite(env: Env, ctx: ExecutionContext, brain: Brain, urls: Record<string, string>) {
+  const repo = (urls.repo ?? "").replace("https://github.com/", "").replace(/\.git$/, "");
+  if (!repo.includes("/")) return null;
+  const r = await gh(env, "POST", `/repos/${repo}/pages`, {
+    source: { branch: "main", path: "/" },
+    build_type: "legacy",
+  });
+  if (!r.ok && r.status !== 409) return { error: "pages enable failed", detail: r.data };
+  const site = ((r.data.html_url as string) ?? `https://${repo.split("/")[0].toLowerCase()}.github.io/${repo.split("/")[1]}/`);
+  const newUrls = { ...urls, site };
+  await env.DB.prepare("UPDATE company_brain SET live_urls=?, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')")
+    .bind(JSON.stringify(newUrls)).run();
+  await env.DB.prepare("INSERT INTO milestone_log (milestone_type, description) VALUES ('site_deployed', ?)")
+    .bind(`Deployed ${brain.product_name} to ${site} via GitHub Pages`).run();
+  await publishToBus(env, ctx, "conversations", JSON.stringify({ from: "devops_1", agent: "devops_1", text: `Deployed: ${site} is live`, model: "workers-ai/llama-3.3-70b", event: "site_deployed" }));
+  return { site };
 }
 
 function slugify(name: string): string {
@@ -617,6 +672,11 @@ async function executeTask(env: Env, ctx: ExecutionContext, brain: Brain, urls: 
   await env.DB.prepare("UPDATE task_log SET status='in_progress', attempts=attempts+1, started_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?")
     .bind(task.id).run();
 
+  const tree = await listRepoFiles(env, repo);
+  const repoCtx = tree.length
+    ? `Existing repo files: ${tree.slice(0, 40).join(", ")}.`
+    : "Repo is nearly empty.";
+
   let feedback = "";
   for (let attempt = 0; attempt < 2; attempt++) {
     // Two-step generation: a tiny JSON for path+summary (always parses), then
@@ -625,7 +685,7 @@ async function executeTask(env: Env, ctx: ExecutionContext, brain: Brain, urls: 
       messages: [
         {
           role: "system",
-          content: `You are ${task.agent_id} at a software company building "${brain.product_name}". Choose where this task's deliverable belongs in the repo — code under src/, docs under docs/, marketing under marketing/, research under docs/research/. Reply with ONLY JSON: {"path": "relative/file/path", "summary": "one line"}.`,
+          content: `You are ${task.agent_id} at a software company building "${brain.product_name}". ${repoCtx} Choose where this task's deliverable belongs — code under src/, tests under tests/, docs under docs/, marketing under marketing/, research under docs/research/. Reuse/extend existing modules rather than creating parallel ones. Reply with ONLY JSON: {"path": "relative/file/path", "summary": "one line"}.`,
         },
         { role: "user", content: `Task: ${task.description}` },
       ],
@@ -642,7 +702,7 @@ async function executeTask(env: Env, ctx: ExecutionContext, brain: Brain, urls: 
       messages: [
         {
           role: "system",
-          content: `You are ${task.agent_id} at a software company building "${brain.product_name}" (${brain.product_description ?? ""}). Write the complete contents of the file "${meta?.path ?? "docs/output.md"}" for this task — real, working content, no placeholders. Reply with ONLY the file contents — no JSON wrapper, no preamble, no markdown fences.${feedback ? ` Previous attempt was rejected: ${feedback}. Fix it.` : ""}`,
+          content: `You are ${task.agent_id} at a software company building "${brain.product_name}" (${brain.product_description ?? ""}). ${repoCtx} Write the complete contents of the file "${meta?.path ?? "docs/output.md"}" for this task — real, working content, no placeholders. It must fit the existing repo: import from existing modules where sensible, use consistent naming. For test files (tests/ or *.test.js / test_*.py) use pytest or node:test so they actually run. Reply with ONLY the file contents — no JSON wrapper, no preamble, no markdown fences.${feedback ? ` Previous attempt was rejected: ${feedback}. Fix it.` : ""}`,
         },
         { role: "user", content: `Task: ${task.description}` },
       ],
@@ -679,33 +739,42 @@ async function executeTask(env: Env, ctx: ExecutionContext, brain: Brain, urls: 
   return { task: task.task_id, error: `verification failed: ${feedback}` };
 }
 
-// Verify an artifact before it touches the repo. The file is written into
-// the exec container, its third-party imports are installed (deps: auto),
-// and it is checked in its real runtime: py_compile + module import for .py,
-// node --check + require() for .js, json.load for .json, HTMLParser for
-// .html — with an LLM task-fit review as fallback when the container is
-// unavailable or the type has no runtime check.
+// Verify an artifact before it touches the repo. The whole repo plus the new
+// file are written into the exec container — so cross-file imports resolve —
+// third-party deps are installed (deps: auto), and the file is checked in its
+// real runtime: pytest/node --test for test files, py_compile + module import
+// for .py, node --check + require() for .js, real parsers for .json/.html/.md.
+// An LLM task-fit review is the fallback when the container is unavailable.
 async function verifyArtifact(
   env: Env, brain: Brain, task: Task, path: string, content: string,
 ): Promise<{ ok: boolean; how?: string; issue?: string }> {
   const ext = path.split(".").pop()?.toLowerCase() ?? "";
   const fname = path.split("/").pop() ?? `artifact.${ext}`;
-  const pyLoad = `import importlib.util as u; s=u.spec_from_file_location('m','${fname}'); m=u.module_from_spec(s); s.loader.exec_module(m)`;
+  const isTest = /(^|\/)(tests?|test_|.*\.test\.|.*\.spec\.)/i.test(path) || /^test_/.test(fname);
+  const pyLoad = `import importlib.util as u; s=u.spec_from_file_location('m','${path}'); m=u.module_from_spec(s); s.loader.exec_module(m)`;
   const commands: Record<string, string[][]> = {
-    py: [["python3", "-m", "py_compile", fname], ["python3", "-c", pyLoad]],
-    js: [["node", "--check", fname], ["node", "-e", `require('./${fname}')`]],
-    json: [["python3", "-c", "import json,sys; json.load(open(sys.argv[1]))", fname]],
-    html: [["python3", "-c", "import sys; from html.parser import HTMLParser; HTMLParser().feed(open(sys.argv[1]).read())", fname]],
-    md: [["python3", "-c", "import sys; assert len(open(sys.argv[1]).read().strip())>20,'empty'", fname]],
+    py: isTest
+      ? [["python3", "-m", "py_compile", path], ["python3", "-m", "pytest", "-q", path]]
+      : [["python3", "-m", "py_compile", path], ["python3", "-c", pyLoad]],
+    js: isTest
+      ? [["node", "--check", path], ["node", "--test", path]]
+      : [["node", "--check", path], ["node", "-e", `require('./${path}')`]],
+    json: [["python3", "-c", "import json,sys; json.load(open(sys.argv[1]))", path]],
+    html: [["python3", "-c", "import sys; from html.parser import HTMLParser; HTMLParser().feed(open(sys.argv[1]).read())", path]],
+    md: [["python3", "-c", "import sys; assert len(open(sys.argv[1]).read().strip())>20,'empty'", path]],
   };
   const command = commands[ext];
   if (command && env.CODE_EXEC) {
     try {
+      const repo = (safeJson<Record<string, string>>(brain.live_urls) ?? {}).repo
+        ?.replace("https://github.com/", "").replace(/\.git$/, "");
+      const files = repo?.includes("/") ? await fetchRepoFiles(env, repo) : {};
+      files[path] = content;
       const container = getContainer(env.CODE_EXEC);
       const r = await container.fetch(new Request("https://exec.local/exec", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ files: { [fname]: content }, commands: command, deps: "auto", timeout: 240 }),
+        body: JSON.stringify({ files, commands: command, deps: "auto", timeout: 240 }),
       }));
       const out = (await r.json().catch(() => ({}))) as { success?: boolean; error?: string; stderr?: string };
       if (r.ok && out.success === false) {
