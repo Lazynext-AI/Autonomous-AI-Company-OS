@@ -199,5 +199,44 @@ class GitManager:
         if committed:
             pushed = await self.push_branch(branch_name)
             result["pushed"] = pushed
+            if pushed:
+                result["pr_url"] = await self._open_pr(branch_name, description)
 
         return result
+
+    async def _open_pr(self, branch_name: str, title: str) -> str | None:
+        """Open a PR for the branch against the default branch, if none exists."""
+        from core.config import get_settings
+        settings = get_settings()
+        if not settings.github_token:
+            return None
+        returncode, remote_url, _ = await self._run_git("remote", "get-url", "origin")
+        if returncode != 0 or "github.com" not in remote_url:
+            return None
+        repo = remote_url.strip().split("github.com/")[-1].removesuffix(".git")
+        try:
+            import httpx
+            headers = {
+                "Authorization": f"Bearer {settings.github_token.strip()}",
+                "Accept": "application/vnd.github.v3+json",
+            }
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                existing = await client.get(
+                    f"https://api.github.com/repos/{repo}/pulls",
+                    params={"head": f"{repo.split('/')[0]}:{branch_name}", "state": "open"},
+                    headers=headers,
+                )
+                if existing.status_code == 200 and existing.json():
+                    return existing.json()[0].get("html_url")
+                r = await client.post(
+                    f"https://api.github.com/repos/{repo}/pulls",
+                    json={"title": title[:100], "head": branch_name, "base": "main"},
+                    headers=headers,
+                )
+                if r.status_code == 201:
+                    logger.info("pr_opened", branch=branch_name, url=r.json().get("html_url"))
+                    return r.json().get("html_url")
+                logger.warning("pr_open_failed", status=r.status_code, error=r.text[:200])
+        except Exception as e:
+            logger.warning("pr_open_error", error=str(e))
+        return None

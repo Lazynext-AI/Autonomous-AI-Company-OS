@@ -58,4 +58,5 @@ backups/
 # (dashboard/app/(app)/products/ is a dashboard page, not a repo clone)
 !dashboard/app/(app)/products/
 
+knowledge_base/
 .health_state.json
