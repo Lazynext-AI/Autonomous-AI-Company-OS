@@ -60,14 +60,20 @@ export async function handleBilling(
   // Standard Webhooks: sign `${id}.${timestamp}.${body}` with the whsec_ secret.
   if (req.method === "POST" && path === "/api/v1/billing/webhook") {
     const raw = await req.text();
+    const whId = req.headers.get("webhook-id") ?? "";
     const secret = env.DODO_WEBHOOK_SECRET;
     if (secret) {
-      const id = req.headers.get("webhook-id") ?? "";
       const ts = req.headers.get("webhook-timestamp") ?? "";
       const sigHeader = req.headers.get("webhook-signature") ?? "";
-      const ok = await verifyDodo(secret, id, ts, raw, sigHeader);
+      const ok = await verifyDodo(secret, whId, ts, raw, sigHeader);
       if (!ok) return json({ error: "bad signature" }, 401);
     }
+    // Replay/idempotency guard — Dodo retries deliver the same webhook-id;
+    // process each id once so replays can't double-write events.
+    const seenKey = `whseen:${whId}`;
+    if (await env.EPHEMERAL.get(seenKey)) return json({ ok: true, deduped: true });
+    await env.EPHEMERAL.put(seenKey, "1", { expirationTtl: 604_800 });
+
     const evt = JSON.parse(raw) as {
       type?: string;
       data?: { metadata?: { plan?: string }; status?: string; customer?: { email?: string } };
