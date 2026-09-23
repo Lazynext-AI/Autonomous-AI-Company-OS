@@ -228,6 +228,9 @@ async function callTool(env: Env, ctx: ExecutionContext, name: string, args: Jso
           : "cto.tasks";
       const taskId = crypto.randomUUID();
       const msg = {
+        // Python bus deserializes on _type; without it messages decode to
+        // BaseMessage and agents drop them as unsupported.
+        _type: "TaskMessage",
         message_id: crypto.randomUUID(),
         from_agent: "mcp-client",
         channel,
