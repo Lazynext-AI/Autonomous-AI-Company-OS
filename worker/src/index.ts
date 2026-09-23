@@ -12,7 +12,7 @@ import { handleMcp } from "./mcp";
 import { handleA2a } from "./a2a";
 import { handleBilling } from "./billing";
 import { handleOAuth } from "./oauth";
-import { handleWebSearch } from "./websearch";
+import { handleWebSearch, serper } from "./websearch";
 import { handleScrape } from "./scrape";
 import { getContainer } from "@cloudflare/containers";
 export { CodeExecContainer } from "./exec_container";
@@ -321,32 +321,139 @@ export default {
   },
 };
 
-// Stand-in brain: free-tier Workers AI Llama generates a real agent
-// message .
+// Autonomous agent loop: a Cloudflare cron tick makes the company act
+// continuously. Phase 1 — no product picked yet: the CEO agent does real
+// market research (Serper + Workers AI) and writes the pick to
+// company_brain. Phase 2 — product exists: agents generate concrete sprint
+// tasks against real company state.
 const TICK_AGENTS = [
-  { id: "ceo_agent", persona: "the CEO prioritising the product sprint" },
-  { id: "builder_agent", persona: "an engineer who just shipped a feature" },
-  { id: "market_researcher_agent", persona: "a researcher with fresh competitor intel" },
-  { id: "marketing_agent", persona: "a growth lead planning a Product Hunt launch" },
+  { id: "ceo_1", persona: "the CEO prioritising the sprint" },
+  { id: "product_manager_1", persona: "the PM shaping the roadmap" },
+  { id: "backend_1", persona: "a backend engineer" },
+  { id: "frontend_1", persona: "a frontend engineer" },
+  { id: "market_researcher_1", persona: "a researcher with fresh competitor intel" },
+  { id: "marketing_1", persona: "a growth lead" },
+  { id: "sales_1", persona: "a sales lead working outbound" },
+  { id: "devops_1", persona: "a devops engineer keeping the deploys green" },
 ];
+
+interface Brain {
+  product_name?: string | null;
+  product_description?: string | null;
+  mission?: string | null;
+  metrics?: string | null;
+}
 
 async function agentTick(env: Env, ctx: ExecutionContext) {
   if (!env.AI) return { error: "AI binding not configured" };
-  const a = TICK_AGENTS[Math.floor(Math.random() * TICK_AGENTS.length)];
+  const brain = await env.DB.prepare("SELECT * FROM company_brain LIMIT 1")
+    .first<Brain>()
+    .catch(() => null);
+  if (!brain?.product_name) return pickProduct(env, ctx);
+  return operate(env, ctx, brain);
+}
+
+// Phase 1: pick a real product. Real Serper market research feeds the model,
+// the pick lands in company_brain, and the decision is published to the bus.
+async function pickProduct(env: Env, ctx: ExecutionContext) {
+  if (!env.AI) return { error: "AI binding not configured" };
+  const queries = [
+    "underserved small business software needs 2026",
+    "SaaS ideas with proven demand low competition",
+    "tools indie hackers and agencies pay for monthly",
+  ];
+  const snippets: string[] = [];
+  for (const q of queries) {
+    const hits = await serper(env, q, 5).catch(() => null);
+    if (hits) snippets.push(...hits.map((h) => `${h.title} — ${h.snippet}`));
+  }
+  const research = snippets.slice(0, 15).join("\n");
   const res = await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
     messages: [
       {
         role: "system",
         content:
-          "You are an agent inside an autonomous AI company building a product called LaunchDeck (AI landing-page generator on Cloudflare). Reply with ONE short status line, first person, under 25 words. No prefix, no quotes.",
+          "You are the CEO of an autonomous software company. Using the market research below, pick ONE software product to build and sell. It must be small enough for AI agents to ship in weeks but valuable enough that businesses pay monthly. Reply with ONLY a JSON object: {\"name\": string, \"description\": string (one sentence), \"target_user\": string, \"why_now\": string (one sentence), \"tech\": string}. No markdown, no explanation.",
       },
-      { role: "user", content: `You are ${a.persona}. What are you doing right now?` },
+      { role: "user", content: `Market research:\n${research || "no results — rely on general knowledge"}` },
     ],
-    max_tokens: 60,
+    max_tokens: 300,
   });
-  const text = (res as { response?: string }).response?.trim() ?? "";
-  if (!text) return { error: "empty model response" };
-  const payload = JSON.stringify({ from: a.id, agent: a.id, text, model: "workers-ai/llama-3.3-70b", demo: true });
+  const pickRaw = (res as { response?: unknown }).response;
+  const raw = (typeof pickRaw === "string" ? pickRaw : JSON.stringify(pickRaw ?? "")).trim();
+  const m = raw.match(/\{[\s\S]*\}/);
+  if (!m) return { error: "product pick not parseable", raw: raw.slice(0, 200) };
+  let pick: { name?: string; description?: string; target_user?: string; why_now?: string; tech?: string };
+  try {
+    pick = JSON.parse(m[0]);
+  } catch {
+    return { error: "product pick not parseable", raw: raw.slice(0, 200) };
+  }
+  if (!pick.name) return { error: "product pick missing name" };
+
+  await env.DB.prepare(
+    `UPDATE company_brain SET product_name=?, product_description=?, tech_stack=?, metrics=?, shipped_features='[]', open_bugs='[]', updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')`,
+  )
+    .bind(
+      pick.name,
+      `${pick.description ?? ""} Target: ${pick.target_user ?? "small businesses"}. Why now: ${pick.why_now ?? ""}`.trim(),
+      JSON.stringify({ stack: pick.tech ?? "Cloudflare Workers + D1" }),
+      JSON.stringify({ users: 0, revenue: 0, mrr: 0, uptime_pct: 100, error_rate: 0, deploy_count: 0 }),
+    )
+    .run();
+  await env.DB.prepare(
+    "INSERT INTO milestone_log (milestone_type, description) VALUES ('product_selected', ?)",
+  )
+    .bind(`CEO picked product: ${pick.name} — ${pick.description ?? ""}`)
+    .run();
+  const text = `Picked our product: ${pick.name}. ${pick.why_now ?? pick.description ?? ""}`;
+  const payload = JSON.stringify({ from: "ceo_1", agent: "ceo_1", text, model: "workers-ai/llama-3.3-70b", event: "product_selected" });
+  await publishToBus(env, ctx, "conversations", payload);
+  return { phase: "product_selected", product: pick.name, description: pick.description };
+}
+
+// Phase 2: operate — an agent generates one concrete sprint task for the real
+// product and posts a status line. Skips task creation when the queue is deep.
+async function operate(env: Env, ctx: ExecutionContext, brain: Brain) {
+  if (!env.AI) return { error: "AI binding not configured" };
+  const a = TICK_AGENTS[Math.floor(Math.random() * TICK_AGENTS.length)];
+  const pending = await env.DB.prepare(
+    "SELECT COUNT(*) c FROM task_log WHERE status IN ('pending','in_progress')",
+  )
+    .first<{ c: number }>()
+    .catch(() => ({ c: 0 }));
+
+  const res = await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
+    messages: [
+      {
+        role: "system",
+        content: `You are ${a.persona} at an autonomous software company building "${brain.product_name}" (${brain.product_description ?? ""}). Mission: ${brain.mission ?? "build and launch a valuable product"}. Reply with ONLY JSON: {"status": "one line, first person, under 25 words", "task": "one concrete deliverable for the sprint or null if nothing new is needed"}. No markdown.`,
+      },
+      { role: "user", content: "What are you doing right now, and what single task most needs doing next?" },
+    ],
+    max_tokens: 120,
+  });
+  const opRaw = (res as { response?: unknown }).response;
+  const raw = (typeof opRaw === "string" ? opRaw : JSON.stringify(opRaw ?? "")).trim();
+  const m = raw.match(/\{[\s\S]*\}/);
+  let status = raw.slice(0, 200);
+  let task: string | null = null;
+  if (m) {
+    try {
+      const parsed = JSON.parse(m[0]) as { status?: string; task?: string | null };
+      status = (parsed.status ?? status).slice(0, 200);
+      task = parsed.task || null;
+    } catch {}
+  }
+
+  if (task && (pending?.c ?? 0) < 25) {
+    await env.DB.prepare(
+      "INSERT INTO task_log (task_id, agent_id, description, status, created_at) VALUES (lower(hex(randomblob(4))), ?, ?, 'pending', strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
+    )
+      .bind(a.id, task)
+      .run();
+  }
+  const payload = JSON.stringify({ from: a.id, agent: a.id, text: status, model: "workers-ai/llama-3.3-70b", ...(task ? { task } : {}) });
   const id = await publishToBus(env, ctx, "conversations", payload);
-  return { id, agent: a.id, text };
+  return { phase: "operating", id, agent: a.id, text: status, task };
 }

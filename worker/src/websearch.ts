@@ -9,7 +9,7 @@ interface Hit {
   source: "serper";
 }
 
-async function serper(env: Env, q: string, n: number): Promise<Hit[] | null> {
+export async function serper(env: Env, q: string, n: number): Promise<Hit[] | null> {
   const key = env.SERPER_API_KEY;
   if (!key) return null;
   const r = await fetch("https://google.serper.dev/search", {
