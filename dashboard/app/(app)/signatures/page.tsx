@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PageHeader, Card, Empty } from "@/components/ui";
+import { PageHeader, Card, Empty, timeAgo } from "@/components/ui";
 import { toast } from "@/components/Toast";
 import { PenTool, Plus, X, ExternalLink } from "lucide-react";
 import Link from "next/link";
@@ -14,6 +14,7 @@ interface Doc {
 
 export default function SignaturesPage() {
   const [docs, setDocs] = useState<Doc[]>([]);
+  const [events, setEvents] = useState<Record<string, unknown>[]>([]);
   const [connected, setConnected] = useState<boolean | null>(null);
   const [modal, setModal] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -32,6 +33,8 @@ export default function SignaturesPage() {
     if (d.connected === false) { setConnected(false); return; }
     setConnected(true);
     setDocs(Array.isArray(d.documents) ? d.documents : []);
+    const ev = await svc("/api/v1/inkless/events");
+    if (Array.isArray(ev.events)) setEvents(ev.events);
   };
   useEffect(() => { load(); const t = setInterval(load, 20000); return () => clearInterval(t); }, []);
 
@@ -100,6 +103,21 @@ export default function SignaturesPage() {
         &ldquo;Auto-release signatures when complete&rdquo; so the signed PDF is delivered automatically.
         Signed documents carry the Inkless audit trail.
       </p>
+
+      {events.length > 0 && (
+        <div className="mt-5 max-w-3xl">
+          <div className="text-xs font-semibold text-muted mb-2">Recent signing events</div>
+          <div className="space-y-1.5">
+            {events.slice(0, 10).map((e, i) => (
+              <div key={i} className="text-xs text-muted flex items-center gap-2">
+                <span className="text-ok">{(e.eventType ?? e.event ?? e.type ?? "event") as string}</span>
+                <span className="truncate">{(e.pdf_id ?? e.documentId ?? "") as string}</span>
+                <span className="ml-auto shrink-0">{timeAgo(e.received_at as string)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setModal(false)}>

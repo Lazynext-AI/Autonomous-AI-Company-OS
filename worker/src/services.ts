@@ -167,8 +167,10 @@ export async function handleServices(
   // --- Inkless e-sign -------------------------------------------------------
   // The only signing path — credential lives in KV as conn:inkless in
   // "base_url:api_key" form (bare key → hosted api.useinkless.com).
-  if (path === "/api/v1/inkless/documents" && req.method === "GET")
+  if (path === "/api/v1/inkless/documents" && req.method === "GET") {
+    ctx.waitUntil(ensureInklessWebhook(req, env));
     return inkless(env, "GET", "/getAllDocuments");
+  }
   if (path === "/api/v1/inkless/send" && req.method === "POST") {
     if (!b.template_id || !b.signer_email)
       return json({ error: "template_id and signer_email required" }, 400);
@@ -181,8 +183,58 @@ export async function handleServices(
       }],
     });
   }
+  if (path === "/api/v1/inkless/events" && req.method === "GET")
+    return json({ events: JSON.parse((await env.EPHEMERAL.get("inkless:events")) ?? "[]") });
 
   return json({ error: "not found" }, 404);
+}
+
+// Public receiver for Inkless webhook events (document.signed / finalized).
+// The secret path segment is generated at registration, so only Inkless (or
+// whoever holds it) can post here — no API key required.
+export async function handleInklessWebhook(
+  req: Request, env: Env, path: string,
+): Promise<Response> {
+  if (req.method !== "POST") return json({ error: "method" }, 405);
+  const sec = path.split("/").pop() ?? "";
+  const expected = await env.EPHEMERAL.get("inkless:whsec");
+  if (!expected || sec !== expected) return json({ error: "forbidden" }, 403);
+  const event = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+  const list = JSON.parse((await env.EPHEMERAL.get("inkless:events")) ?? "[]") as unknown[];
+  list.unshift({ ...event, received_at: new Date().toISOString() });
+  await env.EPHEMERAL.put("inkless:events", JSON.stringify(list.slice(0, 50)));
+  return json({ ok: true });
+}
+
+// Registers our webhook URL with Inkless once per credential so signed/
+// finalized events arrive in real time. Secret lives in KV.
+async function ensureInklessWebhook(req: Request, env: Env): Promise<void> {
+  const cred = await env.EPHEMERAL.get("conn:inkless");
+  if (!cred || (await env.EPHEMERAL.get("inkless:whreg"))) return;
+  let sec = await env.EPHEMERAL.get("inkless:whsec");
+  if (!sec) {
+    sec = crypto.randomUUID();
+    await env.EPHEMERAL.put("inkless:whsec", sec);
+  }
+  const { base, key } = parseInkless(cred);
+  const url = `${new URL(req.url).origin}/api/v1/inkless/webhook/${sec}`;
+  for (const eventType of ["document.signed", "document.finalized"]) {
+    const r = await fetch(`${base}/registerWebhook`, {
+      method: "POST",
+      headers: { "x-api-key": key, "content-type": "application/json" },
+      body: JSON.stringify({ url, eventType }),
+    });
+    if (!r.ok) return; // leave whreg unset → retried on next call
+  }
+  await env.EPHEMERAL.put("inkless:whreg", "1");
+}
+
+function parseInkless(cred: string): { base: string; key: string } {
+  const i = cred.lastIndexOf(":");
+  const maybeBase = i > 0 ? cred.slice(0, i) : "";
+  if (/^https?:\/\//.test(maybeBase))
+    return { base: maybeBase.replace(/\/+$/, ""), key: cred.slice(i + 1) };
+  return { base: "https://api.useinkless.com", key: cred };
 }
 
 // Reads conn:inkless from KV, splits on the LAST ':' so https:// URLs survive,
@@ -192,10 +244,7 @@ async function inkless(
 ): Promise<Response> {
   const cred = await env.EPHEMERAL.get("conn:inkless");
   if (!cred) return json({ connected: false, error: "inkless not connected — set it in Settings → Connector library" });
-  const i = cred.lastIndexOf(":");
-  const maybeBase = i > 0 ? cred.slice(0, i) : "";
-  const base = (/^https?:\/\//.test(maybeBase) ? maybeBase : "https://api.useinkless.com").replace(/\/+$/, "");
-  const key = /^https?:\/\//.test(maybeBase) ? cred.slice(i + 1) : cred;
+  const { base, key } = parseInkless(cred);
   const r = await fetch(`${base}${endpoint}`, {
     method,
     headers: { "x-api-key": key, "content-type": "application/json" },
