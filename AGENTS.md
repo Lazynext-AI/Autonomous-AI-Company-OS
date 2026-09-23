@@ -50,7 +50,7 @@ D1 + KV (`EPHEMERAL`) + Vectorize (`VECTORS`, index `company-knowledge`, 384d)
 - **Email sequence** — lead capture → email 1 immediately, sweeps send 2/3 at +3d/+7d (`seq:last_run` in KV).
 - **Launchdeck** is a live empty product scaffold (404 root) — awaiting a build.
 - **`wcag-2.1.2`** trap detector is conservative; a one-link page can trip it — intentional warn-over-miss.
-- Stale `agent-*` remote branches on the product repo are closed/merged PR leftovers — delete only with confirmation.
+- All stale `agent-*` remote branches were deleted (2026-09, user-confirmed) — closed/merged PR leftovers. New agent branches are created fresh per task and may accumulate again.
 
 ## Product worker deploys
 
