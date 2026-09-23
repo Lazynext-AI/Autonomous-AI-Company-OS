@@ -72,6 +72,8 @@ class CodeReviewAgent(BaseAgent):
             # Extract file paths from task description or context
             file_paths = self._extract_file_paths(task, project_dir)
             if not file_paths:
+                file_paths = self._default_review_paths(project_dir)
+            if not file_paths:
                 return TaskResult(
                     task_id=task.task_id,
                     success=False,
@@ -210,6 +212,19 @@ class CodeReviewAgent(BaseAgent):
                     pass
         
         return list(set(paths))[:10]  # Limit to 10 files
+
+    def _default_review_paths(self, project_dir: Path) -> list[str]:
+        """Repo-wide review set when the task names no files — glob the real
+        code surface (any stack), capped so the LLM fan-out stays bounded."""
+        exts = ("*.js", "*.mjs", "*.ts", "*.html", "*.py")
+        found = []
+        for ext in exts:
+            for f in sorted(project_dir.rglob(ext)):
+                rel = f.relative_to(project_dir)
+                if any(p in rel.parts for p in ("node_modules", ".git", "test", "tests", "docs", "marketing")):
+                    continue
+                found.append(str(rel))
+        return found[:15]
 
     async def _review_file(self, file_path: str, code: str, task: TaskMessage) -> dict[str, Any]:
         """Review a single file using LLM."""
