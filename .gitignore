@@ -29,7 +29,7 @@ wheels/
 chroma_db/
 
 # Logs
-logs/
+/logs/
 *.log
 
 # IDE
