@@ -364,6 +364,13 @@ async function agentTick(env: Env, ctx: ExecutionContext) {
   const urls = safeJson<Record<string, string>>(brain.live_urls) ?? {};
   if (!urls.repo) return bootstrapRepo(env, ctx, brain);
 
+  // Requeue one failed task that still has attempts left — a retry with the
+  // failure as feedback often succeeds; capped so permanently-broken tasks
+  // stay dead instead of looping forever.
+  await env.DB.prepare(
+    "UPDATE task_log SET status='pending' WHERE id=(SELECT id FROM task_log WHERE status='failed' AND attempts<3 ORDER BY created_at LIMIT 1)",
+  ).run().catch(() => {});
+
   // Execute the oldest pending task (real work: GitHub commit), and keep the
   // queue topped up by generating a task when it's running shallow.
   const pending = await env.DB.prepare(
@@ -471,7 +478,7 @@ async function operate(env: Env, ctx: ExecutionContext, brain: Brain, urls: Reco
     messages: [
       {
         role: "system",
-        content: `You are ${a.persona} at an autonomous software company building "${brain.product_name}" (${brain.product_description ?? ""}). Mission: ${brain.mission ?? "build and launch a valuable product"}. The goal is ONE coherent deployable product — real modules that import each other, a package manifest, and tests (test_*.py or *.test.js). ${repoCtx} Reply with ONLY JSON: {"status": "one line, first person, under 25 words", "task": "one concrete deliverable for the sprint or null if nothing new is needed"}. No markdown.`,
+        content: `You are ${a.persona} at an autonomous software company building "${brain.product_name}" (${brain.product_description ?? ""}). Mission: ${brain.mission ?? "build and launch a valuable product"}. North star: the deployed site must become a WORKING version of the product — a visitor can use its core feature client-side in the browser (no backend). Build ONE coherent product — real modules that import each other, a package manifest, tests (test_*.py or *.test.js), and a functional index.html. ${repoCtx} Reply with ONLY JSON: {"status": "one line, first person, under 25 words", "task": "one concrete deliverable for the sprint or null if nothing new is needed"}. No markdown.`,
       },
       { role: "user", content: "What are you doing right now, and what single task most needs doing next?" },
     ],
@@ -491,10 +498,11 @@ async function operate(env: Env, ctx: ExecutionContext, brain: Brain, urls: Reco
   }
 
   if (task && (pending?.c ?? 0) < 25) {
+    // Dedupe: skip if the same task is already queued or running.
     await env.DB.prepare(
-      "INSERT INTO task_log (task_id, agent_id, description, status, created_at) VALUES (lower(hex(randomblob(4))), ?, ?, 'pending', strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
+      "INSERT INTO task_log (task_id, agent_id, description, status, created_at) SELECT lower(hex(randomblob(4))), ?, ?, 'pending', strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE NOT EXISTS (SELECT 1 FROM task_log WHERE description=? AND status IN ('pending','in_progress'))",
     )
-      .bind(a.id, task)
+      .bind(a.id, task, task)
       .run();
   }
   const payload = JSON.stringify({ from: a.id, agent: a.id, text: status, model: "workers-ai/llama-3.3-70b", ...(task ? { task } : {}) });
@@ -676,6 +684,18 @@ async function executeTask(env: Env, ctx: ExecutionContext, brain: Brain, urls: 
   const repoCtx = tree.length
     ? `Existing repo files: ${tree.slice(0, 40).join(", ")}.`
     : "Repo is nearly empty.";
+  // A chosen path is uncommittable if it's a directory, or any of its parent
+  // segments already exist as a file (file-as-dir collision — GitHub 422s).
+  const pathConflict = (p: string): string | null => {
+    if (p.endsWith("/")) return "path is a directory, not a file";
+    const parts = p.split("/");
+    for (let i = 1; i < parts.length; i++) {
+      const prefix = parts.slice(0, i).join("/");
+      if (tree.includes(prefix)) return `path conflicts with existing file "${prefix}"`;
+    }
+    if (tree.some((t) => t.startsWith(p + "/"))) return `path conflicts with existing directory "${p}"`;
+    return null;
+  };
 
   let feedback = "";
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -685,7 +705,7 @@ async function executeTask(env: Env, ctx: ExecutionContext, brain: Brain, urls: 
       messages: [
         {
           role: "system",
-          content: `You are ${task.agent_id} at a software company building "${brain.product_name}". ${repoCtx} Choose where this task's deliverable belongs — code under src/, tests under tests/, docs under docs/, marketing under marketing/, research under docs/research/. Reuse/extend existing modules rather than creating parallel ones. Reply with ONLY JSON: {"path": "relative/file/path", "summary": "one line"}.`,
+          content: `You are ${task.agent_id} at a software company building "${brain.product_name}". ${repoCtx} Choose where this task's deliverable belongs — code under src/, tests under tests/, docs under docs/, marketing under marketing/, research under docs/research/. Reuse/extend existing modules rather than creating parallel ones. Reply with ONLY JSON: {"path": "relative/file/path", "summary": "one line"}.${feedback ? ` Previous attempt was rejected: ${feedback}.` : ""}`,
         },
         { role: "user", content: `Task: ${task.description}` },
       ],
@@ -702,7 +722,7 @@ async function executeTask(env: Env, ctx: ExecutionContext, brain: Brain, urls: 
       messages: [
         {
           role: "system",
-          content: `You are ${task.agent_id} at a software company building "${brain.product_name}" (${brain.product_description ?? ""}). ${repoCtx} Write the complete contents of the file "${meta?.path ?? "docs/output.md"}" for this task — real, working content, no placeholders. It must fit the existing repo: import from existing modules where sensible, use consistent naming. For test files (tests/ or *.test.js / test_*.py) use pytest or node:test so they actually run. Reply with ONLY the file contents — no JSON wrapper, no preamble, no markdown fences.${feedback ? ` Previous attempt was rejected: ${feedback}. Fix it.` : ""}`,
+          content: `You are ${task.agent_id} at a software company building "${brain.product_name}" (${brain.product_description ?? ""}). ${repoCtx} Write the complete contents of the file "${meta?.path ?? "docs/output.md"}" for this task — real, working content, no placeholders. It must fit the existing repo: import from existing modules where sensible, use consistent naming. For test files (tests/ or *.test.js / test_*.py) use pytest or node:test so they actually run. North star: the deployed site (index.html) must become a WORKING client-side version of the product — no backend, visitors use the core feature in the browser. Reply with ONLY the file contents — no JSON wrapper, no preamble, no markdown fences.${feedback ? ` Previous attempt was rejected: ${feedback}. Fix it.` : ""}`,
         },
         { role: "user", content: `Task: ${task.description}` },
       ],
@@ -717,6 +737,11 @@ async function executeTask(env: Env, ctx: ExecutionContext, brain: Brain, urls: 
     }
 
     const path = sanitizePath(meta?.path ?? (ext ? `docs/output.${ext}` : `docs/output-${Date.now()}.md`));
+    const conflict = pathConflict(path);
+    if (conflict) {
+      feedback = `${conflict} — choose a different path`;
+      continue;
+    }
     const v = await verifyArtifact(env, brain, task, path, content);
     if (v.ok) {
       const put = await ghPutFile(env, repo, path, content, `${task.agent_id}: ${(meta?.summary ?? task.description).slice(0, 60)}`);
