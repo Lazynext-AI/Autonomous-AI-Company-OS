@@ -85,7 +85,7 @@ async def list_store_products() -> list[dict]:
     return (await _call("GET", "/api/v1/store/products")).get("rows", [])
 
 
-# --- Email marketing (replaces Mailchimp/SendGrid; sends via Resend) --------
+# --- Email marketing (replaces Mailchimp/SendGrid; sends via Brevo) ---------
 
 async def add_contact(email: str, name: str = "", source: str = "") -> dict:
     return await _call("POST", "/api/v1/marketing/contacts",

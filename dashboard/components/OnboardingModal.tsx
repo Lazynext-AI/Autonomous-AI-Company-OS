@@ -17,7 +17,7 @@ const STEPS = [
   {
     icon: Plug,
     title: "Integrations",
-    body: "Cloudflare (brain + data + code exec), GitHub (code), Resend (email), Serper (research) — all wired.",
+    body: "Cloudflare (brain + data + code exec), GitHub (code), Brevo (email), Serper (research) — all wired.",
   },
   {
     icon: Rocket,

@@ -18,7 +18,7 @@ import { getContainer } from "@cloudflare/containers";
 export { CodeExecContainer } from "./exec_container";
 import { handleWidget } from "./widget";
 import { fanOut, handleWebhooks, publishToBus } from "./webhooks";
-import { handleServices, handleInklessWebhook } from "./services";
+import { handleServices, handleInklessWebhook, brevoSend } from "./services";
 
 export { Env };
 
@@ -173,26 +173,12 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
     }
 
     case "/email/send": {
-      // Real transactional email via Resend — founder flows (verify, reset, alerts).
-      if (!env.RESEND_API_KEY) return json({ error: "email not configured" }, 503);
+      // Real transactional email via Brevo — founder flows (verify, reset, alerts).
       const b = await readBody<{ to: string; subject: string; html: string }>(req);
       if (!b.to || !b.subject || !b.html) return json({ error: "to, subject, html required" }, 400);
-      const r = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${env.RESEND_API_KEY}`,
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          from: "Lazynext <support@lazynext.com>",
-          to: [b.to],
-          subject: b.subject,
-          html: b.html,
-        }),
-      });
-      const d = (await r.json()) as { id?: string; message?: string };
-      if (!r.ok) return json({ error: d.message ?? "send failed" }, r.status);
-      return json({ ok: true, id: d.id });
+      const r = await brevoSend(env, b.to, b.subject, b.html);
+      if (!r.ok) return json({ error: r.error ?? "send failed" }, r.status);
+      return json({ ok: true, id: r.messageId });
     }
 
     case "/bus/ack": {

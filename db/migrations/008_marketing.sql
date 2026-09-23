@@ -1,4 +1,4 @@
--- Native marketing (contacts + campaigns via Resend) — replacing
+-- Native marketing (contacts + campaigns via Brevo) — replacing
 -- Mailchimp/SendGrid.
 
 CREATE TABLE IF NOT EXISTS email_contacts (

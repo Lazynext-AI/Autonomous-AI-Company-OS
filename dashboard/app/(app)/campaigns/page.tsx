@@ -53,7 +53,7 @@ export default function CampaignsPage() {
 
   return (
     <>
-      <PageHeader title="Marketing" subtitle={`Native email campaigns — ${sub} subscribed contacts, sends via Resend.`}>
+      <PageHeader title="Marketing" subtitle={`Native email campaigns — ${sub} subscribed contacts, sends via Brevo.`}>
         <div className="flex gap-2">
           <button onClick={() => setModal("contact")} className="inline-flex items-center gap-2 border border-border hover:border-accent text-fg text-sm font-semibold px-4 py-2.5 rounded-lg transition">
             <Users className="w-4 h-4" /> Add contact
@@ -66,7 +66,7 @@ export default function CampaignsPage() {
 
       <h3 className="text-sm font-semibold text-fg mb-3">Campaigns</h3>
       {campaigns.length === 0 && !loading ? (
-        <Empty title="No campaigns" hint="Create a campaign — it sends to all subscribed contacts via Resend." />
+        <Empty title="No campaigns" hint="Create a campaign — it sends to all subscribed contacts via Brevo." />
       ) : (
         <div className="space-y-3 max-w-3xl mb-8">
           {campaigns.map((c) => (

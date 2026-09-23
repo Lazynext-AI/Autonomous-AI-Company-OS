@@ -110,7 +110,7 @@ export async function handleServices(
       [Number(b.product_id), str(b.customer_email), Number(b.amount_cents ?? 0), str(b.currency) ?? "usd", str(b.dodo_session_id)]);
   }
 
-  // --- Email marketing (replaces Mailchimp/SendGrid; sends via Resend) -----
+  // --- Email marketing (replaces Mailchimp/SendGrid; sends via Brevo) ------
   if (path === "/api/v1/marketing/contacts" && req.method === "GET")
     return list(env, "email_contacts");
   if (path === "/api/v1/marketing/contacts" && req.method === "POST") {
@@ -134,7 +134,7 @@ export async function handleServices(
       [b.name, b.subject, b.html]);
   }
   if (path.match(/^\/api\/v1\/marketing\/campaigns\/\d+\/send$/) && req.method === "POST" && id) {
-    if (!env.RESEND_API_KEY) return json({ error: "email not configured" }, 503);
+    if (!(await brevoCred(env))) return json({ error: "brevo not connected — set it in Settings → Connector library" }, 503);
     const camp = await env.DB.prepare(
       "SELECT * FROM email_campaigns WHERE id = ?").bind(id).first<Record<string, unknown>>();
     if (!camp) return json({ error: "campaign not found" }, 404);
@@ -145,16 +145,7 @@ export async function handleServices(
     let sent = 0;
     for (const c of contacts as { email: string }[]) {
       try {
-        const r = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, "content-type": "application/json" },
-          body: JSON.stringify({
-            from: "Lazynext <support@lazynext.com>",
-            to: [c.email],
-            subject: String(camp.subject),
-            html: String(camp.html),
-          }),
-        });
+        const r = await brevoSend(env, c.email, String(camp.subject), String(camp.html));
         if (r.ok) sent++;
       } catch {}
     }
@@ -239,6 +230,40 @@ function parseInkless(cred: string): { base: string; key: string } {
 
 // Reads conn:inkless from KV, splits on the LAST ':' so https:// URLs survive,
 // then calls the Inkless API. {connected:false} when no credential is set.
+// --- Transactional + campaign email (Brevo — the only email path) ----------
+// Credential lives in KV as conn:brevo in "sender@domain.com:api_key" form
+// (bare key → support@lazynext.com sender), falling back to the
+// BREVO_API_KEY worker secret. Free tier: 300 emails/day.
+async function brevoCred(env: Env): Promise<{ from: string; key: string } | null> {
+  const cred = (await env.EPHEMERAL.get("conn:brevo")) ?? env.BREVO_API_KEY;
+  if (!cred) return null;
+  const i = cred.lastIndexOf(":");
+  const maybeFrom = i > 0 ? cred.slice(0, i) : "";
+  return maybeFrom.includes("@")
+    ? { from: maybeFrom, key: cred.slice(i + 1) }
+    : { from: "support@lazynext.com", key: cred };
+}
+
+export async function brevoSend(
+  env: Env, to: string, subject: string, html: string, name?: string,
+): Promise<{ ok: boolean; status: number; messageId?: string; error?: string }> {
+  const cred = await brevoCred(env);
+  if (!cred)
+    return { ok: false, status: 503, error: "brevo not connected — set it in Settings → Connector library" };
+  const r = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: { "api-key": cred.key, "content-type": "application/json" },
+    body: JSON.stringify({
+      sender: { email: cred.from, name: "Lazynext" },
+      to: [{ email: to, ...(name ? { name } : {}) }],
+      subject,
+      htmlContent: html,
+    }),
+  });
+  const d = (await r.json().catch(() => ({}))) as { messageId?: string; message?: string };
+  return { ok: r.ok, status: r.status, messageId: d.messageId, error: d.message };
+}
+
 async function inkless(
   env: Env, method: string, endpoint: string, body?: unknown,
 ): Promise<Response> {

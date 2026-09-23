@@ -370,7 +370,7 @@ When significant milestones are achieved (e.g., first deployment, 100 users, rev
 | Cloudflare Workers AI | LLM provider | Built-in |
 | Cloudflare (Worker + D1 + KV + Vectorize + Pages + Containers) | All persistent state and deployments | Yes |
 | GitHub | Remote repos, push triggers, Actions CI monitoring | Optional |
-| Resend | Weekly founder briefing emails (also on dashboard) | Optional |
+| Brevo | Transactional + campaign email — briefings, alerts (also on dashboard) | Optional |
 | Cloudflare Container | Code execution sandbox | Built-in |
 
 Frontends deploy to Cloudflare Pages, backends to Workers (JS/TS) or Containers

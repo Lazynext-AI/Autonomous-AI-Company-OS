@@ -12,7 +12,7 @@ export interface Env {
   BROWSER?: Fetcher;
   CODE_EXEC?: DurableObjectNamespace<import("./exec_container").CodeExecContainer>;
   API_TOKEN?: string;
-  RESEND_API_KEY?: string;
+  BREVO_API_KEY?: string;
   DODO_API_KEY?: string;
   DODO_WEBHOOK_SECRET?: string;
   SERPER_API_KEY?: string;

@@ -35,7 +35,7 @@ class Settings(BaseSettings):
 
     # External APIs (optional)
     github_token: str = ""
-    resend_api_key: str = ""
+    brevo_api_key: str = ""
     email_from: str = "Lazynext <support@lazynext.com>"
     serper_api_key: str = ""
 

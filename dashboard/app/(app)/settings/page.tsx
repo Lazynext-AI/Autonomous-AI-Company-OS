@@ -13,7 +13,7 @@ import {
 
 const INTEGRATIONS = [
   { name: "GitHub", desc: "Lazynext-Platform org — repos + CI", icon: GitBranch, ok: true },
-  { name: "Resend", desc: "Transactional email — briefings, alerts", icon: Mail, ok: true },
+  { name: "Brevo", desc: "Transactional + campaign email — briefings, alerts", icon: Mail, ok: true },
   { name: "Workers AI", desc: "LLM brain — Llama-3.3-70b, free", icon: Cpu, ok: true },
   { name: "Cloudflare", desc: "Workers + D1 + KV + Vectorize + Browser + Containers", icon: Globe, ok: true },
   { name: "Penpot", desc: "Design system — penpot.lazynext.com", icon: Palette, ok: true },
@@ -24,8 +24,8 @@ const INTEGRATIONS = [
 
 // Connector library — only genuinely-external services remain. CRM, support,
 // scheduling, commerce, and email marketing are all native on D1 now.
-// What's left are destination networks Cloudflare can't reach, plus Inkless
-// for legal-grade e-signatures.
+// What's left are destination networks Cloudflare can't reach, Brevo for
+// email delivery, plus Inkless for legal-grade e-signatures.
 const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; name: string; hint: string }[] }[] = [
   {
     group: "Social posting", icon: Share2,
@@ -40,6 +40,12 @@ const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; nam
     items: [
       { id: "twilio", name: "Twilio", hint: "Account SID + auth token + number — SMS/voice" },
       { id: "whatsapp", name: "WhatsApp Business", hint: "API token + phone id — chat notifications" },
+    ],
+  },
+  {
+    group: "Email", icon: Mail,
+    items: [
+      { id: "brevo", name: "Brevo", hint: "api_key — or sender@domain.com:api_key (brevo.com → SMTP & API)" },
     ],
   },
   {
@@ -231,7 +237,7 @@ export default function SettingsPage() {
                   <span className="text-muted">Credential</span>
                   <span className="text-fg font-mono text-xs">
                     {integration === "GitHub" && "GITHUB_TOKEN"}
-                    {integration === "Resend" && "RESEND_API_KEY"}
+                    {integration === "Brevo" && "conn:brevo (KV) / BREVO_API_KEY"}
                     {integration === "Scraping" && "CLOUDFLARE (browser)"}
                     {integration === "Workers AI" && "CLOUDFLARE_API_URL"}
                     {integration === "Cloudflare" && "CLOUDFLARE_DEPLOY_TOKEN"}
@@ -349,7 +355,7 @@ export default function SettingsPage() {
             </div>
             <div className="pt-3 border-t border-border">
               <div className="text-sm text-fg mb-1">Email verification</div>
-              <div className="text-xs text-muted mb-3">Send a real verification email to the founder address via Resend.</div>
+              <div className="text-xs text-muted mb-3">Send a real verification email to the founder address via Brevo.</div>
               <button
                 onClick={async () => {
                   const b = await queryApi<any>("SELECT founder_email FROM company_brain LIMIT 1");

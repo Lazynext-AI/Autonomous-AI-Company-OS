@@ -1,4 +1,6 @@
-"""Resend email tool."""
+"""Brevo email tool."""
+
+import re
 
 from core.config import get_settings
 
@@ -36,24 +38,28 @@ def _html_shell(subject: str, body: str, cta_label: str | None = None, cta_url: 
 async def send_email(
     to: str, subject: str, body: str, cta_label: str | None = None, cta_url: str | None = None
 ) -> bool:
-    """Send email via Resend API."""
+    """Send email via Brevo API."""
     settings = get_settings()
-    if not settings.resend_api_key:
+    if not settings.brevo_api_key:
         return False
+    # email_from may be "Name <addr>" — Brevo wants sender {email, name} split.
+    frm = settings.email_from
+    m = re.match(r"^(.*?)\s*<([^>]+)>\s*$", frm)
+    sender = {"email": m.group(2), "name": m.group(1)} if m else {"email": frm}
     try:
         import httpx
         async with httpx.AsyncClient() as client:
             r = await client.post(
-                "https://api.resend.com/emails",
+                "https://api.brevo.com/v3/smtp/email",
                 headers={
-                    "Authorization": f"Bearer {settings.resend_api_key}",
+                    "api-key": settings.brevo_api_key,
                     "Content-Type": "application/json",
                 },
                 json={
-                    "from": settings.email_from,
-                    "to": [to],
+                    "sender": sender,
+                    "to": [{"email": to}],
                     "subject": subject,
-                    "html": _html_shell(subject, body, cta_label, cta_url),
+                    "htmlContent": _html_shell(subject, body, cta_label, cta_url),
                 },
             )
             return r.status_code in (200, 201)

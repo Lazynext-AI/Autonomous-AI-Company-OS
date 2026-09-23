@@ -24,7 +24,7 @@ const ITEMS = [
   { href: "/tickets", label: "Support", icon: Activity, hint: "Native helpdesk tickets" },
   { href: "/bookings", label: "Bookings", icon: Activity, hint: "Native scheduling" },
   { href: "/store", label: "Store", icon: Activity, hint: "Native storefront catalog" },
-  { href: "/campaigns", label: "Marketing", icon: Activity, hint: "Email campaigns via Resend" },
+  { href: "/campaigns", label: "Marketing", icon: Activity, hint: "Email campaigns via Brevo"},
   { href: "/signatures", label: "Signatures", icon: Activity, hint: "Legal e-sign via Inkless" },
   { href: "/logs", label: "Logs", icon: Activity, hint: "Console — errors + events" },
   { href: "/approvals", label: "Approvals", icon: Activity, hint: "Sign off on sensitive actions" },

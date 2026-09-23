@@ -125,6 +125,29 @@ async def _whatsapp(payload: dict, cred: str) -> dict:
 
 # --- Email marketing ------------------------------------------------------
 
+async def _brevo(payload: dict, cred: str) -> dict:
+    # cred format: "<sender_email>:<api_key>" — a bare key falls back to
+    # support@lazynext.com as the verified sender. Key from brevo.com →
+    # SMTP & API → API Keys (free tier: 300 emails/day).
+    i = cred.rfind(":")
+    maybe_from = cred[:i] if i > 0 else ""
+    if "@" in maybe_from:
+        frm, key = maybe_from, cred[i + 1:]
+    else:
+        frm, key = "support@lazynext.com", cred
+    to = payload.get("to") or payload.get("email") or ""
+    return await _post(
+        "https://api.brevo.com/v3/smtp/email",
+        headers={"api-key": key},
+        json_body={
+            "sender": {"email": frm, "name": "Lazynext"},
+            "to": [{"email": to}],
+            "subject": payload.get("subject", "Lazynext"),
+            "htmlContent": payload.get("html", payload.get("text", "")),
+        },
+    )
+
+
 # --- Scheduling & signing -------------------------------------------------
 
 async def _inkless(payload: dict, cred: str) -> dict:
@@ -157,6 +180,7 @@ async def _inkless(payload: dict, cred: str) -> dict:
 _DISPATCH = {
     "x": _x, "linkedin": _linkedin, "meta": _meta,
     "twilio": _twilio, "whatsapp": _whatsapp,
+    "brevo": _brevo,
     "inkless": _inkless,
     }
 

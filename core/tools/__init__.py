@@ -1,4 +1,4 @@
-"""Agent tools: code executor (Cloudflare container), email (Resend), web search (Serper), scraping (Browser Rendering)."""
+"""Agent tools: code executor (Cloudflare container), email (Brevo), web search (Serper), scraping (Browser Rendering)."""
 
 from core.tools.code_executor import CodeExecutionResult, run_code
 from core.tools.connectors import call_connector, connector_status

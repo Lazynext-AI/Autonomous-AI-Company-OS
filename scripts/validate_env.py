@@ -35,9 +35,9 @@ FIX_INSTRUCTIONS = {
         "GitHub: github.com → Settings → Developer settings → Personal access tokens → Generate new token. "
         "Scopes: repo, read:org, workflow."
     ),
-    "resend": (
-        "Resend: resend.com → API Keys → Create API key. Free tier: 3000 emails/month. "
-        "Add domain in Resend dashboard to send to non-resend.dev addresses."
+    "brevo": (
+        "Brevo: brevo.com → SMTP & API → API Keys → Generate. Free tier: 300 emails/day. "
+        "Verify your sender domain for production sends."
     ),
 }
 
@@ -126,21 +126,21 @@ async def check_github() -> tuple[bool, str]:
         return False, str(e)
 
 
-async def check_resend() -> tuple[bool, str]:
-    """Validate Resend API key."""
-    key = os.getenv("RESEND_API_KEY", "").strip()
+async def check_brevo() -> tuple[bool, str]:
+    """Validate Brevo API key."""
+    key = os.getenv("BREVO_API_KEY", "").strip()
     if not key:
-        return False, "RESEND_API_KEY not set (optional for emails)"
+        return False, "BREVO_API_KEY not set (optional for emails)"
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             r = await client.get(
-                "https://api.resend.com/domains",
-                headers={"Authorization": f"Bearer {key}"},
+                "https://api.brevo.com/v3/account",
+                headers={"api-key": key},
             )
             if r.status_code == 200:
                 return True, "OK"
             if r.status_code == 401:
-                return False, "Invalid key. Create at resend.com → API Keys"
+                return False, "Invalid key. Create at brevo.com → SMTP & API → API Keys"
             if r.status_code == 403:
                 return False, "Key invalid or revoked."
             return False, f"HTTP {r.status_code}"
@@ -174,7 +174,7 @@ async def main() -> None:
         ("Brain (Workers AI)", check_brain, True),
         ("Embeddings", check_embeddings, True),
         ("GitHub", check_github, False),
-        ("Resend", check_resend, False),
+        ("Brevo", check_brevo, False),
         ("Exec (Cloudflare container)", check_exec, False),
     ]
 
