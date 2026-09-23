@@ -128,16 +128,21 @@ async def _whatsapp(payload: dict, cred: str) -> dict:
 # --- Scheduling & signing -------------------------------------------------
 
 async def _inkless(payload: dict, cred: str) -> dict:
-    # cred = Inkless API key (free — email hello@useinkless.com to get one).
-    # Legally binding (ESIGN/UETA) with audit trail + webhooks. Sends a
+    # cred format: "<base_url>:<api_key>" — hosted https://api.useinkless.com
+    # (free key via hello@useinkless.com). A bare key falls back to the hosted
+    # URL. Legally binding (ESIGN/UETA) with audit trail + webhooks. Sends a
     # pre-created template to recipients: build the template once in their
     # webapp (app.useinkless.com/templates), then pass template_id here.
-    headers = {"x-api-key": cred, "content-type": "application/json"}
+    base, sep, key = cred.rpartition(":")
+    if not (sep and base.startswith(("http://", "https://"))):
+        base, key = "https://api.useinkless.com", cred
+    base = base.rstrip("/")
+    headers = {"x-api-key": key, "content-type": "application/json"}
     template_id = payload.get("template_id")
     if not template_id:
         return {"ok": False, "error": "inkless requires template_id — create the template in app.useinkless.com first"}
     return await _post(
-        "https://api.useinkless.com/createFromTemplate",
+        f"{base}/createFromTemplate",
         headers=headers,
         json_body={
             "templateId": template_id,

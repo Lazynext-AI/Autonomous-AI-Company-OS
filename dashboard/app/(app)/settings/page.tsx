@@ -45,7 +45,7 @@ const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; nam
   {
     group: "Legal signing", icon: FileCheck2,
     items: [
-      { id: "inkless", name: "Inkless", hint: "API key (email hello@useinkless.com) — free hosted legal e-sign" },
+      { id: "inkless", name: "Inkless", hint: "url:api_key — hosted legal e-sign (key via hello@useinkless.com)" },
     ],
   },
 ];
