@@ -186,14 +186,22 @@ class BackendAgent(BaseAgent):
                     # Automatically create deploy task if code was committed and pushed
                     if write_result.get("git_committed") and write_result.get("git_pushed"):
                         await self._auto_create_deploy_task(task, write_result)
-                elif write_result.get("skipped_protected"):
-                    # Every generated file targeted a managed path — nothing
-                    # shipped, so the task must not complete (dedup would mark
-                    # the feature done forever). Retry lands as a new module.
+                elif write_result.get("skipped_protected") or write_result.get("reverted"):
+                    # Every generated file was blocked (protected path) or
+                    # rejected and reverted by the local test/fitness gates —
+                    # nothing shipped, so the task must not complete (dedup
+                    # would mark the feature done forever).
                     result.success = False
-                    result.error = ("Deliverable blocked: generated files only target "
-                                    "protected paths — deliver as a NEW module instead "
-                                    "(e.g. src/<feature>.js), not an edit to managed files")
-                    result.lesson = "Managed files are protected — extend via new modules"
+                    if write_result.get("skipped_protected"):
+                        result.error = ("Deliverable blocked: generated files only target "
+                                        "protected paths — deliver as a NEW module instead "
+                                        "(e.g. src/<feature>.js), not an edit to managed files")
+                        result.lesson = "Managed files are protected — extend via new modules"
+                    elif write_result.get("tests_failed"):
+                        result.error = "Deliverable rejected: repo test suite failed — fix and reship"
+                        result.lesson = "Generated code must pass the repo's node --test suite"
+                    else:
+                        result.error = "Deliverable rejected: task-fit review found it wrong for this product"
+                        result.lesson = "Generated code must fit the real product surface"
             except Exception as e:
                 logger.error("code_write_failed", task_id=task.task_id, error=str(e))

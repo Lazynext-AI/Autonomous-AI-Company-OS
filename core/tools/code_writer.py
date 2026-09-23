@@ -218,10 +218,14 @@ class CodeWriter:
         if files_written and not tests_failed:
             fitness_failed = await self._fitness_check(task_description, files_written, repo_root)
 
+        reverted: list[str] = []
         if tests_failed or fitness_failed:
             # Rejected artifacts left in the tree poison the next task's
-            # test run — undo this round's writes.
+            # test run — undo this round's writes. files_written must also
+            # be cleared: callers treat a non-empty list as "work shipped"
+            # and would mark the task completed over reverted files.
             await self._revert_files(repo_root, files_written)
+            reverted, files_written = files_written, []
 
         # Commit to git if files were written
         git_info = {"committed": False, "branch": None, "pushed": False}
@@ -241,6 +245,9 @@ class CodeWriter:
             "git_pushed": git_info.get("pushed", False),
             "repo_root": str(repo_root),
         }
+
+        if reverted:
+            result["reverted"] = reverted
 
         if tests_failed:
             result["tests_failed"] = tests_failed

@@ -175,11 +175,18 @@ class DevOpsAgent(BaseAgent):
                     result.output = f"{result.output}\n\n[Files written: {', '.join(write_result['files_written'])}]"
                     if write_result.get("git_committed"):
                         result.output += "\n[Committed to git]"
-                elif write_result.get("skipped_protected"):
+                elif write_result.get("skipped_protected") or write_result.get("reverted"):
                     result.success = False
-                    result.error = ("Deliverable blocked: generated files only target "
-                                    "protected paths — deliver as a NEW module instead")
-                    result.lesson = "Managed files are protected — extend via new modules"
+                    if write_result.get("skipped_protected"):
+                        result.error = ("Deliverable blocked: generated files only target "
+                                        "protected paths — deliver as a NEW module instead")
+                        result.lesson = "Managed files are protected — extend via new modules"
+                    elif write_result.get("tests_failed"):
+                        result.error = "Deliverable rejected: repo test suite failed — fix and reship"
+                        result.lesson = "Generated code must pass the repo's node --test suite"
+                    else:
+                        result.error = "Deliverable rejected: task-fit review found it wrong for this product"
+                        result.lesson = "Generated code must fit the real product surface"
             except Exception as e:
                 logger.error("config_write_failed", task_id=task.task_id, error=str(e))
 
