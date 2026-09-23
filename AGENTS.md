@@ -41,6 +41,7 @@ D1 + KV (`EPHEMERAL`) + Vectorize (`VECTORS`, index `company-knowledge`, 384d)
 ## Known states
 
 - **Dodo is test-mode.** Live requires: Dodo KYC (user action) → live `DODO_API_KEY` → `DODO_API_BASE=https://live.dodopayments.com` → recreate product + webhook in live mode. Webhook: Svix-style signature verify + `whseen:` replay dedup; `past_due` sets `pastdue:` KV + bus event, no immediate revoke.
+- **Plan state model** — `subs:active` (KV) tracks active subscriptions by `subscription_id`; the global `plan` is *derived* from that set (any active → its plan, none → Founder). One cancellation can no longer clobber the global while other subs stay active. `GET /api/v1/billing/subscriptions` (admin token) lists Dodo's active subs for reconciliation.
 - **14-day free trial is live** — `/billing/products` + `/billing/checkout` accept `trial_days` (→ `price.trial_period_days` / `subscription_data.trial_period_days`); product `/checkout` sends `trial_days:14`. `metadata.trial=1` stamps `trial:<email>` on `subscription.active`; any later billing event clears it; the daily sweep sends one 3-day reminder at day 11 (`trial:<email>:reminded`).
 - **`/query` endpoint rejects bare Python `urllib`** (403) — send a `User-Agent` header; also avoid inlined literal-heavy SQL, prefer `?` params.
 - **Brevo is the only email provider** — Resend is fully removed (code, config, secrets). Do not reintroduce.

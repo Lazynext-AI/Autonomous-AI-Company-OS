@@ -105,7 +105,17 @@ export async function handleBilling(
       }
     }
     if (plan && (activate || downgrade)) {
-      const name = activate ? plan : "Founder";
+      // `plan` must reflect "any active subscription", not "the last event
+      // seen" — cancelling one sub must not downgrade the global plan while
+      // another stays active. Track active subs by subscription_id (email
+      // fallback for payloads that lack it) and derive the plan from the set.
+      const subKey = (evt.data as { subscription_id?: string })?.subscription_id ?? email ?? "unknown";
+      const rawSubs = await env.EPHEMERAL.get("subs:active");
+      const subs: Record<string, string> = rawSubs ? JSON.parse(rawSubs) : {};
+      if (activate) subs[subKey] = plan; else delete subs[subKey];
+      await env.EPHEMERAL.put("subs:active", JSON.stringify(subs));
+      const actives = Object.values(subs);
+      const name = actives.includes("pro") ? "pro" : (actives[0] ?? "Founder");
       await env.EPHEMERAL.put("plan", JSON.stringify({ name }));
       // Product license: the buyer's email becomes their license key for the
       // product API (validated via license:<email> in KV).
@@ -213,6 +223,17 @@ export async function handleBilling(
     const d = (await r.json()) as Record<string, unknown>;
     if (!r.ok) return json({ error: "cancel failed", detail: d }, 502);
     return json({ ok: true, subscription_id: subId, status: d.status });
+  }
+
+  // List active subscriptions — internal token. Billing visibility for the
+  // dashboard/ops and the source of truth for reconciling `subs:active`.
+  if (req.method === "GET" && path === "/api/v1/billing/subscriptions") {
+    const auth = req.headers.get("authorization") ?? "";
+    if (auth !== `Bearer ${env.API_TOKEN}`) return json({ error: "unauthorized" }, 401);
+    const r = await dodoFetch(env, "/subscriptions?status=active", undefined, "GET");
+    const d = (await r.json()) as { items?: unknown[] };
+    if (!r.ok) return json({ error: "list failed", detail: d }, 502);
+    return json({ ok: true, subscriptions: d.items ?? [] });
   }
 
   // Current plan — public read for the dashboard.
