@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 // Proxy for the native services (CRM / tickets / bookings / store) on the
 // worker. Reads happen via queryApi straight to D1; this route is only for
 // writes so they go through the worker's validation + auth.
-const ALLOWED = /^\/api\/v1\/(crm\/leads|support\/tickets|booking|store\/products)(\/\d+)?$/;
+const ALLOWED = /^\/api\/v1\/(crm\/leads|support\/tickets|booking|store\/products|store\/orders|marketing\/contacts|marketing\/campaigns|sign\/requests)(\/\d+(\/send|\/sign)?)?$/;
 
 export async function POST(req: NextRequest) {
   const { path, method = "POST", body } = await req.json();

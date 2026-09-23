@@ -21,10 +21,9 @@ const INTEGRATIONS = [
   { name: "Dodo Payments", desc: "Billing — merchant of record ($29/mo plan live)", icon: CreditCard, ok: true },
 ];
 
-// Connector library — situational services wired to accept credentials.
-// Stored in KV as conn:<id> so agents can call them once you add a key/URL.
-// CRM, support tickets, scheduling, and commerce are native (built-in on D1) —
-// only genuinely-external services remain here.
+// Connector library — only genuinely-external services remain. CRM, support,
+// scheduling, commerce, email marketing, and e-sign are all native on D1 now.
+// What's left are destination networks Cloudflare can't reach.
 const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; name: string; hint: string }[] }[] = [
   {
     group: "Social posting", icon: Share2,
@@ -39,19 +38,6 @@ const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; nam
     items: [
       { id: "twilio", name: "Twilio", hint: "Account SID + auth token + number — SMS/voice" },
       { id: "whatsapp", name: "WhatsApp Business", hint: "API token + phone id — chat notifications" },
-    ],
-  },
-  {
-    group: "Email marketing", icon: Send,
-    items: [
-      { id: "mailchimp", name: "Mailchimp", hint: "API key + list id — campaigns (Resend covers transactional)" },
-      { id: "sendgrid", name: "SendGrid", hint: "API key — marketing email" },
-    ],
-  },
-  {
-    group: "Signing", icon: CalendarClock,
-    items: [
-      { id: "docusign", name: "DocuSign", hint: "Access token + account id — sign contracts" },
     ],
   },
 ];

@@ -125,43 +125,12 @@ async def _whatsapp(payload: dict, cred: str) -> dict:
 
 # --- Email marketing ------------------------------------------------------
 
-async def _mailchimp(payload: dict, cred: str) -> dict:
-    # cred format: "<api_key>:<list_id>" (api_key embeds the dc suffix)
-    key, _, list_id = cred.partition(":")
-    dc = key.split("-")[-1] if "-" in key else "us1"
-    return await _post(
-        f"https://{dc}.api.mailchimp.com/3.0/lists/{list_id}/members",
-        auth=("lazynext", key),
-        json_body={"email_address": payload.get("email", ""), "status": "subscribed"},
-    )
-
-
-async def _sendgrid(payload: dict, cred: str) -> dict:
-    return await _post(
-        "https://api.sendgrid.com/v3/marketing/contacts",
-        headers={"authorization": f"Bearer {cred}"},
-        json_body={"contacts": [{"email": payload.get("email", "")}]},
-    )
-
-
 # --- Scheduling & signing -------------------------------------------------
-
-async def _docusign(payload: dict, cred: str) -> dict:
-    # cred format: "<account_id>:<access_token>"
-    acct, _, token = cred.partition(":")
-    return await _post(
-        f"https://demo.docusign.net/restapi/v2.1/accounts/{acct}/envelopes",
-        headers={"authorization": f"Bearer {token}"},
-        json_body=payload,
-    )
-
 
 _DISPATCH = {
     "x": _x, "linkedin": _linkedin, "meta": _meta,
     "twilio": _twilio, "whatsapp": _whatsapp,
-    "mailchimp": _mailchimp, "sendgrid": _sendgrid,
-    "docusign": _docusign,
-}
+    }
 
 
 async def call_connector(connector_id: str, payload: dict[str, Any] | str) -> dict[str, Any]:

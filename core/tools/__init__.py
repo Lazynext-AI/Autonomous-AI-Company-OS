@@ -6,8 +6,10 @@ from core.tools.email_tool import send_email
 from core.tools.scrape_tool import research_topic, scrape_url
 from core.tools.search_tool import search_web
 from core.tools.services import (
-    add_lead, add_store_product, book_meeting, create_ticket,
-    list_bookings, list_leads, list_store_products, list_tickets, update_lead,
+    add_contact, add_lead, add_store_product, book_meeting, create_campaign,
+    create_signature_request, create_ticket, list_bookings, list_campaigns,
+    list_contacts, list_leads, list_signature_requests, list_store_products,
+    list_tickets, send_campaign, sign_request, update_lead,
 )
 
 __all__ = [
@@ -28,4 +30,12 @@ __all__ = [
     "list_bookings",
     "add_store_product",
     "list_store_products",
+    "add_contact",
+    "list_contacts",
+    "create_campaign",
+    "send_campaign",
+    "list_campaigns",
+    "create_signature_request",
+    "sign_request",
+    "list_signature_requests",
 ]

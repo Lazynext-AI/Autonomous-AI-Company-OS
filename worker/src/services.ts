@@ -39,7 +39,12 @@ export async function handleServices(
   if (res) return res;
   touchKey(env, ctx, key!.id);
   const b = req.method === "GET" ? {} : ((await req.json().catch(() => ({}))) as Record<string, unknown>);
-  const id = parseInt(path.split("/").pop() ?? "", 10);
+  // id is the last numeric segment — for ".../{id}/send" or ".../{id}/sign" the
+  // id is second-to-last, not last.
+  const segs = path.split("/").filter(Boolean);
+  const idSeg = /^\d+$/.test(segs[segs.length - 1] ?? "") ? segs[segs.length - 1]
+    : /^\d+$/.test(segs[segs.length - 2] ?? "") ? segs[segs.length - 2] : "";
+  const id = parseInt(idSeg, 10);
 
   // --- CRM ----------------------------------------------------------------
   if (path === "/api/v1/crm/leads" && req.method === "GET")
@@ -103,6 +108,84 @@ export async function handleServices(
     return insert(env, "store_orders",
       ["product_id", "customer_email", "amount_cents", "currency", "dodo_session_id"],
       [Number(b.product_id), str(b.customer_email), Number(b.amount_cents ?? 0), str(b.currency) ?? "usd", str(b.dodo_session_id)]);
+  }
+
+  // --- Email marketing (replaces Mailchimp/SendGrid; sends via Resend) -----
+  if (path === "/api/v1/marketing/contacts" && req.method === "GET")
+    return list(env, "email_contacts");
+  if (path === "/api/v1/marketing/contacts" && req.method === "POST") {
+    if (!b.email) return json({ error: "email required" }, 400);
+    return insert(env, "email_contacts",
+      ["email", "name", "subscribed", "source"],
+      [str(b.email), str(b.name), b.subscribed === false ? 0 : 1, str(b.source)]);
+  }
+  if (path.startsWith("/api/v1/marketing/contacts/") && (req.method === "PATCH" || req.method === "PUT") && id) {
+    const f: Record<string, unknown> = {};
+    if (b.subscribed != null) f.subscribed = b.subscribed ? 1 : 0;
+    if (b.name) f.name = b.name;
+    return update(env, "email_contacts", id, f);
+  }
+  if (path === "/api/v1/marketing/campaigns" && req.method === "GET")
+    return list(env, "email_campaigns");
+  if (path === "/api/v1/marketing/campaigns" && req.method === "POST") {
+    if (!b.name || !b.subject || !b.html) return json({ error: "name + subject + html required" }, 400);
+    return insert(env, "email_campaigns",
+      ["name", "subject", "html"],
+      [b.name, b.subject, b.html]);
+  }
+  if (path.match(/^\/api\/v1\/marketing\/campaigns\/\d+\/send$/) && req.method === "POST" && id) {
+    if (!env.RESEND_API_KEY) return json({ error: "email not configured" }, 503);
+    const camp = await env.DB.prepare(
+      "SELECT * FROM email_campaigns WHERE id = ?").bind(id).first<Record<string, unknown>>();
+    if (!camp) return json({ error: "campaign not found" }, 404);
+    const { results: contacts } = await env.DB.prepare(
+      "SELECT email FROM email_contacts WHERE subscribed = 1").all();
+    if (!contacts?.length) return json({ error: "no subscribed contacts" }, 400);
+    await update(env, "email_campaigns", id, { status: "sending" });
+    let sent = 0;
+    for (const c of contacts as { email: string }[]) {
+      try {
+        const r = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, "content-type": "application/json" },
+          body: JSON.stringify({
+            from: "Lazynext <support@lazynext.com>",
+            to: [c.email],
+            subject: String(camp.subject),
+            html: String(camp.html),
+          }),
+        });
+        if (r.ok) sent++;
+      } catch {}
+    }
+    await env.DB.prepare(
+      "UPDATE email_campaigns SET status='sent', sent_count=?, sent_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?",
+    ).bind(sent, id).run();
+    return json({ ok: true, id, sent, total: contacts.length });
+  }
+
+  // --- E-sign (replaces DocuSign for basic signing; not ESIGN-certified) ---
+  if (path === "/api/v1/sign/requests" && req.method === "GET")
+    return list(env, "signature_requests");
+  if (path === "/api/v1/sign/requests" && req.method === "POST") {
+    if (!b.title) return json({ error: "title required" }, 400);
+    return insert(env, "signature_requests",
+      ["title", "doc_text", "signer_name", "signer_email"],
+      [b.title, str(b.doc_text), str(b.signer_name), str(b.signer_email)]);
+  }
+  if (path.match(/^\/api\/v1\/sign\/requests\/\d+\/sign$/) && req.method === "POST" && id) {
+    if (!b.signature_text) return json({ error: "signature_text required" }, 400);
+    const ip = req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for") ?? null;
+    await env.DB.prepare(
+      `UPDATE signature_requests SET status='signed', signature_text=?, signer_ip=?,
+       signed_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'), updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+       WHERE id=?`,
+    ).bind(str(b.signature_text), ip, id).run();
+    return json({ ok: true, id, status: "signed" });
+  }
+  if (path.match(/^\/api\/v1\/sign\/requests\/\d+$/) && req.method === "GET" && id) {
+    const r = await env.DB.prepare("SELECT * FROM signature_requests WHERE id=?").bind(id).first();
+    return r ? json({ row: r }) : json({ error: "not found" }, 404);
   }
 
   return json({ error: "not found" }, 404);

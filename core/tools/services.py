@@ -83,3 +83,39 @@ async def add_store_product(name: str, price_cents: int, description: str = "",
 
 async def list_store_products() -> list[dict]:
     return (await _call("GET", "/api/v1/store/products")).get("rows", [])
+
+
+# --- Email marketing (replaces Mailchimp/SendGrid; sends via Resend) --------
+
+async def add_contact(email: str, name: str = "", source: str = "") -> dict:
+    return await _call("POST", "/api/v1/marketing/contacts",
+                       {"email": email, "name": name, "source": source})
+
+async def list_contacts() -> list[dict]:
+    return (await _call("GET", "/api/v1/marketing/contacts")).get("rows", [])
+
+async def create_campaign(name: str, subject: str, html: str) -> dict:
+    return await _call("POST", "/api/v1/marketing/campaigns",
+                       {"name": name, "subject": subject, "html": html})
+
+async def send_campaign(campaign_id: int) -> dict:
+    return await _call("POST", f"/api/v1/marketing/campaigns/{campaign_id}/send")
+
+async def list_campaigns() -> list[dict]:
+    return (await _call("GET", "/api/v1/marketing/campaigns")).get("rows", [])
+
+
+# --- E-sign (replaces DocuSign for basic signing) ---------------------------
+
+async def create_signature_request(title: str, doc_text: str = "",
+                                   signer_name: str = "", signer_email: str = "") -> dict:
+    return await _call("POST", "/api/v1/sign/requests",
+                       {"title": title, "doc_text": doc_text,
+                        "signer_name": signer_name, "signer_email": signer_email})
+
+async def sign_request(request_id: int, signature_text: str) -> dict:
+    return await _call("POST", f"/api/v1/sign/requests/{request_id}/sign",
+                       {"signature_text": signature_text})
+
+async def list_signature_requests() -> list[dict]:
+    return (await _call("GET", "/api/v1/sign/requests")).get("rows", [])
