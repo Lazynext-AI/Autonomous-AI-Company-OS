@@ -680,21 +680,23 @@ async function executeTask(env: Env, ctx: ExecutionContext, brain: Brain, urls: 
 }
 
 // Verify an artifact before it touches the repo. The file is written into
-// the exec container and checked in its real runtime — py_compile for .py,
-// node --check for .js, json.load for .json, HTMLParser for .html — with an
-// LLM task-fit review as fallback when the container is unavailable or the
-// type has no runtime check.
+// the exec container, its third-party imports are installed (deps: auto),
+// and it is checked in its real runtime: py_compile + module import for .py,
+// node --check + require() for .js, json.load for .json, HTMLParser for
+// .html — with an LLM task-fit review as fallback when the container is
+// unavailable or the type has no runtime check.
 async function verifyArtifact(
   env: Env, brain: Brain, task: Task, path: string, content: string,
 ): Promise<{ ok: boolean; how?: string; issue?: string }> {
   const ext = path.split(".").pop()?.toLowerCase() ?? "";
   const fname = path.split("/").pop() ?? `artifact.${ext}`;
-  const commands: Record<string, string[]> = {
-    py: ["python3", "-m", "py_compile", fname],
-    js: ["node", "--check", fname],
-    json: ["python3", "-c", "import json,sys; json.load(open(sys.argv[1]))", fname],
-    html: ["python3", "-c", "import sys; from html.parser import HTMLParser; HTMLParser().feed(open(sys.argv[1]).read())", fname],
-    md: ["python3", "-c", "import sys; assert len(open(sys.argv[1]).read().strip())>20,'empty'", fname],
+  const pyLoad = `import importlib.util as u; s=u.spec_from_file_location('m','${fname}'); m=u.module_from_spec(s); s.loader.exec_module(m)`;
+  const commands: Record<string, string[][]> = {
+    py: [["python3", "-m", "py_compile", fname], ["python3", "-c", pyLoad]],
+    js: [["node", "--check", fname], ["node", "-e", `require('./${fname}')`]],
+    json: [["python3", "-c", "import json,sys; json.load(open(sys.argv[1]))", fname]],
+    html: [["python3", "-c", "import sys; from html.parser import HTMLParser; HTMLParser().feed(open(sys.argv[1]).read())", fname]],
+    md: [["python3", "-c", "import sys; assert len(open(sys.argv[1]).read().strip())>20,'empty'", fname]],
   };
   const command = commands[ext];
   if (command && env.CODE_EXEC) {
@@ -703,7 +705,7 @@ async function verifyArtifact(
       const r = await container.fetch(new Request("https://exec.local/exec", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ files: { [fname]: content }, command, timeout: 30 }),
+        body: JSON.stringify({ files: { [fname]: content }, commands: command, deps: "auto", timeout: 240 }),
       }));
       const out = (await r.json().catch(() => ({}))) as { success?: boolean; error?: string; stderr?: string };
       if (r.ok && out.success === false) {
