@@ -23,8 +23,9 @@ const INTEGRATIONS = [
 ];
 
 // Connector library — only genuinely-external services remain. CRM, support,
-// scheduling, commerce, email marketing, and e-sign are all native on D1 now.
-// What's left are destination networks Cloudflare can't reach.
+// scheduling, commerce, and email marketing are all native on D1 now.
+// What's left are destination networks Cloudflare can't reach, plus Inkless
+// for legal-grade e-signatures.
 const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; name: string; hint: string }[] }[] = [
   {
     group: "Social posting", icon: Share2,
@@ -44,7 +45,6 @@ const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; nam
   {
     group: "Legal signing", icon: FileCheck2,
     items: [
-      { id: "docuseal", name: "DocuSeal", hint: "base URL + API key — self-host free, or hosted Pro" },
       { id: "inkless", name: "Inkless", hint: "API key (email hello@useinkless.com) — free hosted legal e-sign" },
     ],
   },

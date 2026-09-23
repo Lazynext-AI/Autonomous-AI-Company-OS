@@ -164,29 +164,5 @@ export async function handleServices(
     return json({ ok: true, id, sent, total: contacts.length });
   }
 
-  // --- E-sign (replaces DocuSign for basic signing; not ESIGN-certified) ---
-  if (path === "/api/v1/sign/requests" && req.method === "GET")
-    return list(env, "signature_requests");
-  if (path === "/api/v1/sign/requests" && req.method === "POST") {
-    if (!b.title) return json({ error: "title required" }, 400);
-    return insert(env, "signature_requests",
-      ["title", "doc_text", "signer_name", "signer_email"],
-      [b.title, str(b.doc_text), str(b.signer_name), str(b.signer_email)]);
-  }
-  if (path.match(/^\/api\/v1\/sign\/requests\/\d+\/sign$/) && req.method === "POST" && id) {
-    if (!b.signature_text) return json({ error: "signature_text required" }, 400);
-    const ip = req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for") ?? null;
-    await env.DB.prepare(
-      `UPDATE signature_requests SET status='signed', signature_text=?, signer_ip=?,
-       signed_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'), updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
-       WHERE id=?`,
-    ).bind(str(b.signature_text), ip, id).run();
-    return json({ ok: true, id, status: "signed" });
-  }
-  if (path.match(/^\/api\/v1\/sign\/requests\/\d+$/) && req.method === "GET" && id) {
-    const r = await env.DB.prepare("SELECT * FROM signature_requests WHERE id=?").bind(id).first();
-    return r ? json({ row: r }) : json({ error: "not found" }, 404);
-  }
-
   return json({ error: "not found" }, 404);
 }

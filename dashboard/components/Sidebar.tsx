@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Users, ListTodo, Brain, FileText, BookOpen,
   Activity, Key, Settings, Menu, X, BarChart3, Package, Bell, Search, ChevronDown, Plus,
   Rocket, Code2, MessageSquare, TerminalSquare, ShieldCheck, ScrollText,
-  LogOut, CreditCard, Zap, Palette, LifeBuoy, CalendarClock, ShoppingCart, Send, PenTool,
+  LogOut, CreditCard, Zap, Palette, LifeBuoy, CalendarClock, ShoppingCart, Send,
 } from "lucide-react";
 
 const NAV = [
@@ -29,7 +29,6 @@ const NAV = [
   { href: "/bookings", label: "Bookings", icon: CalendarClock },
   { href: "/store", label: "Store", icon: ShoppingCart },
   { href: "/campaigns", label: "Marketing", icon: Send },
-  { href: "/signatures", label: "Signatures", icon: PenTool },
   { href: "/logs", label: "Logs", icon: TerminalSquare },
   { href: "/approvals", label: "Approvals", icon: ShieldCheck },
   { href: "/audit", label: "Audit", icon: ScrollText },

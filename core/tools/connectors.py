@@ -127,47 +127,6 @@ async def _whatsapp(payload: dict, cred: str) -> dict:
 
 # --- Scheduling & signing -------------------------------------------------
 
-async def _docuseal(payload: dict, cred: str) -> dict:
-    # cred format: "<base_url>:<api_key>" — hosted https://api.docuseal.com or a
-    # self-hosted instance. Open-source, legally binding (ESIGN/UETA/eIDAS).
-    # Free API on self-host; hosted API needs Pro. If payload has template_id,
-    # submits that template directly; otherwise builds one from doc_text first.
-    base, _, key = cred.partition(":")
-    base = base.rstrip("/")
-    headers = {"X-Auth-Token": key, "content-type": "application/json"}
-    signer = payload.get("signer_email", payload.get("email", ""))
-    submitter = {"role": payload.get("role", "Signer"), "email": signer}
-    if payload.get("signer_name"):
-        submitter["name"] = payload["signer_name"]
-    template_id = payload.get("template_id")
-    if not template_id:
-        tpl = await _post(
-            f"{base}/templates/html",
-            headers=headers,
-            json_body={
-                "name": payload.get("title", "Signature request"),
-                "html": f"<h3>{payload.get('title', 'Signature request')}</h3>"
-                        f"<p>{payload.get('doc_text', '')}</p>",
-            },
-        )
-        if not tpl.get("ok"):
-            return tpl
-        template_id = tpl.get("body", {}).get("id")
-        if not template_id:
-            return {"ok": False, "error": "docuseal returned no template id", "body": tpl.get("body")}
-    return await _post(
-        f"{base}/submissions",
-        headers=headers,
-        json_body={
-            "template_id": template_id,
-            "send_email": True,
-            "submitters": [submitter],
-            **({"message": {"subject": payload["subject"], "body": payload["message"]}}
-               if payload.get("subject") or payload.get("message") else {}),
-        },
-    )
-
-
 async def _inkless(payload: dict, cred: str) -> dict:
     # cred = Inkless API key (free — email hello@useinkless.com to get one).
     # Legally binding (ESIGN/UETA) with audit trail + webhooks. Sends a
@@ -193,7 +152,7 @@ async def _inkless(payload: dict, cred: str) -> dict:
 _DISPATCH = {
     "x": _x, "linkedin": _linkedin, "meta": _meta,
     "twilio": _twilio, "whatsapp": _whatsapp,
-    "docuseal": _docuseal, "inkless": _inkless,
+    "inkless": _inkless,
     }
 
 

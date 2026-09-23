@@ -7,9 +7,9 @@ from core.tools.scrape_tool import research_topic, scrape_url
 from core.tools.search_tool import search_web
 from core.tools.services import (
     add_contact, add_lead, add_store_product, book_meeting, create_campaign,
-    create_signature_request, create_ticket, list_bookings, list_campaigns,
-    list_contacts, list_leads, list_signature_requests, list_store_products,
-    list_tickets, send_campaign, sign_request, update_lead,
+    create_ticket, list_bookings, list_campaigns,
+    list_contacts, list_leads, list_store_products,
+    list_tickets, send_campaign, update_lead,
 )
 
 __all__ = [
@@ -35,7 +35,4 @@ __all__ = [
     "create_campaign",
     "send_campaign",
     "list_campaigns",
-    "create_signature_request",
-    "sign_request",
-    "list_signature_requests",
 ]
