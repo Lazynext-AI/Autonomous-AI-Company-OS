@@ -75,13 +75,50 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
           weight: cs.fontWeight,
         });
       }
+      // Static facts that need a real DOM (not regex): iframe titles, duplicate
+      // ids, aria-hidden focusables, autofocus, noopener, media captions.
+      const facts = {
+        iframesNoTitle: doc.querySelectorAll('iframe:not([title])').length,
+        duplicateIds: (() => {
+          const seen = new Set(); let dup = 0;
+          for (const el of Array.from(doc.querySelectorAll('[id]') as any)) {
+            const id = (el as any).id;
+            if (seen.has(id)) dup++; else seen.add(id);
+          }
+          return dup;
+        })(),
+        ariaHiddenFocusable: doc.querySelectorAll('[aria-hidden="true"] a[href], [aria-hidden="true"] button, [aria-hidden="true"] input, [aria-hidden="true"] [tabindex]').length,
+        autofocus: doc.querySelectorAll('[autofocus]').length,
+        blankNoopener: doc.querySelectorAll('a[target="_blank"]:not([rel*="noopener"])').length,
+        mediaNoCaptions: doc.querySelectorAll('video:not([aria-label]):not(:has(track)), audio:not([aria-label]):not(:has(track))').length,
+        tablesNoHeaders: Array.from(doc.querySelectorAll('table') as any).filter((t: any) => !t.querySelector('th')).length,
+        skipLink: !!doc.querySelector('a[href^="#main"], a[href^="#content"]'),
+      };
       return {
         title: doc.title as string,
         html: String(doc.documentElement.outerHTML),
         styles,
+        facts,
       };
     });
-    return json({ url, title: data.title, html: data.html, styles: data.styles });
+
+    // Interactive check: press Tab through the page and watch where focus
+    // lands. A sequence that never moves = keyboard trap; zero focusable
+    // elements = keyboard-inaccessible.
+    const focusTrace: string[] = [];
+    try {
+      for (let i = 0; i < 10; i++) {
+        await page.keyboard.press("Tab");
+        const cur = await page.evaluate(() => {
+          const el = (globalThis as any).document.activeElement;
+          if (!el || el === (globalThis as any).document.body) return "body";
+          return `${String(el.tagName).toLowerCase()}${el.id ? "#" + el.id : ""}${String((el as any).innerText ?? "").trim() ? ":" + String((el as any).innerText).trim().slice(0, 25) : ""}`;
+        });
+        focusTrace.push(String(cur));
+      }
+    } catch {}
+
+    return json({ url, title: data.title, html: data.html, styles: data.styles, facts: data.facts, focus: focusTrace });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e), provider: "cloudflare-browser" }, 502);
   } finally {

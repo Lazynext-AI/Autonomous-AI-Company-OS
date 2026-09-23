@@ -70,9 +70,10 @@ export async function handleBilling(
     }
     const evt = JSON.parse(raw) as {
       type?: string;
-      data?: { metadata?: { plan?: string }; status?: string };
+      data?: { metadata?: { plan?: string }; status?: string; customer?: { email?: string } };
     };
     const plan = evt.data?.metadata?.plan;
+    const email = evt.data?.customer?.email?.toLowerCase();
     const type = evt.type ?? "";
     // Activate on payment/subscription success; downgrade to Founder on
     // cancellation/failure so the plan always reflects real billing state.
@@ -81,11 +82,42 @@ export async function handleBilling(
     if (plan && (activate || downgrade)) {
       const name = activate ? plan : "Founder";
       await env.EPHEMERAL.put("plan", JSON.stringify({ name }));
+      // Product license: the buyer's email becomes their license key for the
+      // product API (validated via license:<email> in KV).
+      if (email) {
+        await env.EPHEMERAL.put(`license:${email}`, activate ? plan : "free", { expirationTtl: 31_536_000 });
+      }
       await env.DB.prepare(
         "INSERT INTO bus_messages (channel, payload, created_at) VALUES ('billing.events', ?, datetime('now'))",
-      ).bind(JSON.stringify({ type, plan: name, from: plan })).run();
+      ).bind(JSON.stringify({ type, plan: name, from: plan, licensed: !!email })).run();
     }
     return json({ ok: true });
+  }
+
+  // Create a Dodo product — internal token only. Returns the product_id used
+  // by /api/v1/billing/checkout and product workers' /checkout redirects.
+  if (req.method === "POST" && path === "/api/v1/billing/products") {
+    const auth = req.headers.get("authorization") ?? "";
+    if (auth !== `Bearer ${env.API_TOKEN}`) return json({ error: "unauthorized" }, 401);
+    const b = (await req.json()) as { name?: string; description?: string; price_cents?: number; currency?: string; recurring?: boolean };
+    if (!b.name || !b.price_cents) return json({ error: "name and price_cents required" }, 400);
+    const r = await dodoFetch(env, "/products", {
+      name: b.name,
+      description: b.description ?? "",
+      tax_category: "saas",
+      price: {
+        type: b.recurring === false ? "one_time_price" : "recurring_price",
+        price: b.price_cents,
+        currency: b.currency ?? "USD",
+        discount: 0,
+        purchasing_power_parity: false,
+        tax_inclusive: false,
+        ...(b.recurring === false ? {} : { payment_frequency_count: 1, payment_frequency_interval: "Month", subscription_period_count: 1, subscription_period_interval: "Month" }),
+      },
+    });
+    const d = (await r.json()) as { product_id?: string; id?: string };
+    if (!r.ok) return json({ error: "product create failed", detail: d }, 502);
+    return json({ product_id: d.product_id ?? d.id });
   }
 
   // Checkout — internal token only (dashboard calls this server-side).
