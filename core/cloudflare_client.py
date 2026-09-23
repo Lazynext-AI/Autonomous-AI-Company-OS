@@ -217,6 +217,10 @@ class QueryBuilder:
         self._where.append((column, "=", value))
         return self
 
+    def like(self, column: str, pattern: str) -> "QueryBuilder":
+        self._where.append((column, "LIKE", pattern))
+        return self
+
     def lt(self, column: str, value: Any) -> "QueryBuilder":
         self._where.append((column, "<", value))
         return self

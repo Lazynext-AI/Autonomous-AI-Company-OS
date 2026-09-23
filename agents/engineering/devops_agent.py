@@ -489,15 +489,17 @@ class DevOpsAgent(BaseAgent):
             branch = workflow.get("head_branch", "unknown")
             run_id = workflow.get("id")
 
-            # Check if we already handled this workflow run — a failed or
-            # completed fix task means it was seen, not that it needs another.
-            existing_tasks = await self.task_tracker.get_tasks_by_status("pending")
-            existing_tasks += await self.task_tracker.get_tasks_by_status("in_progress")
-            existing_tasks += await self.task_tracker.get_tasks_by_status("failed")
-            existing_tasks += await self.task_tracker.get_tasks_by_status("completed")
-            for task in existing_tasks:
-                if f"run {run_id}" in task.get("description", ""):
-                    return  # Already have a task for this
+            # Only the default branch: feature/PR branch failures belong to
+            # whoever owns the branch, and every new run id would otherwise
+            # spawn a fix task forever.
+            if branch not in ("main", "master"):
+                return
+
+            # Check if we already handled this workflow run — a task in any
+            # status means the run was seen, not that it needs another.
+            existing_tasks = await self.task_tracker.find_by_description(f"run {run_id}")
+            if existing_tasks:
+                return  # Already have a task for this
 
             # Create fix task
             fix_task = TaskMessage(

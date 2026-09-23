@@ -53,6 +53,21 @@ class TaskTracker:
 
         return await self._run_sync(_fetch)
 
+    async def find_by_description(self, fragment: str) -> list[dict[str, Any]]:
+        """Fetch task_log rows whose description contains fragment, any status."""
+
+        def _fetch():
+            r = (
+                self._client.table("task_log")
+                .select("task_id, description, status")
+                .like("description", f"%{fragment}%")
+                .limit(20)
+                .execute()
+            )
+            return r.data or []
+
+        return await self._run_sync(_fetch)
+
     async def create_task(
         self,
         task_id: str,
