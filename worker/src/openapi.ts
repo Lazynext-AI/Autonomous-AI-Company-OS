@@ -140,6 +140,59 @@ export const OPENAPI_SPEC = {
         responses: { "200": { description: "JSON-RPC response" }, "202": { description: "Notification accepted" } },
       },
     },
+    "/a2a": {
+      post: {
+        summary: "A2A endpoint — delegate a task to the company (public)",
+        security: [],
+        description:
+          "JSON-RPC 2.0 agent-to-agent protocol. Methods: tasks/send " +
+          "(params.message.parts[0].text → returns {id, status.state}) and " +
+          "tasks/get (params.id → task state + bus history).",
+        responses: { "200": { description: "JSON-RPC response" } },
+      },
+    },
+    "/.well-known/agent.json": {
+      get: {
+        summary: "A2A agent card (public)",
+        security: [],
+        responses: { "200": { description: "Agent card (name, skills, endpoints)" } },
+      },
+    },
+    "/api/v1/widget/chat": {
+      post: {
+        summary: "Widget chat — message the company (public)",
+        security: [],
+        description: "Used by /widget.js embeds. Posts the message to the company bus.",
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: { type: "object", required: ["text"], properties: { text: { type: "string", maxLength: 500 } } },
+            },
+          },
+        },
+        responses: { "200": { description: "Acknowledged" }, "400": { description: "text required" } },
+      },
+    },
+    "/api/v1/openapi.json": {
+      get: { summary: "This OpenAPI document (public)", security: [], responses: { "200": { description: "OpenAPI 3.1 JSON" } } },
+    },
+    "/api/v1/docs": {
+      get: { summary: "Swagger UI for this API (public)", security: [], responses: { "200": { description: "HTML docs page" } } },
+    },
+    "/oauth/authorize": {
+      get: {
+        summary: "OAuth authorization endpoint (public)",
+        security: [],
+        responses: { "200": { description: "Authorization page / redirect" } },
+      },
+    },
+    "/oauth/token": {
+      post: {
+        summary: "OAuth token endpoint (public)",
+        security: [],
+        responses: { "200": { description: "Token response" }, "400": { description: "Invalid grant" } },
+      },
+    },
   },
 };
 
