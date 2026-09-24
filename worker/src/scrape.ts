@@ -41,6 +41,26 @@ export async function handleScrape(req: Request, env: Env): Promise<Response> {
   }
 }
 
+// Render a URL to PDF via Browser Rendering (page.pdf) — used for report exports.
+export async function handlePdf(req: Request, env: Env): Promise<Response> {
+  const { url } = (await req.json()) as { url?: string };
+  if (!url || !/^https?:\/\//i.test(url)) return json({ error: "valid url required" }, 400);
+  if (!env.BROWSER) return json({ error: "browser binding not configured" }, 503);
+
+  let browser;
+  try {
+    browser = await puppeteer.launch(env.BROWSER);
+    const page = await browser.newPage();
+    await page.goto(url, { waitUntil: "networkidle0", timeout: 30000 });
+    const pdf = await page.pdf({ printBackground: true });
+    return new Response(pdf, { headers: { "content-type": "application/pdf" } });
+  } catch (e: any) {
+    return json({ error: e instanceof Error ? e.message : String(e), provider: "cloudflare-browser" }, 502);
+  } finally {
+    if (browser) await browser.close().catch(() => {});
+  }
+}
+
 // Rendered-page extraction for the product API — returns the full rendered
 // HTML plus computed text styles so the scanner can check REAL contrast
 // (post-CSS) instead of guessing from markup.
