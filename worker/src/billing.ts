@@ -208,6 +208,17 @@ export async function handleBilling(
     return json({ ok: true, webhook: d });
   }
 
+  // List registered Dodo webhooks — internal token only. Verifies the live
+  // registration still points at this worker (silent drops = dead billing).
+  if (req.method === "GET" && path === "/api/v1/billing/webhooks") {
+    const auth = req.headers.get("authorization") ?? "";
+    if (auth !== `Bearer ${env.API_TOKEN}`) return json({ error: "unauthorized" }, 401);
+    const r = await dodoFetch(env, "/webhooks", undefined, "GET");
+    const d = (await r.json()) as Record<string, unknown>;
+    if (!r.ok) return json({ error: "webhook list failed", detail: d }, 502);
+    return json({ ok: true, ...d });
+  }
+
   // Create a Dodo product — internal token only. Returns the product_id used
   // by /api/v1/billing/checkout and product workers' /checkout redirects.
   if (req.method === "POST" && path === "/api/v1/billing/products") {
