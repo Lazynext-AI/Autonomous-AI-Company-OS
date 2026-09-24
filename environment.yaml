@@ -1,0 +1,42 @@
+# Devin environment blueprint for Lazynext — The Autonomous AI Company OS.
+# Mirrors scripts/setup.sh; verified locally (make test 9 passed/5 skipped,
+# worker tsc clean, product node --test green, make dev boots 13 agents).
+initialize:
+  - run: |
+      # One-time toolchain + deps (same as `make setup` / scripts/setup.sh)
+      curl -LsSf https://astral.sh/uv/install.sh | sh
+      export PATH="$HOME/.local/bin:$PATH"
+      uv venv --python 3.12 .venv
+      uv pip install -e . --python .venv/bin/python
+      (cd worker && npm install)
+      (cd dashboard && npm install)
+      [ -f .env ] || cp .env.example .env
+maintenance:
+  - run: |
+      export PATH="$HOME/.local/bin:$PATH"
+      uv pip install -e . --python .venv/bin/python
+knowledge:
+  - name: test
+    contents: |
+      PYTHONPATH=. .venv/bin/python -m pytest tests/ -v   # 9 pass, 5 skip without live secrets
+      (cd worker && npx tsc --noEmit)                      # worker typecheck
+      (cd products/accessibility-checker && node --test)   # product suite (own git repo)
+  - name: startup
+    contents: |
+      PYTHONPATH=. .venv/bin/python scripts/run_agents.py   # `make dev` — the local agent fleet
+      (cd dashboard && npm run dev)                         # `make dashboard` — Next.js UI
+  - name: secrets
+    contents: |
+      Fill .env from .env.example. Required: CLOUDFLARE_API_URL, CLOUDFLARE_API_TOKEN
+      (worker bearer — NOT a Cloudflare REST token), CLOUDFLARE_DEPLOY_TOKEN (deploys),
+      BREVO_API_KEY, GITHUB_TOKEN/PAT. Provider creds (Brevo/SignWell/GitHub) also live in
+      KV conn:* keys. See AGENTS.md — it documents every token trap and the live topology.
+  - name: ops
+    contents: |
+      Worker: cd worker && npx wrangler deploy (uses CLOUDFLARE_DEPLOY_TOKEN)
+      Platform worker: https://ai-company-os.dry-hall-6a50.workers.dev
+      Product worker:  https://accessibility-checker.dry-hall-6a50.workers.dev
+        (deploys via Cloudflare scripts Upload API — see AGENTS.md "Product worker deploys"
+        for the bindings traps: always resend full bindings incl. secret_text values)
+      Dashboard:       https://ai-company-dashboard.dry-hall-6a50.workers.dev
+        (cd dashboard && npm run deploy — opennextjs-cloudflare)
