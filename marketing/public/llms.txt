@@ -5,6 +5,6 @@
 > Accessibility Checker, is live with real billing.
 
 - Site: https://lazynext.com
-- Product: https://lazynext-platform.github.io/accessibility-checker/
+- Product: https://checker.lazynext.com/
 - Docs: https://lazynext.com/docs
 - Dashboard: https://dashboard.lazynext.com
