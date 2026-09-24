@@ -1,6 +1,29 @@
 // Multi-user auth helpers — PBKDF2 hashing, tokens, sessions.
 // All Web Crypto — runs on Cloudflare Workers.
 
+import { NextRequest } from "next/server";
+import { workerFetch } from "./worker";
+
+// IP-keyed counter in KV — bounds credential guessing on the auth endpoints.
+// Fail-open: if the worker is unreachable the API is down anyway.
+export async function rateLimited(req: NextRequest, scope: string, limit = 20, windowSec = 600) {
+  try {
+    const ip =
+      req.headers.get("cf-connecting-ip") ??
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      "anon";
+    const key = `rl:${scope}:${ip}`;
+    const res = await workerFetch("/kv/get", { key });
+    const { value } = await res.json();
+    const n = Number(value ?? 0);
+    if (n >= limit) return true;
+    await workerFetch("/kv/put", { key, value: String(n + 1), ttl: windowSec });
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 export async function hashPassword(password: string, salt?: string) {
   const s = salt ?? toHex(crypto.getRandomValues(new Uint8Array(16)));
   const key = await crypto.subtle.importKey(

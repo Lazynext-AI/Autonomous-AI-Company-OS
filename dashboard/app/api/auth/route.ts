@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { workerFetch, queryWorker } from "@/lib/worker";
-import { hashPassword, verifyPassword, genToken, signSession } from "@/lib/auth";
+import { hashPassword, verifyPassword, genToken, signSession, rateLimited } from "@/lib/auth";
 import * as OTPAuth from "otpauth";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +33,8 @@ async function setSession(res: NextResponse, userId: number) {
 }
 
 export async function POST(req: NextRequest) {
+  if (await rateLimited(req, "auth", 20))
+    return NextResponse.json({ error: "rate limited" }, { status: 429 });
   const { action, email: rawEmail, password, code, token } = await req.json();
   const emailAddr = String(rawEmail ?? "").trim().toLowerCase();
 
@@ -66,6 +68,8 @@ export async function POST(req: NextRequest) {
 
   // ── Login → password → optional TOTP → session ──────────────────────────
   if (action === "login") {
+    if (await rateLimited(req, "login", 10))
+      return NextResponse.json({ error: "rate limited" }, { status: 429 });
     const r = await queryWorker("SELECT id, password_hash, salt, email_verified FROM users WHERE email = ?", [emailAddr]);
     const d = await r.json();
     const u = d.results?.[0];

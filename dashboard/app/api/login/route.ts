@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { workerFetch } from "@/lib/worker";
+import { rateLimited } from "@/lib/auth";
 import * as OTPAuth from "otpauth";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,8 @@ async function kvGet(key: string): Promise<string | null> {
 }
 
 export async function POST(req: NextRequest) {
+  if (await rateLimited(req, "owner-login", 10))
+    return NextResponse.json({ error: "rate limited" }, { status: 429 });
   const { passphrase, code } = await req.json();
   const e = await env();
   const expected = e.DASHBOARD_PASSPHRASE || process.env.DASHBOARD_PASSPHRASE;
