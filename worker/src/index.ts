@@ -352,6 +352,9 @@ export default {
   // Continuous agent loop: a Cloudflare cron tick makes agents act
   // autonomously on a schedule .
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    // Dead-man heartbeat — external checks can read cron:last_tick to prove
+    // the trigger itself is still firing (sweeps/tasks ride this tick).
+    ctx.waitUntil(env.EPHEMERAL.put("cron:last_tick", String(Date.now())).catch(() => {}));
     ctx.waitUntil(agentTick(env, ctx).then(() => undefined).catch(() => {}));
     ctx.waitUntil(advanceLeadSequence(env).then(() => undefined).catch(() => {}));
   },
