@@ -239,7 +239,8 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
 
     case "/kv/get": {
       const b = await readBody<{ key: string }>(req);
-      const value = await env.EPHEMERAL.get(b.key);
+      const key = b.key ?? new URL(req.url).searchParams.get("key");
+      const value = key ? await env.EPHEMERAL.get(key) : null;
       return json({ value });
     }
     case "/kv/list": {
