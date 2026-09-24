@@ -617,6 +617,12 @@ Workers AI brain runs via the company worker /agent/generate:
    - Products deploy via wrangler (Pages/Workers) directly from the agent runner
    - Set up monitoring and alerts
 
+### Backups
+
+- **D1** exports run weekly via `.github/workflows/backup.yml` (workflow
+  artifact, 30-day retention). Manual: `make db-backup`.
+- Restore + coverage matrix: `docs/disaster_recovery.md`.
+
 ### Horizontal Scaling
 
 Agents are stateless and can scale horizontally:

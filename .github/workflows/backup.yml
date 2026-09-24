@@ -1,0 +1,31 @@
+name: D1 backup
+
+# Weekly export of ai-company-db to a workflow artifact (30-day retention).
+# Requires repo secrets CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN (scoped
+# deploy token — the same pair the product repo uses for CI deploys).
+# Restore procedure: docs/disaster_recovery.md
+on:
+  schedule:
+    - cron: "0 3 * * 0" # Sundays 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - working-directory: worker
+        run: npm ci
+      - working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler d1 export ai-company-db --remote --output ../d1-backup.sql
+      - uses: actions/upload-artifact@v4
+        with:
+          name: d1-backup-${{ github.run_id }}
+          path: d1-backup.sql
+          retention-days: 30
