@@ -388,8 +388,8 @@ async function advanceLeadSequence(env: Env) {
     if (!joined || stage >= SEQUENCE.length) continue;
     const days = (Date.now() - joined) / 86_400_000;
     if (days >= SEQ_DAYS[stage]) {
-      const s = await brevoSend(env, email, SEQUENCE[stage].subject, SEQUENCE[stage].html);
-      if (s.ok) await env.EPHEMERAL.put(`lead:${email}:stage`, String(stage + 1), { expirationTtl: 31_536_000 });
+      const s = await brevoSend(env, email, SEQUENCE[stage].subject, SEQUENCE[stage].html).catch(() => null);
+      if (s?.ok) await env.EPHEMERAL.put(`lead:${email}:stage`, String(stage + 1), { expirationTtl: 31_536_000 });
     }
   }
   // Trial-expiry reminders — stamped at subscription.active for trialing
@@ -404,50 +404,67 @@ async function advanceLeadSequence(env: Env) {
       env, email,
       "Your Accessibility Checker Pro trial ends in 3 days",
       "<p>Your 14-day Pro trial ends in 3 days. Your subscription then continues at $9/mo automatically — cancel any time before then to keep the free tier.</p>",
-    );
-    if (s.ok) await env.EPHEMERAL.put(`trial:${email}:reminded`, "1", { expirationTtl: 31_536_000 });
+    ).catch(() => null);
+    if (s?.ok) await env.EPHEMERAL.put(`trial:${email}:reminded`, "1", { expirationTtl: 31_536_000 });
   }
 
   // Pro site monitoring — rescan each mon:<email>:<hash> record once a day
   // and alert via Brevo when the score drops >= 10 points (DROP_THRESHOLD;
   // record shape mirrors src/monitor.js in the accessibility-checker repo).
   const mons = await env.EPHEMERAL.list({ prefix: "mon:" });
+  const sweep: { scanned: number; errors: string[] } = { scanned: 0, errors: [] };
   for (const k of mons.keys) {
-    const raw = await env.EPHEMERAL.get(k.name);
-    if (!raw) continue;
-    let rec: { url?: string; email?: string; last_score?: number | null; scans?: number; alerts?: number };
     try {
-      rec = JSON.parse(raw);
-    } catch {
-      continue;
-    }
-    if (!rec?.url || !rec?.email) continue;
-    const scan = await fetch("https://accessibility-checker.dry-hall-6a50.workers.dev/scan", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ url: rec.url, license: rec.email }),
-    }).catch(() => null);
-    if (!scan?.ok) continue;
-    const d = (await scan.json()) as { score?: number; report?: string };
-    if (typeof d.score !== "number") continue;
-    const prev = typeof rec.last_score === "number" ? rec.last_score : null;
-    const dropped = prev !== null && prev - d.score >= 10;
-    await env.EPHEMERAL.put(k.name, JSON.stringify({
-      ...rec,
-      last_score: d.score,
-      last_scan_at: Date.now(),
-      scans: (rec.scans ?? 0) + 1,
-      alerts: (rec.alerts ?? 0) + (dropped ? 1 : 0),
-    }));
-    if (dropped) {
-      await brevoSend(
-        env,
-        rec.email,
-        `Accessibility alert: ${rec.url} dropped to ${d.score}/100`,
-        `<p>Your monitored page <b>${rec.url}</b> scored <b>${d.score}/100</b> — down ${(prev ?? 0) - d.score} points from ${prev}.</p><p>Full report: <a href="${d.report ?? ""}">${d.report ?? ""}</a></p>`,
-      );
+      const raw = await env.EPHEMERAL.get(k.name);
+      if (!raw) continue;
+      let rec: { url?: string; email?: string; last_score?: number | null; scans?: number; alerts?: number };
+      try {
+        rec = JSON.parse(raw);
+      } catch {
+        continue;
+      }
+      if (!rec?.url || !rec?.email) continue;
+      if (!env.A11Y) {
+        sweep.errors.push("A11Y service binding not configured");
+        break;
+      }
+      const scan = await env.A11Y.fetch("https://a11y.internal/scan", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ url: rec.url, license: rec.email }),
+      }).catch(() => null);
+      if (!scan?.ok) {
+        sweep.errors.push(`${k.name}: scan ${scan?.status ?? "fetch-failed"}`);
+        continue;
+      }
+      const d = (await scan.json()) as { score?: number; report?: string };
+      if (typeof d.score !== "number") {
+        sweep.errors.push(`${k.name}: no score in scan response`);
+        continue;
+      }
+      const prev = typeof rec.last_score === "number" ? rec.last_score : null;
+      const dropped = prev !== null && prev - d.score >= 10;
+      await env.EPHEMERAL.put(k.name, JSON.stringify({
+        ...rec,
+        last_score: d.score,
+        last_scan_at: Date.now(),
+        scans: (rec.scans ?? 0) + 1,
+        alerts: (rec.alerts ?? 0) + (dropped ? 1 : 0),
+      }));
+      sweep.scanned++;
+      if (dropped) {
+        await brevoSend(
+          env,
+          rec.email,
+          `Accessibility alert: ${rec.url} dropped to ${d.score}/100`,
+          `<p>Your monitored page <b>${rec.url}</b> scored <b>${d.score}/100</b> — down ${(prev ?? 0) - d.score} points from ${prev}.</p><p>Full report: <a href="${d.report ?? ""}">${d.report ?? ""}</a></p>`,
+        ).catch((e: unknown) => sweep.errors.push(`${k.name}: brevo ${e instanceof Error ? e.name : "err"}`));
+      }
+    } catch (e) {
+      sweep.errors.push(`${k.name}: ${e instanceof Error ? e.name : "err"}`);
     }
   }
+  await env.EPHEMERAL.put("mon:last_sweep", JSON.stringify({ at: Date.now(), ...sweep })).catch(() => {});
 }
 
 // Autonomous agent loop: a Cloudflare cron tick makes the company act

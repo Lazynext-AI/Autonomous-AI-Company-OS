@@ -10,6 +10,7 @@ export interface Env {
   VECTORS: VectorizeIndex;
   AI?: Ai;
   BROWSER?: Fetcher;
+  A11Y?: Fetcher;
   CODE_EXEC?: DurableObjectNamespace<import("./exec_container").CodeExecContainer>;
   API_TOKEN?: string;
   BREVO_API_KEY?: string;

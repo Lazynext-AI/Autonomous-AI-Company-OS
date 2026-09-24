@@ -29,6 +29,12 @@ binding = "AI"
 [browser]
 binding = "BROWSER"
 
+# Product worker — scheduled monitor rescans call its /scan via service binding
+# (same-account workers.dev fetches are refused by the runtime).
+[[services]]
+binding = "A11Y"
+service = "accessibility-checker"
+
 # Code-execution container — Python sandbox for agent code execution.
 [[containers]]
 name = "code-exec"
