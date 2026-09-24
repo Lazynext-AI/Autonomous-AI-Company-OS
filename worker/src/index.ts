@@ -132,6 +132,14 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
     return json({ ok: true });
   }
 
+  // Read-only KV fetch usable over GET ?key= — ops/debug convenience.
+  // (Every other route below is POST-only.)
+  if (path === "/kv/get" && req.method === "GET") {
+    const key = new URL(req.url).searchParams.get("key");
+    const value = key ? await env.EPHEMERAL.get(key) : null;
+    return json({ value });
+  }
+
   if (req.method !== "POST") return json({ error: "not found" }, 404);
 
   switch (path) {
