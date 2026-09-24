@@ -69,7 +69,8 @@ D1 + KV (`EPHEMERAL`) + Vectorize (`VECTORS`, index `company-knowledge`, 384d)
 
 - `bindings` omitted from upload metadata **silently drops them at runtime** — the settings API still lists them but `env.PLATFORM` is undefined (error 1101). Always re-send the full binding set.
 - `secret_text` bindings must include `text` in the re-sent metadata or upload fails 10021. `PLATFORM_TOKEN` = the worker bearer = `.env`'s `CLOUDFLARE_API_TOKEN`.
-- Multipart part `filename=` is the module path — `-F "src/scanner.js=@src/scanner.js;filename=src/scanner.js"`.
+- Multipart part `filename=` is the module path — `-F "src/scanner.js=@src/scanner.js;filename=src/scanner.js"`, each with `;type=application/javascript+module`.
+- **Full bundle (11 parts)** — `worker.js` + `src/{scanner,crawl,monitor,recommendations,page,static}.js` + `src/rules/{additional,wcag22,section508,crosspage}.js`. Missing a part = runtime import failure (1101); stale extra parts are ignored.
 
 ## Failure classes already fixed (don't regress)
 
