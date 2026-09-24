@@ -1117,13 +1117,18 @@ async function verifyArtifact(
   // .mjs is already ESM — node --check parses it natively, so it reuses the
   // js commands without needing the .check.mjs copy.
   const command = commands[ext === "mjs" ? "js" : ext];
+  const repo = (safeJson<Record<string, string>>(brain.live_urls) ?? {}).repo
+    ?.replace("https://github.com/", "").replace(/\.git$/, "");
+  // Whole-repo verification for repo artifacts; a targeted file set when the
+  // caller supplies it (e.g. the product worker + its own modules). Fetched
+  // once so the exec check and the LLM-fallback exports digest share it —
+  // but only when the container will run or the artifact is code (the digest
+  // is pointless for .md/.html).
+  const needFiles = (!!command && !!env.CODE_EXEC) || ["js", "mjs", "ts"].includes(ext);
+  const files: Record<string, string> =
+    repo?.includes("/") && needFiles ? await fetchRepoFiles(env, repo).catch(() => ({})) : { ...(extraFiles ?? {}) };
   if (command && env.CODE_EXEC) {
     try {
-      const repo = (safeJson<Record<string, string>>(brain.live_urls) ?? {}).repo
-        ?.replace("https://github.com/", "").replace(/\.git$/, "");
-      // Whole-repo verification for repo artifacts; a targeted file set when
-      // the caller supplies it (e.g. the product worker + its own modules).
-      const files = repo?.includes("/") ? await fetchRepoFiles(env, repo) : { ...(extraFiles ?? {}) };
       files[path] = content;
       if (jsCheckPath !== path) files[jsCheckPath] = content;
       const container = getContainer(env.CODE_EXEC);
@@ -1147,11 +1152,27 @@ async function verifyArtifact(
     return { ok: false, how: "exec", issue: "verification container unavailable for test file" };
   }
 
+  // Give the reviewer the repo's real export names — the previous prompt told
+  // it cross-module references were "fine", so phantom imports (wrong-named
+  // exports) passed unchecked.
+  const digest = Object.entries(files)
+    .filter(([p]) => /\.(js|mjs|ts)$/.test(p))
+    .map(([p, c]) => {
+      const names = new Set<string>();
+      for (const m of c.matchAll(/export\s+(?:async\s+)?(?:function|const|let|class)\s+([A-Za-z_$][\w$]*)/g)) names.add(m[1]);
+      for (const m of c.matchAll(/export\s*\{([^}]+)\}/g)) m[1].split(",").forEach((n) => { const w = n.trim().split(/\s+as\s+/); if (w[0]) names.add(w[w.length - 1].trim()); });
+      if (/export\s+default\b/.test(c)) names.add("default");
+      return names.size ? `${p}: ${[...names].slice(0, 12).join(", ")}` : null;
+    })
+    .filter(Boolean)
+    .slice(0, 30)
+    .join(" | ");
+
   const res = await env.AI!.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
     messages: [
       {
         role: "system",
-        content: `You are a reviewer at a software company building "${brain.product_name}". Reject ONLY for clear problems: empty/stub content, placeholder text (TODO, "implement this"), wrong file type for its extension, malformed syntax, or content unrelated to the task. Cross-module references are fine — files may import helpers defined elsewhere in the repo. Reply with ONLY JSON: {"ok": true} or {"ok": false, "issue": "one line"}.`,
+        content: `You are a reviewer at a software company building "${brain.product_name}". Reject ONLY for clear problems: empty/stub content, placeholder text (TODO, "implement this"), wrong file type for its extension, malformed syntax, content unrelated to the task, or imports of names the referenced file does not export. Repo exports: ${digest || "unavailable"}. Reply with ONLY JSON: {"ok": true} or {"ok": false, "issue": "one line"}.`,
       },
       { role: "user", content: `Task: ${task.description}\nFile: ${path}\n\n${content.slice(0, 4000)}` },
     ],
