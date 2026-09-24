@@ -371,18 +371,19 @@ export default {
 
 // Pro conversion sequence (drafted by sales_1 — marketing/pro_sequence.md):
 // email 1 at capture, email 2 at +3d, email 3 at +7d.
+const CHECKOUT_URL = "https://checker.lazynext.com/checkout";
 const SEQUENCE = [
   {
-    subject: "Unlock full accessibility scanning",
-    html: `<p>Thanks for trying Accessibility Checker — you ran a real rendered-page WCAG scan.</p><p><b>Pro ($9/mo)</b> removes the 3-scans-a-day limit: unlimited rendered scans, shareable reports, and reports delivered to your inbox.</p><p><a href="https://accessibility-checker.dry-hall-6a50.workers.dev/checkout">Upgrade to Pro →</a></p>`,
+    subject: "Unlock full accessibility scanning — your discount inside",
+    html: `<p>Thanks for trying Accessibility Checker — you ran a real rendered-page WCAG scan.</p><p><b>Pro ($9/mo)</b> removes the 3-scans-a-day limit: unlimited rendered scans, site-wide crawls, daily monitoring with alerts, and reports delivered to your inbox. It starts with a 14-day free trial (card up front, cancel any time).</p><p>As promised — <b>20% off</b> your subscription: use code <b>WELCOME20</b> at checkout.</p><p><a href="${CHECKOUT_URL}">Start your free trial →</a></p>`,
   },
   {
     subject: "What teams fix first after their first scan",
-    html: `<p>The most common issues our rendered scans surface: missing landmarks, keyboard-inaccessible pages, and contrast that looks fine in the stylesheet but fails once CSS actually paints.</p><p>Pro runs unlimited scans — iterate on fixes and watch your score climb.</p><p><a href="https://accessibility-checker.dry-hall-6a50.workers.dev/checkout">Go Pro →</a></p>`,
+    html: `<p>The most common issues our rendered scans surface: missing landmarks, keyboard-inaccessible pages, and contrast that looks fine in the stylesheet but fails once CSS actually paints.</p><p>Pro runs unlimited scans — iterate on fixes and watch your score climb. Your <b>WELCOME20</b> code still works for 20% off.</p><p><a href="${CHECKOUT_URL}">Go Pro →</a></p>`,
   },
   {
     subject: "Last call: unlimited scans for $9/mo",
-    html: `<p>Your free tier is capped at 3 rendered scans a day. Pro is $9/month, cancels anytime, and every report is shareable with your team.</p><p><a href="https://accessibility-checker.dry-hall-6a50.workers.dev/checkout">Upgrade →</a></p>`,
+    html: `<p>Your free tier is capped at 3 rendered scans a day. Pro is $9/month, cancels anytime, and every report is shareable with your team.</p><p>Last reminder — <b>WELCOME20</b> takes 20% off: <a href="${CHECKOUT_URL}">start your 14-day free trial →</a></p>`,
   },
 ];
 const SEQ_DAYS = [0, 3, 7];
@@ -424,7 +425,7 @@ async function advanceLeadSequence(env: Env) {
   // and alert via Brevo when the score drops >= 10 points (DROP_THRESHOLD;
   // record shape mirrors src/monitor.js in the accessibility-checker repo).
   const mons = await env.EPHEMERAL.list({ prefix: "mon:" });
-  const sweep: { scanned: number; errors: string[] } = { scanned: 0, errors: [] };
+  const sweep: { scanned: number; errors: string[]; skipped?: number } = { scanned: 0, errors: [] };
   for (const k of mons.keys) {
     try {
       const raw = await env.EPHEMERAL.get(k.name);
@@ -436,6 +437,11 @@ async function advanceLeadSequence(env: Env) {
         continue;
       }
       if (!rec?.url || !rec?.email) continue;
+      // Monitoring is a Pro feature — skip lapsed licenses so a cancelled
+      // customer's monitors don't keep scanning on the free tier. The record
+      // stays, so monitoring resumes automatically if they resubscribe.
+      const lic = await env.EPHEMERAL.get(`license:${rec.email}`);
+      if (lic !== "pro") { sweep.skipped = (sweep.skipped ?? 0) + 1; continue; }
       if (!env.A11Y) {
         sweep.errors.push("A11Y service binding not configured");
         break;

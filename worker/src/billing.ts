@@ -234,6 +234,52 @@ export async function handleBilling(
     return json({ ok: true, ...d });
   }
 
+  // Create a Dodo discount code — internal token only. The 402 funnel
+  // promises leads "we'll send you a discount"; this is what makes that
+  // real (recreate in live mode at the flip).
+  if (req.method === "POST" && path === "/api/v1/billing/discounts") {
+    const auth = req.headers.get("authorization") ?? "";
+    if (auth !== `Bearer ${env.API_TOKEN}`) return json({ error: "unauthorized" }, 401);
+    const b = (await req.json()) as { code?: string; amount?: number; type?: string; name?: string; usage_limit?: number; expires_at?: string; restricted_to?: string[] };
+    if (!b.code || !b.amount) return json({ error: "code and amount required" }, 400);
+    const r = await dodoFetch(env, "/discounts", {
+      code: b.code,
+      type: b.type ?? "percentage",
+      amount: b.amount,
+      name: b.name ?? b.code,
+      ...(b.usage_limit ? { usage_limit: b.usage_limit } : {}),
+      ...(b.expires_at ? { expires_at: b.expires_at } : {}),
+      ...(b.restricted_to ? { restricted_to: b.restricted_to } : {}),
+    });
+    const d = (await r.json()) as Record<string, unknown>;
+    if (!r.ok) return json({ error: "discount create failed", detail: d }, 502);
+    return json({ ok: true, discount: d });
+  }
+
+  // Update a Dodo discount — internal token only. NOTE: Dodo's `amount` for
+  // type=percentage is in BASIS POINTS (2000 = 20%), verified live.
+  if (req.method === "PATCH" && path === "/api/v1/billing/discounts") {
+    const auth = req.headers.get("authorization") ?? "";
+    if (auth !== `Bearer ${env.API_TOKEN}`) return json({ error: "unauthorized" }, 401);
+    const b = (await req.json()) as { discount_id?: string; code?: string; amount?: number; name?: string; usage_limit?: number; expires_at?: string };
+    if (!b.discount_id) return json({ error: "discount_id required" }, 400);
+    const { discount_id, ...fields } = b;
+    const r = await dodoFetch(env, `/discounts/${discount_id}`, fields, "PATCH");
+    const d = (await r.json()) as Record<string, unknown>;
+    if (!r.ok) return json({ error: "discount update failed", detail: d }, 502);
+    return json({ ok: true, discount: d });
+  }
+
+  // List Dodo discounts — internal token only (verify codes survived).
+  if (req.method === "GET" && path === "/api/v1/billing/discounts") {
+    const auth = req.headers.get("authorization") ?? "";
+    if (auth !== `Bearer ${env.API_TOKEN}`) return json({ error: "unauthorized" }, 401);
+    const r = await dodoFetch(env, "/discounts", undefined, "GET");
+    const d = (await r.json()) as Record<string, unknown>;
+    if (!r.ok) return json({ error: "discount list failed", detail: d }, 502);
+    return json({ ok: true, ...d });
+  }
+
   // Create a Dodo product — internal token only. Returns the product_id used
   // by /api/v1/billing/checkout and product workers' /checkout redirects.
   if (req.method === "POST" && path === "/api/v1/billing/products") {
