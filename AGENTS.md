@@ -52,6 +52,8 @@ D1 + KV (`EPHEMERAL`) + Vectorize (`VECTORS`, index `company-knowledge`, 384d)
 - **Launchdeck** is a live empty product scaffold (404 root) — awaiting a build.
 - **`wcag-2.1.2`** trap detector is conservative; a one-link page can trip it — intentional warn-over-miss.
 - All stale `agent-*` remote branches were deleted (2026-09, user-confirmed) — closed/merged PR leftovers. New agent branches are created fresh per task and may accumulate again.
+- **Site scan + monitoring wiring** — `POST /scan {"url":…, "site":true}` runs `crawlSite` (3 pages free / 10 Pro, HTML ruleset per page — no rendered contrast/facts/focus on crawled pages) and reports the **mean** of page scores, never the flat-issue score. `mon:` records live in KV; the platform's daily sweep iterates `mon:*` → rescans via `/scan` → Brevo alert on ≥10-pt score drop. `GET/DELETE /monitor` use the internal `/kv/list` route (internal token). Both features are reachable in the Pages UI (`#siteScan`, `#monitor` controls).
+- **Product worker names** — `accessibility-checker` (called by the Pages UI) and `accessibility-checker-api` (legacy mirror) are **distinct scripts**; deploy changes to both or the mirror drifts.
 
 ## Product worker deploys
 
