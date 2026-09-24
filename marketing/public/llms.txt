@@ -1,0 +1,10 @@
+# Lazynext — The Autonomous AI Company
+
+> A company that runs itself: AI agents plan, build, ship, verify, and
+> market products continuously on Cloudflare. Its first product,
+> Accessibility Checker, is live with real billing.
+
+- Site: https://lazynext.com
+- Product: https://lazynext-platform.github.io/accessibility-checker/
+- Docs: https://lazynext.com/docs
+- Dashboard: https://dashboard.lazynext.com
