@@ -6,7 +6,7 @@
  * (public /api/v1/* + /mcp).
  */
 
-import { Env, json, cors, preflight } from "./gateway";
+import { Env, json, cors, preflight, listAll } from "./gateway";
 import { handlePublicApi } from "./public_api";
 import { handleMcp } from "./mcp";
 import { handleA2a } from "./a2a";
@@ -253,8 +253,8 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
     }
     case "/kv/list": {
       const b = await readBody<{ prefix: string }>(req);
-      const list = await env.EPHEMERAL.list({ prefix: b.prefix ?? "" });
-      return json({ keys: list.keys.map((k) => k.name) });
+      const keys = await listAll(env.EPHEMERAL, b.prefix ?? "");
+      return json({ keys: keys.map((k) => k.name) });
     }
     case "/kv/put": {
       const b = await readBody<{ key: string; value: string; ttl?: number }>(req);
@@ -395,8 +395,8 @@ async function advanceLeadSequence(env: Env) {
   const last = await env.EPHEMERAL.get("seq:last_run");
   if (last && Date.now() - parseInt(last, 10) < 20 * 3_600_000) return; // ~daily
   await env.EPHEMERAL.put("seq:last_run", String(Date.now()));
-  const list = await env.EPHEMERAL.list({ prefix: "lead:" });
-  for (const k of list.keys) {
+  const list = await listAll(env.EPHEMERAL, "lead:");
+  for (const k of list) {
     if (k.name.endsWith(":stage") || k.name.endsWith(":joined")) continue;
     const email = k.name.slice(5);
     const stage = parseInt((await env.EPHEMERAL.get(`lead:${email}:stage`)) ?? "0", 10);
@@ -410,8 +410,8 @@ async function advanceLeadSequence(env: Env) {
   }
   // Trial-expiry reminders — stamped at subscription.active for trialing
   // checkouts (see billing.ts). At day 11 of the 14-day trial, warn once.
-  const trials = await env.EPHEMERAL.list({ prefix: "trial:" });
-  for (const k of trials.keys) {
+  const trials = await listAll(env.EPHEMERAL, "trial:");
+  for (const k of trials) {
     if (k.name.endsWith(":reminded")) continue;
     const email = k.name.slice(6);
     const started = parseInt((await env.EPHEMERAL.get(k.name)) ?? "0", 10);
@@ -427,9 +427,9 @@ async function advanceLeadSequence(env: Env) {
   // Pro site monitoring — rescan each mon:<email>:<hash> record once a day
   // and alert via Brevo when the score drops >= 10 points (DROP_THRESHOLD;
   // record shape mirrors src/monitor.js in the accessibility-checker repo).
-  const mons = await env.EPHEMERAL.list({ prefix: "mon:" });
+  const mons = await listAll(env.EPHEMERAL, "mon:");
   const sweep: { scanned: number; errors: string[]; skipped?: number } = { scanned: 0, errors: [] };
-  for (const k of mons.keys) {
+  for (const k of mons) {
     try {
       const raw = await env.EPHEMERAL.get(k.name);
       if (!raw) continue;

@@ -2,7 +2,7 @@
 // Merchant-of-record: Dodo handles tax/compliance; we just create
 // a checkout link and update the plan on payment success.
 // Host: test.dodopayments.com (test mode) or live.dodopayments.com.
-import { Env, json } from "./gateway";
+import { Env, json, listAll } from "./gateway";
 
 const DODO_API_DEFAULT = "https://test.dodopayments.com"; // set env.DODO_API_BASE to https://live.dodopayments.com when the account leaves test mode
 
@@ -96,8 +96,8 @@ export async function reconcileBilling(env: Env): Promise<{ active: number; repa
   await env.EPHEMERAL.put("plan", JSON.stringify({ name: actives.includes("pro") ? "pro" : (actives[0] ?? "Founder") }));
 
   // Downgrade pro licenses whose subscription is no longer active.
-  const licKeys = await env.EPHEMERAL.list({ prefix: "license:" });
-  for (const k of licKeys.keys) {
+  const licKeys = await listAll(env.EPHEMERAL, "license:");
+  for (const k of licKeys) {
     const email = k.name.slice(8);
     const v = await env.EPHEMERAL.get(k.name);
     if (v && v !== "free" && !liveEmails.has(email)) {

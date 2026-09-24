@@ -125,3 +125,16 @@ export function touchKey(env: Env, ctx: ExecutionContext, id: number): void {
       .run(),
   );
 }
+
+// KV list() returns max 1000 keys per call — without cursor pagination,
+// sweeps and /kv/list silently drop everything past the first page at scale.
+export async function listAll(kv: KVNamespace, prefix: string): Promise<KVNamespaceListKey<unknown, string>[]> {
+  const keys: KVNamespaceListKey<unknown, string>[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = await kv.list({ prefix, cursor });
+    keys.push(...page.keys);
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+  return keys;
+}
