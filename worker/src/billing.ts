@@ -50,6 +50,65 @@ async function dodoFetch(env: Env, path: string, body?: unknown, method = "POST"
 
 // POST /api/v1/billing/checkout — create a Dodo checkout for a plan.
 // Admin-token protected (the dashboard proxies with the internal token).
+// Reconcile KV billing state against Dodo's live subscription list. Runs in
+// the daily sweep and repairs drift from delayed or dropped webhooks in both
+// directions: active subs get their license stamped, subs no longer active
+// are removed from subs:active and their licenses downgraded. Idempotent —
+// mirrors exactly what the webhook handler writes.
+export async function reconcileBilling(env: Env): Promise<{ active: number; repaired: string[] }> {
+  const r = await dodoFetch(env, "/subscriptions?status=active&limit=100", undefined, "GET");
+  if (!r.ok) return { active: -1, repaired: ["subscription list failed"] };
+  const d = (await r.json()) as {
+    items?: { subscription_id?: string; customer?: { email?: string }; metadata?: { plan?: string; trial?: string } }[];
+  };
+  const live = new Map<string, { plan: string; email?: string; trial: boolean }>();
+  for (const s of d.items ?? []) {
+    const id = s.subscription_id;
+    if (!id) continue;
+    live.set(id, { plan: s.metadata?.plan ?? "pro", email: s.customer?.email?.toLowerCase(), trial: s.metadata?.trial === "1" });
+  }
+  const repaired: string[] = [];
+
+  const rawSubs = await env.EPHEMERAL.get("subs:active");
+  const subs: Record<string, string> = rawSubs ? JSON.parse(rawSubs) : {};
+  for (const key of Object.keys(subs)) {
+    if (!live.has(key)) { delete subs[key]; repaired.push(`removed stale ${key}`); }
+  }
+  const liveEmails = new Set<string>();
+  for (const [id, s] of live) {
+    if (subs[id] !== s.plan) { subs[id] = s.plan; repaired.push(`upserted ${id}`); }
+    if (s.email) {
+      liveEmails.add(s.email);
+      const lic = await env.EPHEMERAL.get(`license:${s.email}`);
+      if (lic !== s.plan) {
+        await env.EPHEMERAL.put(`license:${s.email}`, s.plan, { expirationTtl: 31_536_000 });
+        repaired.push(`license ${s.email}`);
+      }
+      if (s.trial && !(await env.EPHEMERAL.get(`trial:${s.email}`))) {
+        await env.EPHEMERAL.put(`trial:${s.email}`, String(Date.now()), { expirationTtl: 31_536_000 });
+        repaired.push(`trial ${s.email}`);
+      }
+      await env.EPHEMERAL.delete(`pastdue:${s.email}`);
+    }
+  }
+  await env.EPHEMERAL.put("subs:active", JSON.stringify(subs));
+  const actives = Object.values(subs);
+  await env.EPHEMERAL.put("plan", JSON.stringify({ name: actives.includes("pro") ? "pro" : (actives[0] ?? "Founder") }));
+
+  // Downgrade pro licenses whose subscription is no longer active.
+  const licKeys = await env.EPHEMERAL.list({ prefix: "license:" });
+  for (const k of licKeys.keys) {
+    const email = k.name.slice(8);
+    const v = await env.EPHEMERAL.get(k.name);
+    if (v && v !== "free" && !liveEmails.has(email)) {
+      await env.EPHEMERAL.put(k.name, "free", { expirationTtl: 31_536_000 });
+      await env.EPHEMERAL.delete(`trial:${email}`);
+      repaired.push(`downgraded ${email}`);
+    }
+  }
+  return { active: live.size, repaired };
+}
+
 export async function handleBilling(
   req: Request,
   env: Env,
@@ -220,8 +279,28 @@ export async function handleBilling(
     }
     if (!subId) return json({ error: "subscription_id or email required" }, 400);
     const r = await dodoFetch(env, `/subscriptions/${subId}`, { status: "cancelled" }, "PATCH");
-    const d = (await r.json()) as Record<string, unknown>;
+    const d = (await r.json()) as { status?: string; customer?: { email?: string }; metadata?: { plan?: string } };
     if (!r.ok) return json({ error: "cancel failed", detail: d }, 502);
+
+    // Apply the downgrade synchronously — webhooks can lag or drop in test
+    // mode, and a cancelled sub must not leave license:<email> = 'pro' while
+    // we wait. When subscription.cancelled does arrive it repeats the same
+    // writes (idempotent), so this is safe to do in both places.
+    const subEmail = d.customer?.email?.toLowerCase() ?? b.email?.toLowerCase();
+    const rawSubs = await env.EPHEMERAL.get("subs:active");
+    const subs: Record<string, string> = rawSubs ? JSON.parse(rawSubs) : {};
+    delete subs[subId];
+    await env.EPHEMERAL.put("subs:active", JSON.stringify(subs));
+    const actives = Object.values(subs);
+    const planName = actives.includes("pro") ? "pro" : (actives[0] ?? "Founder");
+    await env.EPHEMERAL.put("plan", JSON.stringify({ name: planName }));
+    if (subEmail) {
+      await env.EPHEMERAL.put(`license:${subEmail}`, "free", { expirationTtl: 31_536_000 });
+      await env.EPHEMERAL.delete(`trial:${subEmail}`);
+    }
+    await env.DB.prepare(
+      "INSERT INTO bus_messages (channel, payload, created_at) VALUES ('billing.events', ?, datetime('now'))",
+    ).bind(JSON.stringify({ type: "subscription.cancelled", plan: planName, from: "api", licensed: !!subEmail })).run();
     return json({ ok: true, subscription_id: subId, status: d.status });
   }
 

@@ -10,7 +10,7 @@ import { Env, json, cors, preflight } from "./gateway";
 import { handlePublicApi } from "./public_api";
 import { handleMcp } from "./mcp";
 import { handleA2a } from "./a2a";
-import { handleBilling } from "./billing";
+import { handleBilling, reconcileBilling } from "./billing";
 import { handleOAuth } from "./oauth";
 import { handleWebSearch, serper } from "./websearch";
 import { handleScrape, handleRender } from "./scrape";
@@ -465,6 +465,13 @@ async function advanceLeadSequence(env: Env) {
     }
   }
   await env.EPHEMERAL.put("mon:last_sweep", JSON.stringify({ at: Date.now(), ...sweep })).catch(() => {});
+
+  // Billing reconciliation — webhooks can lag or drop (seen live: a cancel
+  // PATCH landed at Dodo but subscription.cancelled never arrived). Compare
+  // subs:active against Dodo's live list and repair licenses/plan/trial
+  // drift. Breadcrumb mirrors mon:last_sweep for observability.
+  const rec = await reconcileBilling(env).catch((e: unknown) => ({ active: -1, repaired: [e instanceof Error ? e.name : "err"] }));
+  await env.EPHEMERAL.put("billing:last_reconcile", JSON.stringify({ at: Date.now(), ...rec })).catch(() => {});
 }
 
 // Autonomous agent loop: a Cloudflare cron tick makes the company act
