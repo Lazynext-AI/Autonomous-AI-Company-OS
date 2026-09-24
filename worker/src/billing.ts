@@ -273,7 +273,7 @@ export async function handleBilling(
     const trial = (b.trial_days ?? 0) > 0;
     const r = await dodoFetch(env, "/checkouts", {
       product_cart: [{ product_id: b.product_id, quantity: 1 }],
-      return_url: "https://lazynext-platform.github.io/accessibility-checker/?upgraded=1",
+      return_url: "https://checker.lazynext.com/?upgraded=1",
       metadata: { plan: b.plan ?? "", ...(trial ? { trial: "1" } : {}) },
       // Card-upfront free trial: Dodo collects the payment method now and
       // auto-converts to the recurring price when trial_period_days elapse.
