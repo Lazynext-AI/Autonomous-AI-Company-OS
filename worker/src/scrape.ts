@@ -104,21 +104,60 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
 
     // Interactive check: press Tab through the page and watch where focus
     // lands. A sequence that never moves = keyboard trap; zero focusable
-    // elements = keyboard-inaccessible.
+    // elements = keyboard-inaccessible. Also census the focusable elements
+    // (so downstream analysis knows what Tab *should* reach) and probe
+    // Escape (a dialog that ignores it is a hard trap).
     const focusTrace: string[] = [];
+    let focusable = 0;
+    let escape: { inDialog: boolean; responds: boolean } | null = null;
+    const FOCUSABLE_SEL =
+      'a[href],button,input,select,textarea,summary,area[href],video[controls],audio[controls],[tabindex]:not([tabindex="-1"])';
+    // Trace entries carry the element's index in the focusable census —
+    // labels alone can't distinguish same-text siblings ("Get started" ×5).
+    const readFocus = () =>
+      page.evaluate((sel) => {
+        const doc = (globalThis as any).document;
+        const el = doc.activeElement;
+        if (!el || el === doc.body) return "body";
+        const idx = Array.from(doc.querySelectorAll(sel) as any).indexOf(el);
+        const desc = `${String(el.tagName).toLowerCase()}${el.id ? "#" + el.id : ""}${String((el as any).innerText ?? "").trim() ? ":" + String((el as any).innerText).trim().slice(0, 25) : ""}`;
+        return `${idx}:${desc}`;
+      }, FOCUSABLE_SEL);
     try {
-      for (let i = 0; i < 10; i++) {
+      focusable = await page.evaluate((sel) => {
+        const doc = (globalThis as any).document;
+        const win = (globalThis as any).window;
+        let n = 0;
+        for (const el of Array.from(doc.querySelectorAll(sel) as any)) {
+          const r = (el as any).getBoundingClientRect();
+          const cs = win.getComputedStyle(el);
+          if (r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && !(el as any).disabled) n++;
+        }
+        return n;
+      }, FOCUSABLE_SEL);
+      for (let i = 0; i < 24; i++) {
         await page.keyboard.press("Tab");
-        const cur = await page.evaluate(() => {
-          const el = (globalThis as any).document.activeElement;
-          if (!el || el === (globalThis as any).document.body) return "body";
-          return `${String(el.tagName).toLowerCase()}${el.id ? "#" + el.id : ""}${String((el as any).innerText ?? "").trim() ? ":" + String((el as any).innerText).trim().slice(0, 25) : ""}`;
-        });
-        focusTrace.push(String(cur));
+        focusTrace.push(String(await readFocus()));
       }
+      const beforeEsc = await readFocus();
+      const inDialog = await page.evaluate(() => {
+        const el = (globalThis as any).document.activeElement;
+        return !!(el && (el as any).closest && (el as any).closest('dialog,[role="dialog"]'));
+      });
+      await page.keyboard.press("Escape");
+      escape = { inDialog, responds: String(await readFocus()) !== String(beforeEsc) };
     } catch {}
 
-    return json({ url, title: data.title, html: data.html, styles: data.styles, facts: data.facts, focus: focusTrace });
+    return json({
+      url,
+      title: data.title,
+      html: data.html,
+      styles: data.styles,
+      facts: data.facts,
+      focus: focusTrace,
+      focusable,
+      escape,
+    });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e), provider: "cloudflare-browser" }, 502);
   } finally {
