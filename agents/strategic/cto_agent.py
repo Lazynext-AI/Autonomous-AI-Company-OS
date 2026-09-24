@@ -230,7 +230,11 @@ TECH CONTEXT:
 RECENT TASKS (avoid duplicates):
 {json.dumps(recent_descriptions[:5]) if recent_descriptions else "[]"}
 
-CRITICAL: Do NOT create tasks that are similar to recent tasks above. Each task must be unique and specific.
+CRITICAL RULES:
+- Do NOT create tasks similar to recent tasks above. Each task must be unique and specific.
+- The Shipped list is CLOSED work — never create a task that rebuilds, extends, or re-words anything in it, even partially.
+- Managed files (worker.js, index.html, src/scanner.js, package.json, test/scanner.test.mjs) cannot be edited — deliverables targeting them are always rejected. Tasks must produce NEW modules, tests, or docs.
+- Stay in scope: no new platforms or apps, no additional payment providers (Dodo only), no additional email providers (Brevo only), no architecture rewrites.
 
 OUTPUT: JSON array only. No markdown, no explanation.
 Schema per task:

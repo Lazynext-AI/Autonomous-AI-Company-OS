@@ -107,7 +107,8 @@ RULES:
 2. If no product exists, your first priority MUST be defining and building the initial product.
 3. Each priority must be actionable - the CTO will turn it into 5-10 concrete tasks.
 4. Use the exact deadline: {deadline}
-5. Return ONLY valid JSON, no markdown, no explanation.
+5. The "Already shipped" list is CLOSED work — never propose a priority that rebuilds, extends, or re-words anything in it. Direct priorities only at genuinely uncovered areas: deeper product capability, uncovered tests, docs, conversion polish on the existing funnel.
+6. Return ONLY valid JSON, no markdown, no explanation.
 
 JSON schema (return ONLY this object):
 {{
