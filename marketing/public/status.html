@@ -30,15 +30,18 @@ h1{font-size:34px;font-weight:800;margin:20px 0 8px}
 section{padding:16px 0 60px}
 h2{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
 footer{border-top:1px solid var(--border);padding:28px 0;color:var(--muted);font-size:12px;text-align:center}
+.skip{position:absolute;left:-9999px;top:0;background:#6D28D9;color:#fff;padding:10px 18px;border-radius:0 0 10px 0;font-size:13px;font-weight:700;z-index:999}.skip:focus{left:0}
 </style>
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
+
 <div class="wrap">
 <nav>
   <a class="logo" href="/"><span>◆</span> Lazynext</a>
   <a class="btn" href="https://dashboard.lazynext.com">Dashboard</a>
 </nav>
-<main>
+<main id="main">
 <header>
   <div class="badge"><span class="dot"></span> All systems operational</div>
   <h1>Lazynext Status</h1>
