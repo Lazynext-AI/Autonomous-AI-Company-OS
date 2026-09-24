@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { workerFetch, queryWorker } from "@/lib/worker";
-import { hashPassword, verifyPassword, genToken } from "@/lib/auth";
+import { hashPassword, verifyPassword, genToken, signSession } from "@/lib/auth";
 import * as OTPAuth from "otpauth";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,14 @@ function branded(title: string, body: string, cta?: { href: string; label: strin
 async function setSession(res: NextResponse, userId: number) {
   const token = genToken();
   await workerFetch("/kv/put", { key: `session:${token}`, value: String(userId), ttl: 60 * 60 * 24 * 30 });
-  res.cookies.set("lz_user_session", token, { httpOnly: true, secure: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 30, path: "/" });
+  let secret = process.env.DASHBOARD_SESSION_TOKEN;
+  try {
+    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+    const ctx = await getCloudflareContext({ async: true });
+    secret = (ctx.env as Record<string, string | undefined>).DASHBOARD_SESSION_TOKEN ?? secret;
+  } catch {}
+  const value = secret ? await signSession(token, secret) : token;
+  res.cookies.set("lz_user_session", value, { httpOnly: true, secure: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 30, path: "/" });
 }
 
 export async function POST(req: NextRequest) {
