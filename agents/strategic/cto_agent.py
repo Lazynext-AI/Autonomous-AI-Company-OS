@@ -330,9 +330,10 @@ Return 5-10 UNIQUE tasks. Return ONLY the JSON array."""
             )
             return
 
-        # Skip alerts for gate-rejected deliverables - the task was infeasible, not buggy;
-        # a remediation task hits the same gates and escalates again
-        if "deliverable rejected" in error_details:
+        # Skip alerts for gate-vetoed deliverables - the task was infeasible, not buggy;
+        # a remediation task hits the same gates and escalates again. Agents emit
+        # "Deliverable blocked:" (protected paths) and "Deliverable rejected:" (tests/task-fit).
+        if "deliverable" in error_details:
             self.logger.info(
                 "qa_alert_skipped_gate_rejection",
                 message="Skipping QA alert - deliverable rejections are task-spec issues, not bugs"
