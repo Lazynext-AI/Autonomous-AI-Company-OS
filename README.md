@@ -62,7 +62,7 @@ External consumers use `lzk_*` API keys (issued via `/api/v1/keys` with the admi
 - **Docs**: `GET /api/v1/openapi.json` + Swagger UI at `/api/v1/docs`
 - **SDKs**: `core/public_api_client.py` (Python) · `sdk/js/` (JS/TS, `npm i lazynext`) · `sdk/go/` (Go)
 - **CLI**: `lazynext` command (installed at `/opt/homebrew/bin/lazynext`) — `status`, `briefings`, `tasks`, `task "…"`, `agents`, `search`, `health`, `mcp-tools`, `waitlist`
-- **A2A**: `GET /.well-known/agent.json` (agent card) + `POST /a2a` (`tasks/send`/`tasks/get`) — other AI agents can delegate work
+- **A2A**: `GET /.well-known/agent.json` (agent card, public) + `POST /a2a` — `tasks/send` (write scope) queues real work, `tasks/get` (read scope) reports true state from task_log
 - **OAuth 2.0**: `POST /oauth/token` (client_credentials + authorization_code) + `POST /oauth/authorize` (admin-mints scoped `lzk_` keys)
 - **Embeddable widget**: `<script src="https://ai-company.lazynext.com/widget.js"></script>` + `<div data-lazynext="status|chat">` — live status card / chat box on any site
 - **Chat integrations**: webhook endpoints auto-detect Slack/Discord/Telegram URLs and format messages natively — connect in Settings → Chat integrations

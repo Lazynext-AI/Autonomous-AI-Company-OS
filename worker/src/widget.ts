@@ -34,7 +34,7 @@ const WIDGET_JS = `(function(){
           log.scrollTop = log.scrollHeight;
           fetch(API + "/widget/chat", { method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify({ text: msg }) })
             .then(function(r){return r.json()}).then(function(d){
-              log.innerHTML += '<div style="margin-bottom:4px"><b style="color:#22C55E">Lazynext:</b> ' + (d.reply || "received") + "</div>";
+              log.innerHTML += '<div style="margin-bottom:4px"><b style="color:#22C55E">Lazynext:</b> ' + (d.reply || d.error || "received") + "</div>";
               log.scrollTop = log.scrollHeight;
             }).catch(function(){ log.innerHTML += '<div style="color:#EF4444">offline</div>'; });
         }
@@ -60,14 +60,51 @@ export async function handleWidget(
     });
   }
 
-  // Widget chat → a lightweight reply + posts to the bus so agents see it.
+  // Widget chat — public, so per-IP rate limit before spending AI tokens.
+  // Answers synchronously about the product/company (the widget.chat bus
+  // channel has no agent subscribers, so promising "an agent will pick it
+  // up" would be a lie; the publish stays as an audit/webhook trail).
   if (req.method === "POST" && path === "/api/v1/widget/chat") {
+    const ip = req.headers.get("cf-connecting-ip") ?? "anon";
+    const bucket = Math.floor(Date.now() / 60000);
+    const rlKey = `rl:widget:${ip}:${bucket}`;
+    const used = parseInt((await env.EPHEMERAL.get(rlKey)) ?? "0", 10);
+    if (used >= 10) return json({ error: "rate limit exceeded" }, 429);
+    await env.EPHEMERAL.put(rlKey, String(used + 1), { expirationTtl: 120 });
+
     const b = (await req.json()) as { text?: string };
-    const text = (b.text ?? "").slice(0, 500);
+    const text = (b.text ?? "").slice(0, 500).trim();
     if (!text) return json({ error: "text required" }, 400);
-    // publishToBus → webhook fan-out, same as every other bus write.
-    await publishToBus(env, ctx, "widget.chat", JSON.stringify({ text, source: "widget" }));
-    return json({ reply: "The company received your message — an agent will pick it up." });
+
+    let reply = "";
+    if (env.AI) {
+      const brain = await env.DB.prepare(
+        "SELECT product_name, product_description, mission FROM company_brain LIMIT 1",
+      )
+        .first<{ product_name?: string; product_description?: string; mission?: string }>()
+        .catch(() => null);
+      const res = await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
+        messages: [
+          {
+            role: "system",
+            content:
+              `You are the website chat for "${brain?.product_name ?? "Lazynext"}" — ${brain?.product_description ?? "an autonomous AI company"}. Mission: ${brain?.mission ?? "build and launch valuable products"}. ` +
+              "Answer the visitor's question about the product or company in 1-3 short sentences, plain text. If they ask for something you can't do here, say so and point them at the site.",
+          },
+          { role: "user", content: text },
+        ],
+        max_tokens: 120,
+      });
+      const out = (res as { response?: unknown }).response;
+      reply = (typeof out === "string" ? out : JSON.stringify(out ?? "")).trim().slice(0, 500);
+    }
+    await publishToBus(
+      env,
+      ctx,
+      "widget.chat",
+      JSON.stringify({ text, reply, source: "widget" }),
+    );
+    return json({ reply: reply || "Ask us anything about the product or the company." });
   }
 
   return json({ error: "not found" }, 404);

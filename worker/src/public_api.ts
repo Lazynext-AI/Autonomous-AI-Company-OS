@@ -47,7 +47,17 @@ async function createTask(env: Env, ctx: ExecutionContext, req: Request): Promis
     return json({ error: "invalid channel" }, 400);
   }
   const taskId = crypto.randomUUID();
+  // task_log is the real queue — agentTick executes the oldest pending row
+  // every cron tick. The default cto.tasks bus channel has no subscribers
+  // (only role channels like cto.tasks.backend do), so a bus publish alone
+  // was a dead letter; the row is what guarantees the task runs.
+  await env.DB.prepare(
+    "INSERT INTO task_log (task_id, agent_id, description, status, created_at) VALUES (?, 'public-api', ?, 'pending', strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
+  )
+    .bind(taskId, b.description.trim().slice(0, 4000))
+    .run();
   const msg = {
+    _type: "TaskMessage",
     message_id: crypto.randomUUID(),
     from_agent: "public-api",
     to_agent: "",

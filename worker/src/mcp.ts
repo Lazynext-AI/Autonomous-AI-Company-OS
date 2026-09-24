@@ -227,6 +227,15 @@ async function callTool(env: Env, ctx: ExecutionContext, name: string, args: Jso
           ? args.channel
           : "cto.tasks";
       const taskId = crypto.randomUUID();
+      // task_log is the real queue — agentTick executes the oldest pending
+      // row every cron tick. The default cto.tasks bus channel has no
+      // subscribers (only role channels like cto.tasks.backend do), so a
+      // bus publish alone was a dead letter; the row guarantees execution.
+      await env.DB.prepare(
+        "INSERT INTO task_log (task_id, agent_id, description, status, created_at) VALUES (?, 'mcp-client', ?, 'pending', strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
+      )
+        .bind(taskId, desc.slice(0, 4000))
+        .run();
       const msg = {
         // Python bus deserializes on _type; without it messages decode to
         // BaseMessage and agents drop them as unsupported.

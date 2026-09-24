@@ -142,13 +142,17 @@ export const OPENAPI_SPEC = {
     },
     "/a2a": {
       post: {
-        summary: "A2A endpoint — delegate a task to the company (public)",
-        security: [],
+        summary: "A2A endpoint — delegate a task to the company",
         description:
-          "JSON-RPC 2.0 agent-to-agent protocol. Methods: tasks/send " +
-          "(params.message.parts[0].text → returns {id, status.state}) and " +
-          "tasks/get (params.id → task state + bus history).",
-        responses: { "200": { description: "JSON-RPC response" } },
+          "JSON-RPC 2.0 agent-to-agent protocol. tasks/send requires an " +
+          "lzk_ key with write scope (params.message.parts[0].text → queues " +
+          "the task and returns {id, status.state}); tasks/get requires read " +
+          "scope (params.id → real task state + result artifact).",
+        responses: {
+          "200": { description: "JSON-RPC response" },
+          "401": { description: "missing/invalid API key" },
+          "403": { description: "insufficient scope" },
+        },
       },
     },
     "/.well-known/agent.json": {
@@ -160,9 +164,9 @@ export const OPENAPI_SPEC = {
     },
     "/api/v1/widget/chat": {
       post: {
-        summary: "Widget chat — message the company (public)",
+        summary: "Widget chat — ask the company a question (public)",
         security: [],
-        description: "Used by /widget.js embeds. Posts the message to the company bus.",
+        description: "Used by /widget.js embeds. Replies synchronously via Workers AI, grounded in the product/company profile. Rate-limited per IP.",
         requestBody: {
           content: {
             "application/json": {
@@ -170,7 +174,7 @@ export const OPENAPI_SPEC = {
             },
           },
         },
-        responses: { "200": { description: "Acknowledged" }, "400": { description: "text required" } },
+        responses: { "200": { description: "Reply" }, "400": { description: "text required" }, "429": { description: "rate limit exceeded" } },
       },
     },
     "/api/v1/openapi.json": {
