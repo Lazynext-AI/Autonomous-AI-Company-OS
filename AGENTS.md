@@ -7,7 +7,7 @@ D1 + KV (`EPHEMERAL`) + Vectorize (`VECTORS`, index `company-knowledge`, 384d)
 ## Live surfaces
 
 - Platform worker: `https://ai-company-os.dry-hall-6a50.workers.dev`
-- Product worker: `https://accessibility-checker.dry-hall-6a50.workers.dev`
+- Product worker: `https://accessibility-checker.dry-hall-6a50.workers.dev` — this is what `index.html` calls. A second script `accessibility-checker-api` mirrors the same code (recreated after it was found deleted — error 1042 means "no worker on that route"; keep both in sync when deploying).
 - Dashboard: `https://dashboard.lazynext.com` (session cookie `lazynext_session`)
 - Product repo: `github.com/Lazynext-Platform/accessibility-checker` (mirrored at `products/accessibility-checker`)
 
