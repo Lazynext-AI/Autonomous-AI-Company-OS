@@ -185,6 +185,8 @@ class BaseAgent(ABC):
                                 channel, "agents", msg_id
                             )
 
+                await self.periodic_work()
+
                 if not tasks_found:
                     await self.idle_behavior()
 
@@ -401,6 +403,14 @@ class BaseAgent(ABC):
     async def handle_knowledge_request(self, request: KnowledgeRequestMessage) -> None:
         """Handle knowledge request from peer."""
         pass
+
+    async def periodic_work(self) -> None:
+        """Hook run every loop iteration, busy or idle.
+
+        Override for interval-driven work (e.g. scheduled outreach) that must
+        fire even while the agent keeps receiving tasks — idle_behavior only
+        runs when the queue is empty.
+        """
 
     async def idle_behavior(self) -> None:
         """Default idle: sleep briefly."""

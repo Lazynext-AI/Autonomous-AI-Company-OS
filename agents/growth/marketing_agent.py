@@ -45,11 +45,15 @@ class MarketingAgent(BaseAgent):
                 time_taken_seconds=int(time.time() - start),
             )
 
-    async def idle_behavior(self) -> None:
+    async def periodic_work(self) -> None:
+        """Fire the growth-experiment cycle on its interval even while tasks
+        keep arriving — idle_behavior never runs when the queue stays busy."""
         now = time.time()
         if (now - self._last_experiment_at) >= self._experiment_interval_seconds:
             await self._run_growth_experiment_cycle()
             self._last_experiment_at = now
+
+    async def idle_behavior(self) -> None:
         await asyncio.sleep(3)
 
     async def _run_growth_experiment_cycle(self) -> None:

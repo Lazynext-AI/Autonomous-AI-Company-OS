@@ -48,11 +48,15 @@ class SalesAgent(BaseAgent):
                 time_taken_seconds=int(time.time() - start),
             )
 
-    async def idle_behavior(self) -> None:
+    async def periodic_work(self) -> None:
+        """Fire the outreach cycle on its interval even while tasks keep
+        arriving — idle_behavior never runs when the queue stays busy."""
         now = time.time()
         if (now - self._last_outreach_at) >= self._outreach_interval_seconds:
             await self._run_outreach_cycle()
             self._last_outreach_at = now
+
+    async def idle_behavior(self) -> None:
         await asyncio.sleep(3)
 
     async def _run_outreach_cycle(self) -> None:
@@ -92,31 +96,63 @@ Return plain text with:
         produces the artifact, a human fires it. Returns the campaign id.
         """
         if not self._cf.is_configured():
+            self.logger.warning("draft_campaign_skipped", reason="cf_not_configured")
             return None
         try:
             pending = await self._cf.aquery(
                 "SELECT COUNT(*) c FROM email_campaigns WHERE status IN ('draft','sending')"
             )
             if (pending[0]["c"] if pending else 0) > 0:
+                self.logger.info("draft_campaign_skipped", reason="pending_exists")
                 return None
             contacts = await self._cf.aquery(
                 "SELECT COUNT(*) c FROM email_contacts WHERE subscribed = 1"
             )
             if not contacts or not contacts[0]["c"]:
+                self.logger.info("draft_campaign_skipped", reason="no_subscribed_contacts")
                 return None
-            copy = await self.call_llm(
-                self.get_system_prompt(),
+            copy_prompt = (
                 f"Write one outreach email for {product_name} to a cold prospect.\n"
                 "Output exactly two lines:\n"
                 "SUBJECT: <subject line>\n"
-                "BODY: <plain text, 3 short paragraphs, no greeting placeholder, no HTML>",
+                "BODY: <plain text, 3 short paragraphs, no greeting placeholder, no HTML>"
             )
             subject = body = ""
-            if "SUBJECT:" in copy and "BODY:" in copy:
-                after = copy.split("SUBJECT:", 1)[1]
-                subject, body = (s.strip() for s in after.split("BODY:", 1))
-            if not subject or not body:
+            for attempt in range(2):
+                copy = await self.call_llm(self.get_system_prompt(), copy_prompt)
+                low = (copy or "").lower()
+                if "subject:" in low:
+                    after = copy[low.index("subject:") + len("subject:"):]
+                    if "body:" in after.lower():
+                        body_idx = after.lower().index("body:")
+                        subject = after[:body_idx].strip().strip("*#` \t\n").strip()
+                        body = after[body_idx + len("body:"):].strip().strip("*#` \t\n").strip()
+                    else:
+                        # No BODY: marker — first line is the subject, any
+                        # remaining lines are the body the model forgot to tag.
+                        lines = after.split("\n")
+                        subject = lines[0].strip().strip("*#` \t\n").strip()
+                        body = "\n".join(lines[1:]).strip().strip("*#` \t\n").strip()
+                if subject:
+                    break
+                self.logger.warning(
+                    "draft_campaign_copy_retry",
+                    attempt=attempt,
+                    copy=(copy or "")[:300],
+                )
+            if not subject:
+                self.logger.warning(
+                    "draft_campaign_skipped",
+                    reason="copy_parse_failed",
+                    copy=(copy or "")[:300],
+                )
                 return None
+            if not body:
+                body = (
+                    f"Hi,\n\n{product_name} scans websites for accessibility issues and "
+                    "produces a prioritized fix list — free rendered scan, no signup.\n\n"
+                    "Worth a look? Reply and I'll send your site's report."
+                )
             html_body = "".join(
                 f"<p>{html.escape(p.strip())}</p>"
                 for p in body.split("\n") if p.strip()
@@ -125,7 +161,15 @@ Return plain text with:
                 "INSERT INTO email_campaigns (name, subject, html) VALUES (?, ?, ?)",
                 [f"sales-outreach-{time.strftime('%Y-%m-%d')}", subject, html_body],
             )
-            return int(res.get("meta", {}).get("last_row_id", 0)) or None
+            row_id = int(res.get("meta", {}).get("last_row_id", 0) or 0)
+            if not row_id:
+                self.logger.warning(
+                    "draft_campaign_skipped", reason="insert_no_rowid", res=str(res)[:300]
+                )
+                return None
+            return row_id
         except Exception as e:
-            self.logger.warning("draft_campaign_failed", error=str(e))
+            self.logger.warning(
+                "draft_campaign_failed", error=str(e), error_type=type(e).__name__
+            )
             return None

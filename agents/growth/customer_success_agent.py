@@ -45,11 +45,15 @@ class CustomerSuccessAgent(BaseAgent):
                 time_taken_seconds=int(time.time() - start),
             )
 
-    async def idle_behavior(self) -> None:
+    async def periodic_work(self) -> None:
+        """Fire the customer-health cycle on its interval even while tasks
+        keep arriving — idle_behavior never runs when the queue stays busy."""
         now = time.time()
         if (now - self._last_review_at) >= self._review_interval_seconds:
             await self._run_customer_health_cycle()
             self._last_review_at = now
+
+    async def idle_behavior(self) -> None:
         await asyncio.sleep(3)
 
     async def _run_customer_health_cycle(self) -> None:
