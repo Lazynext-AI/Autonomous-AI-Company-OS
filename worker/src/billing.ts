@@ -120,12 +120,20 @@ export async function handleBilling(
   if (req.method === "POST" && path === "/api/v1/billing/webhook") {
     const raw = await req.text();
     const whId = req.headers.get("webhook-id") ?? "";
-    const secret = env.DODO_WEBHOOK_SECRET;
-    if (secret) {
+    // Accept either signing secret: the KV-stored one written by the
+    // registration route (tracks the newest webhook — flips with live-mode
+    // re-registration) or the deployed env secret (initial/manual setup).
+    const secrets = [
+      await env.EPHEMERAL.get("dodo:webhook_secret"),
+      env.DODO_WEBHOOK_SECRET,
+    ].filter((s): s is string => !!s);
+    if (secrets.length) {
       const ts = req.headers.get("webhook-timestamp") ?? "";
       const sigHeader = req.headers.get("webhook-signature") ?? "";
-      const ok = await verifyDodo(secret, whId, ts, raw, sigHeader);
-      if (!ok) return json({ error: "bad signature" }, 401);
+      const results = await Promise.all(
+        secrets.map((s) => verifyDodo(s, whId, ts, raw, sigHeader)),
+      );
+      if (!results.some(Boolean)) return json({ error: "bad signature" }, 401);
     }
     // Replay/idempotency guard — Dodo retries deliver the same webhook-id;
     // process each id once so replays can't double-write events.
@@ -205,6 +213,13 @@ export async function handleBilling(
     });
     const d = (await r.json()) as Record<string, unknown>;
     if (!r.ok) return json({ error: "webhook register failed", detail: d }, r.status === 404 ? 501 : 502);
+    // Persist the new webhook's signing secret — Dodo rotates it per webhook,
+    // so re-registering (e.g. the live-mode flip) would otherwise silently
+    // break verification until DODO_WEBHOOK_SECRET was manually updated.
+    const secret = d.secret ?? d.webhook_secret;
+    if (typeof secret === "string" && secret) {
+      await env.EPHEMERAL.put("dodo:webhook_secret", secret);
+    }
     return json({ ok: true, webhook: d });
   }
 
