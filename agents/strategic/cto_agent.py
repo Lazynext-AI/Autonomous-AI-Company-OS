@@ -339,7 +339,19 @@ Return 5-10 UNIQUE tasks. Return ONLY the JSON array."""
                 message="Skipping QA alert - deliverable rejections are task-spec issues, not bugs"
             )
             return
-        
+
+        # Skip alerts for transient infrastructure errors - network/timeout/SSL
+        # hiccups are self-recovering and no remediation task can fix them.
+        if any(s in error_details for s in (
+            "ssl:", "unexpected_eof", "timed out", "timeout", "connection reset",
+            "connection refused", "econnreset", "econnrefused", "502", "503", "429",
+        )):
+            self.logger.info(
+                "qa_alert_skipped_transient_infra",
+                message="Skipping QA alert - transient infra errors are not remediable"
+            )
+            return
+
         component = (alert.affected_component or "").lower()
         assign = "devops" if component in {"api_health", "runtime", "deployment", "health"} else "backend"
         role_channel = Channels.CTO_TASKS_DEVOPS if assign == "devops" else Channels.CTO_TASKS_BACKEND
