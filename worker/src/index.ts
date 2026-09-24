@@ -641,7 +641,7 @@ async function operate(env: Env, ctx: ExecutionContext, brain: Brain, urls: Reco
   // Failed/completed tasks feed back as a do-not-repeat list — exact-match
   // dedup alone lets the same idea regenerate under slightly different wording.
   const recent = await env.DB.prepare(
-    "SELECT description FROM task_log WHERE status IN ('failed','completed') ORDER BY created_at DESC LIMIT 15",
+    "SELECT description FROM task_log WHERE status IN ('failed','completed','escalated') ORDER BY created_at DESC LIMIT 15",
   )
     .all<{ description: string }>()
     .catch(() => ({ results: [] as { description: string }[] }));
@@ -656,7 +656,7 @@ async function operate(env: Env, ctx: ExecutionContext, brain: Brain, urls: Reco
     messages: [
       {
         role: "system",
-        content: `You are ${a.persona} at an autonomous software company building "${brain.product_name}" (${brain.product_description ?? ""}). Mission: ${brain.mission ?? "build and launch a valuable product"}. North star: the deployed site must become a WORKING version of the product — a visitor can use its core feature client-side in the browser (no backend). Build ONE coherent product — real modules that import each other, a package manifest, tests (test_*.py or *.test.js), and a functional index.html. ${repoCtx}${doneCtx ? ` Already shipped or dead — do NOT repeat or rephrase: ${doneCtx}.` : ""} Stay inside the current product scope: no new platforms (no mobile/desktop apps), no additional payment providers (Dodo is the merchant of record), no additional email providers (Brevo only), no architecture rewrites — incremental product work only. Reply with ONLY JSON: {"status": "one line, first person, under 25 words", "task": "one concrete deliverable for the sprint or null if nothing new is needed"}. No markdown.`,
+        content: `You are ${a.persona} at an autonomous software company building "${brain.product_name}" (${brain.product_description ?? ""}). Mission: ${brain.mission ?? "build and launch a valuable product"}. North star: the deployed site must become a WORKING version of the product — a visitor can use its core feature client-side in the browser (no backend). Build ONE coherent product — real modules that import each other, a package manifest, tests (test_*.py or *.test.js), and a functional index.html. ${repoCtx}${doneCtx ? ` Already shipped or dead — do NOT repeat or rephrase: ${doneCtx}.` : ""} Stay inside the current product scope: no new platforms (no mobile/desktop apps), no additional payment providers (Dodo is the merchant of record), no additional email providers (Brevo only), no architecture rewrites — incremental product work only. worker.js, index.html, src/scanner.js, package.json and test/scanner.test.mjs are managed files that cannot be edited — deliverables touching them are always rejected; propose NEW modules, tests, or docs instead. Reply with ONLY JSON: {"status": "one line, first person, under 25 words", "task": "one concrete deliverable for the sprint or null if nothing new is needed"}. No markdown.`,
       },
       { role: "user", content: "What are you doing right now, and what single task most needs doing next?" },
     ],
