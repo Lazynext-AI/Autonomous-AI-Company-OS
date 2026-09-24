@@ -393,5 +393,47 @@ export async function handleBilling(
     return json({ plan: plan ? JSON.parse(plan) : { name: "Founder" } });
   }
 
+  // Conversion funnel — internal token. Aggregates the product funnel for
+  // the dashboard: scans → leads → trials → paying customers. Counts are
+  // current-state views (KV records decay by TTL), not cumulative totals.
+  if (req.method === "GET" && path === "/api/v1/billing/funnel") {
+    const auth = req.headers.get("authorization") ?? "";
+    if (auth !== `Bearer ${env.API_TOKEN}`) return json({ error: "unauthorized" }, 401);
+    const [reports, leads, trials, licenses, mons] = await Promise.all([
+      listAll(env.EPHEMERAL, "report:"),
+      listAll(env.EPHEMERAL, "lead:"),
+      listAll(env.EPHEMERAL, "trial:"),
+      listAll(env.EPHEMERAL, "license:"),
+      listAll(env.EPHEMERAL, "mon:"),
+    ]);
+    const leadCount = leads.filter(
+      (k) => !k.name.endsWith(":stage") && !k.name.endsWith(":joined"),
+    ).length;
+    const trialCount = trials.filter((k) => !k.name.endsWith(":reminded")).length;
+    const licVals = await Promise.all(licenses.map((k) => env.EPHEMERAL.get(k.name)));
+    const proLicenses = licVals.filter((v) => v != null && v !== "free").length;
+    const rawSubs = await env.EPHEMERAL.get("subs:active");
+    const subsActive = rawSubs
+      ? Object.keys(JSON.parse(rawSubs) as Record<string, string>).length
+      : 0;
+    const count = async (table: string) =>
+      env.DB.prepare(`SELECT COUNT(*) c FROM ${table}`)
+        .first<{ c: number }>()
+        .then((r) => r?.c ?? 0)
+        .catch(() => null);
+    return json({
+      scans_30d: reports.length,
+      leads: leadCount,
+      waitlist: await count("waitlist"),
+      email_contacts: await count("email_contacts"),
+      crm_leads: await count("crm_leads"),
+      trials_active: trialCount,
+      licenses_pro: proLicenses,
+      licenses_free: licVals.length - proLicenses,
+      subscriptions_active: subsActive,
+      monitors: mons.filter((k) => k.name !== "mon:last_sweep").length,
+    });
+  }
+
   return json({ error: "not found" }, 404);
 }

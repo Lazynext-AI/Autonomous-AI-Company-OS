@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { queryApi } from "@/lib/api";
 import { PageHeader, Card } from "@/components/ui";
-import { CreditCard, Activity, Key, Rocket, BookOpen } from "lucide-react";
+import { CreditCard, Activity, Key, Rocket, BookOpen, TrendingUp } from "lucide-react";
 import { toast } from "@/components/Toast";
 
 const PLANS = [
@@ -18,6 +18,7 @@ export default function BillingPage() {
   const [planOpen, setPlanOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [subs, setSubs] = useState<any[]>([]);
+  const [funnel, setFunnel] = useState<any>(null);
 
   useEffect(() => {
     Promise.all([
@@ -49,6 +50,10 @@ export default function BillingPage() {
     fetch("/api/billing")
       .then((r) => r.json())
       .then((d) => { if (Array.isArray(d.subscriptions)) setSubs(d.subscriptions); })
+      .catch(() => {});
+    fetch("/api/funnel")
+      .then((r) => r.json())
+      .then((d) => { if (d && !d.error) setFunnel(d); })
       .catch(() => {});
   }, []);
 
@@ -139,6 +144,58 @@ export default function BillingPage() {
                 </div>
               ))}
             </div>
+          )}
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-accentSoft" /> Conversion funnel
+          </h2>
+          {!funnel ? (
+            <p className="text-xs text-muted">Loading funnel…</p>
+          ) : (
+            <>
+              <div className="space-y-2">
+                {(() => {
+                  const stages = [
+                    { label: "Scans (30d)", value: funnel.scans_30d ?? 0 },
+                    { label: "Leads", value: funnel.leads ?? 0 },
+                    { label: "In trial", value: funnel.trials_active ?? 0 },
+                    { label: "Customers", value: funnel.subscriptions_active ?? 0 },
+                  ];
+                  const top = Math.max(stages[0].value, 1);
+                  return stages.map((s, i) => {
+                    const prev = i > 0 ? stages[i - 1].value : null;
+                    const pct = prev != null && prev > 0 ? Math.round((s.value / prev) * 100) : null;
+                    return (
+                      <div key={s.label} className="flex items-center gap-3">
+                        <span className="text-xs text-muted w-24 shrink-0">{s.label}</span>
+                        <div className="flex-1 h-5 bg-input rounded-md overflow-hidden">
+                          <div
+                            className="h-full bg-accent/70 rounded-md"
+                            style={{ width: `${s.value > 0 ? Math.max((s.value / top) * 100, 4) : 0}%` }}
+                          />
+                        </div>
+                        <span className="text-sm font-semibold text-fg w-12 text-right">{s.value}</span>
+                        <span className="text-[10px] text-muted w-10 text-right">
+                          {pct != null ? `${pct}%` : ""}
+                        </span>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+              <div className="flex flex-wrap gap-x-5 gap-y-1 mt-4 text-[10px] text-muted">
+                <span>Licenses: <b className="text-fg">{funnel.licenses_pro ?? 0} pro</b> / {funnel.licenses_free ?? 0} free</span>
+                <span>Waitlist: <b className="text-fg">{funnel.waitlist ?? 0}</b></span>
+                <span>Email contacts: <b className="text-fg">{funnel.email_contacts ?? 0}</b></span>
+                <span>CRM leads: <b className="text-fg">{funnel.crm_leads ?? 0}</b></span>
+                <span>Monitors: <b className="text-fg">{funnel.monitors ?? 0}</b></span>
+              </div>
+              <p className="text-[10px] text-muted mt-2">
+                Current-state counts — KV records decay by TTL, so scans cover the stored-report window (30d).
+              </p>
+            </>
           )}
         </Card>
       </div>

@@ -37,6 +37,9 @@ the `.sql` to the same `d1 execute --file` command.
 ## Known gaps
 
 - Artifact retention is 30 days — for longer history, download monthly or
-  extend to an R2 bucket (would need a new binding + export script).
+  extend to an R2 bucket. Blocked on the deploy token: `wrangler r2 bucket
+  create` fails with auth error 10000 — the token needs `R2 Storage Edit`
+  (or a dedicated R2 token as a repo secret). Once a bucket exists, add an
+  `r2 object put` step to `backup.yml`.
 - KV has no export — acceptable since its data is either ephemeral or
   re-derivable, except `conn:*` credentials which are trivially re-entered.
