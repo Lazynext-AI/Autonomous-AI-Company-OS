@@ -15,6 +15,20 @@ from core.tools.product_resolver import get_product_project_dir
 
 logger = structlog.get_logger(__name__)
 
+_NODE_BUILTINS = frozenset({
+    "assert", "async_hooks", "buffer", "child_process", "cluster", "console",
+    "constants", "crypto", "dgram", "dns", "domain", "events", "fs", "http",
+    "http2", "https", "inspector", "module", "net", "os", "path",
+    "perf_hooks", "process", "punycode", "querystring", "readline", "repl",
+    "stream", "string_decoder", "sys", "timers", "tls", "trace_events",
+    "tty", "url", "util", "v8", "vm", "wasi", "worker_threads", "zlib",
+})
+# Bare import specifiers in written files — from 'x', import 'x',
+# import('x'), require('x'), export ... from 'x'.
+_IMPORT_SPEC_RE = re.compile(
+    r"(?:\bfrom\s+|\bimport\s*\(\s*|\brequire\(\s*|\bimport\s+)['\"]([^'\"]+)['\"]"
+)
+
 
 def extract_code_blocks(text: str) -> list[dict[str, str]]:
     """Extract code blocks from LLM output. Returns list of {language, code, filename}."""
@@ -211,15 +225,23 @@ class CodeWriter:
         if files_written and any(f.endswith((".mjs", ".js")) for f in files_written):
             tests_failed = await self._run_node_tests(repo_root)
 
+        # Deterministic phantom-import gate — the LLM check below let
+        # through code importing nonexistent packages (@cloudflare/brevo,
+        # @cloudflare/kv) because no test imports dead files. Bare specifiers
+        # must resolve to package.json deps or Node builtins.
+        phantom_failed = None
+        if files_written and not tests_failed:
+            phantom_failed = self._check_phantom_imports(files_written, repo_root)
+
         # Task-fit review — catches valid-but-wrong artifacts (DOM ids that
         # don't exist, same-origin API calls from Pages, dead code) that the
         # test gate cannot. Same role as the cloud loop's LLM review.
         fitness_failed = None
-        if files_written and not tests_failed:
+        if files_written and not tests_failed and not phantom_failed:
             fitness_failed = await self._fitness_check(task_description, files_written, repo_root)
 
         reverted: list[str] = []
-        if tests_failed or fitness_failed:
+        if tests_failed or fitness_failed or phantom_failed:
             # Rejected artifacts left in the tree poison the next task's
             # test run — undo this round's writes. files_written must also
             # be cleared: callers treat a non-empty list as "work shipped"
@@ -229,7 +251,7 @@ class CodeWriter:
 
         # Commit to git if files were written
         git_info = {"committed": False, "branch": None, "pushed": False}
-        if files_written and self.git_manager and not tests_failed and not fitness_failed:
+        if files_written and self.git_manager and not tests_failed and not fitness_failed and not phantom_failed:
             try:
                 # Use git manager for branch-based commits
                 git_info = await self.git_manager.create_pr_branch_and_commit(
@@ -254,6 +276,9 @@ class CodeWriter:
 
         if fitness_failed:
             result["fitness_failed"] = fitness_failed
+
+        if phantom_failed:
+            result["phantom_imports"] = phantom_failed
 
         if skipped_protected:
             result["skipped_protected"] = skipped_protected
@@ -291,6 +316,48 @@ class CodeWriter:
             return tail
         except FileNotFoundError:
             return None  # node not installed locally — CI remains the backstop
+
+    def _check_phantom_imports(
+        self, files: list[str], repo_root: Path
+    ) -> Optional[str]:
+        """Reject bare import specifiers that don't resolve — nonexistent
+        npm packages are the most common fleet hallucination and no test
+        catches them when the file is dead code. Returns issue text or None.
+        Skips when there's no package.json to judge against."""
+        pkg_file = repo_root / "package.json"
+        if not pkg_file.exists():
+            return None
+        try:
+            import json as _json
+            pkg = _json.loads(pkg_file.read_text(encoding="utf-8"))
+        except Exception:
+            return None
+        declared = set()
+        for key in ("dependencies", "devDependencies", "peerDependencies",
+                    "optionalDependencies"):
+            declared.update(pkg.get(key) or {})
+
+        bad: list[str] = []
+        for rel in files:
+            if not rel.endswith((".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx")):
+                continue
+            try:
+                content = (repo_root / rel).read_text(encoding="utf-8")
+            except Exception:
+                continue
+            for spec in set(_IMPORT_SPEC_RE.findall(content)):
+                if spec.startswith((".", "/", "node:", "data:", "http:", "https:")):
+                    continue
+                root = spec if not spec.startswith("@") else "/".join(spec.split("/")[:2])
+                if not spec.startswith("@"):
+                    root = spec.split("/")[0]
+                if root not in declared and root not in _NODE_BUILTINS:
+                    bad.append(f"{rel}: '{spec}'")
+        if bad:
+            issue = "phantom imports: " + "; ".join(sorted(bad)[:5])
+            logger.warning("phantom_imports_rejected", issue=issue)
+            return issue
+        return None
 
     async def _revert_files(self, repo_root: Path, files: list[str]) -> None:
         """Undo this round's writes: tracked files restore from HEAD, new

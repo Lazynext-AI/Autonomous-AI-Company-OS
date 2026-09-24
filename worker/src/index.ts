@@ -1186,6 +1186,29 @@ async function verifyArtifact(
     return { ok: false, how: "exec", issue: "verification container unavailable for test file" };
   }
 
+  // Phantom-import gate — bare specifiers must resolve to package.json deps
+  // or Node builtins. The exec check catches these via module resolution, but
+  // when the container is unavailable the LLM review alone decides and it let
+  // @cloudflare/brevo + @cloudflare/kv fabrications through once already.
+  if (["js", "mjs", "cjs", "ts", "tsx", "jsx"].includes(ext) && files["package.json"]) {
+    try {
+      const pkg = JSON.parse(files["package.json"]) as Record<string, Record<string, string> | undefined>;
+      const declared = new Set([
+        ...Object.keys(pkg.dependencies ?? {}), ...Object.keys(pkg.devDependencies ?? {}),
+        ...Object.keys(pkg.peerDependencies ?? {}), ...Object.keys(pkg.optionalDependencies ?? {}),
+      ]);
+      const builtins = new Set("assert async_hooks buffer child_process cluster console constants crypto dgram dns domain events fs http http2 https inspector module net os path perf_hooks process punycode querystring readline repl stream string_decoder sys timers tls trace_events tty url util v8 vm wasi worker_threads zlib".split(" "));
+      const bad = new Set<string>();
+      for (const m of content.matchAll(/(?:\bfrom\s+|\bimport\s*\(\s*|\brequire\(\s*|\bimport\s+)["']([^"']+)["']/g)) {
+        const spec = m[1];
+        if (/^(\.|\/|node:|data:|https?:)/.test(spec)) continue;
+        const root = spec.startsWith("@") ? spec.split("/").slice(0, 2).join("/") : spec.split("/")[0];
+        if (!declared.has(root) && !builtins.has(root)) bad.add(spec);
+      }
+      if (bad.size) return { ok: false, how: "static", issue: `phantom imports: ${[...bad].slice(0, 5).join("; ")}`.slice(0, 300) };
+    } catch {}
+  }
+
   // Give the reviewer the repo's real export names — the previous prompt told
   // it cross-module references were "fine", so phantom imports (wrong-named
   // exports) passed unchecked.
