@@ -234,6 +234,9 @@ CRITICAL RULES:
 - Do NOT create tasks similar to recent tasks above. Each task must be unique and specific.
 - The Shipped list is CLOSED work — never create a task that rebuilds, extends, or re-words anything in it, even partially.
 - Managed files (worker.js, index.html, src/scanner.js, package.json, test/scanner.test.mjs) cannot be edited — deliverables targeting them are always rejected. Tasks must produce NEW modules, tests, or docs.
+- The product has NO user accounts or auth — never propose tasks needing logins, user/customer dashboards, profiles, saved history, or per-user data.
+- The product is a single-page app — no multi-page flows, onboarding wizards, landing pages, or A/B tests can ship.
+- Recurring rejected classes — never propose: analytics/metrics dashboards or tracking systems (already exist in KV/D1/dashboard), notification/alert/email systems (already shipped via Brevo), feedback endpoints, deploy automation (intentionally manual), lead capture (the 402 funnel already ships it).
 - Stay in scope: no new platforms or apps, no additional payment providers (Dodo only), no additional email providers (Brevo only), no architecture rewrites.
 
 OUTPUT: JSON array only. No markdown, no explanation.

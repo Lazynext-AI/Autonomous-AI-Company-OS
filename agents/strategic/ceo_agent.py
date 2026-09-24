@@ -108,7 +108,8 @@ RULES:
 3. Each priority must be actionable - the CTO will turn it into 5-10 concrete tasks.
 4. Use the exact deadline: {deadline}
 5. The "Already shipped" list is CLOSED work — never propose a priority that rebuilds, extends, or re-words anything in it. Direct priorities only at genuinely uncovered areas: deeper product capability, uncovered tests, docs, conversion polish on the existing funnel.
-6. Return ONLY valid JSON, no markdown, no explanation.
+6. Architectural bounds — the product has NO user accounts or auth system, so priorities needing logins, user dashboards, profiles, saved history, or per-user data are impossible. It is a single-page app, so multi-page flows, onboarding wizards, landing pages, and A/B tests are impossible. Direct priorities at what can actually ship: new analysis capability, marketing/sales prose deliverables, docs, tests, new self-contained modules.
+7. Return ONLY valid JSON, no markdown, no explanation.
 
 JSON schema (return ONLY this object):
 {{
