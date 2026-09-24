@@ -73,6 +73,15 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
           bg: cs.backgroundColor,
           size: parseFloat(cs.fontSize),
           weight: cs.fontWeight,
+          td: cs.textDecorationLine,
+          // 1.4.1 is scoped to links inside body text — a nav menu link is
+          // identifiable as a link by structure, not color. inProse marks
+          // links sitting inside a text-bearing block that is not inside
+          // nav/header/footer furniture.
+          inProse:
+            el.tagName === "A" &&
+            !!(el as any).closest("p,li,td,dd,blockquote") &&
+            !(el as any).closest("nav,header,footer"),
         });
       }
       // Static facts that need a real DOM (not regex): iframe titles, duplicate
