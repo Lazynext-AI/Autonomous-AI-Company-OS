@@ -29,9 +29,9 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:28px 0
 .navlinks a:hover{color:var(--text)}
 .navlinks a.btn-primary, .navlinks a.btn-primary:hover{color:#fff}
 .btn{display:inline-block;padding:12px 24px;border-radius:10px;font-weight:700;font-size:14px;transition:all .15s}
-.btn-primary{background:#6D28D9;color:#fff}
+.btn-primary{background:#6D28D9;color:#fff;border:1.5px solid #A78BFA}
 .btn-primary:hover{background:#5B21B6}
-.btn-ghost{border:1.5px solid var(--border);color:var(--text)}
+.btn-ghost{border:1.5px solid #6B7280;color:var(--text)}
 .btn-ghost:hover{border-color:var(--accentSoft)}
 .hero{text-align:center;padding:110px 0 90px}
 .badge{display:inline-block;padding:6px 16px;border-radius:999px;background:var(--accentBg);color:var(--accentSoft);font-size:12px;font-weight:700;margin-bottom:28px}
@@ -178,8 +178,8 @@ footer{border-top:1px solid var(--border);padding:40px 0;color:var(--muted);font
     <p>Dashboard, PWA, REST API, MCP, CLI, webhooks, SDK and email — watch it work from anywhere.</p>
     <a class="btn btn-primary" href="https://dashboard.lazynext.com/signup" style="padding:16px 36px;font-size:15px">Get started</a>
     <form id="waitlist" style="margin-top:24px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-      <input type="email" required aria-label="Email address" autocomplete="email" placeholder="you@company.com" style="background:#0A0A0B;border:1px solid #26262E;border-radius:10px;padding:12px 18px;color:#FAFAFA;font-size:14px;min-width:240px"/>
-      <button type="submit" style="background:#6D28D9;color:#fff;border:0;border-radius:10px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer">Join waitlist</button>
+      <input type="email" required aria-label="Email address" autocomplete="email" placeholder="you@company.com" style="background:#0A0A0B;border:1px solid #6B7280;border-radius:10px;padding:12px 18px;color:#FAFAFA;font-size:14px;min-width:240px"/>
+      <button type="submit" style="background:#6D28D9;color:#fff;border:1.5px solid #A78BFA;border-radius:10px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer">Join waitlist</button>
     </form>
     <p id="wlmsg" style="margin-top:12px;font-size:13px;color:#A78BFA"></p>
   </div>
@@ -212,13 +212,14 @@ document.getElementById('waitlist').addEventListener('submit',async e=>{
     <a href="/changelog">Changelog</a>
     <a href="/legal">Legal</a>
     <a href="/pricing">Pricing</a>
+    <a href="/sitemap.xml">Sitemap</a>
   </div>
 </div>
 </footer>
 <div id="cookie" style="display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#141419;border:1px solid #26262E;border-radius:14px;padding:14px 18px;font-size:13px;color:#FAFAFA;max-width:560px;z-index:99;box-shadow:0 8px 30px rgba(0,0,0,.5)">
   We use a single auth cookie to keep you signed in — no trackers, no ads.
   <a href="/legal" style="color:#A78BFA">Legal</a>
-  <button onclick="localStorage.setItem('lz_cookie_ok','1');document.getElementById('cookie').style.display='none';document.body.style.paddingBottom=''" style="margin-left:14px;background:#6D28D9;color:#fff;border:0;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">OK</button>
+  <button onclick="localStorage.setItem('lz_cookie_ok','1');document.getElementById('cookie').style.display='none';document.body.style.paddingBottom=''" style="margin-left:14px;background:#6D28D9;color:#fff;border:1.5px solid #A78BFA;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">OK</button>
 </div>
 <script>
 if(!localStorage.getItem('lz_cookie_ok')){var c=document.getElementById('cookie');c.style.display='block';document.body.style.paddingBottom=(c.offsetHeight+40)+'px'}

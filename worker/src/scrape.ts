@@ -111,6 +111,9 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
     let focusable = 0;
     let undersized: { d: string; w: number; h: number }[] = [];
     const obscured = new Set<string>();
+    const noFocusInd = new Set<string>();
+    let nontextContrast: { d: string; ratio: number }[] = [];
+    let spacingClip: string[] = [];
     let escape: { inDialog: boolean; responds: boolean } | null = null;
     const FOCUSABLE_SEL =
       'a[href],button,input,select,textarea,summary,area[href],video[controls],audio[controls],[tabindex]:not([tabindex="-1"])';
@@ -156,16 +159,23 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
         focusTrace.push(entry);
         // WCAG 2.4.11 — a focused element fully covered by author content
         // (sticky header, banner, overlay) is hidden from keyboard users.
-        const hidden = await page.evaluate(() => {
+        // WCAG 2.4.13 — focus appearance: no outline AND no box-shadow on the
+        // focused element means keyboard users can't see where focus is.
+        const probe = await page.evaluate(() => {
           const doc = (globalThis as any).document;
+          const win = (globalThis as any).window;
           const el = doc.activeElement;
-          if (!el || el === doc.body || !(el as any).getBoundingClientRect) return false;
+          if (!el || el === doc.body || !(el as any).getBoundingClientRect) return { hidden: false, noInd: false };
           const r = (el as any).getBoundingClientRect();
-          if (r.width === 0 || r.height === 0) return false;
-          const top = doc.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-          return !!top && top !== el && !(el as any).contains(top);
+          const hidden = r.width > 0 && r.height > 0
+            ? (() => { const top = doc.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!top && top !== el && !(el as any).contains(top); })()
+            : false;
+          const cs = win.getComputedStyle(el);
+          const noInd = !(parseFloat(cs.outlineWidth) > 0 && cs.outlineStyle !== "none") && cs.boxShadow === "none";
+          return { hidden, noInd };
         });
-        if (hidden) obscured.add(entry);
+        if (probe.hidden) obscured.add(entry);
+        if (probe.noInd && entry !== "body") noFocusInd.add(entry);
       }
       const beforeEsc = await readFocus();
       const inDialog = await page.evaluate(() => {
@@ -174,6 +184,85 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
       });
       await page.keyboard.press("Escape");
       escape = { inDialog, responds: String(await readFocus()) !== String(beforeEsc) };
+
+      // WCAG 1.4.11 (AA) — non-text contrast: an interactive component's
+      // visual boundary (border, outline, or fill) must reach 3:1 against
+      // the adjacent background or keyboard/sighted users can't see it.
+      nontextContrast = await page.evaluate(() => {
+        const doc = (globalThis as any).document;
+        const win = (globalThis as any).window;
+        const chan = (rgb: string) => {
+          const m = rgb.match(/[\d.]+/g)?.map(Number) ?? [0, 0, 0, 1];
+          return { r: m[0] ?? 0, g: m[1] ?? 0, b: m[2] ?? 0, a: m[3] ?? 1 };
+        };
+        const over = (fg: any, bg: any) => ({
+          r: fg.r * fg.a + bg.r * (1 - fg.a),
+          g: fg.g * fg.a + bg.g * (1 - fg.a),
+          b: fg.b * fg.a + bg.b * (1 - fg.a),
+        });
+        const lum = (c: any) => {
+          const f = (v: number) => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); };
+          return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b);
+        };
+        const out: { d: string; ratio: number }[] = [];
+        const els = Array.from(doc.querySelectorAll('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),select,textarea,button,[role="button"],[role="checkbox"],[role="radio"]') as any).slice(0, 200);
+        for (const el of els as any[]) {
+          const cs = win.getComputedStyle(el);
+          const r = el.getBoundingClientRect();
+          if (!(r.width > 0 && r.height > 0) || cs.visibility === "hidden" || cs.display === "none") continue;
+          // Adjacent background = nearest non-transparent ancestor fill.
+          let bg = { r: 255, g: 255, b: 255 };
+          for (let n = el.parentElement; n; n = n.parentElement) {
+            const c = chan(win.getComputedStyle(n).backgroundColor);
+            if (c.a > 0) { bg = c; break; }
+          }
+          // Boundary = border, outline, or the element's own fill — any ONE
+          // passing 3:1 satisfies the criterion.
+          const candidates: any[] = [];
+          const bw = parseFloat(cs.borderTopWidth) || 0;
+          if (bw > 0 && cs.borderTopStyle !== "none") candidates.push(chan(cs.borderTopColor));
+          if (parseFloat(cs.outlineWidth) > 0 && cs.outlineStyle !== "none") candidates.push(chan(cs.outlineColor));
+          const fill = chan(cs.backgroundColor);
+          if (fill.a > 0) candidates.push(fill);
+          if (!candidates.length) continue; // no boundary to check
+          const best = Math.max(...candidates.map((c) => {
+            const e = over(c, bg);
+            const l1 = lum(e), l2 = lum(bg);
+            return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+          }));
+          if (best < 3) out.push({ d: `${String(el.tagName).toLowerCase()}${el.id ? "#" + el.id : ""}`, ratio: Math.round(best * 100) / 100 });
+          if (out.length >= 8) break;
+        }
+        return out;
+      });
+
+      // WCAG 1.4.12 (AA) — text spacing: applying the criterion's override
+      // metrics must not clip content. Delta-only: elements already clipped
+      // before the override are the author's existing overflow, not 1.4.12.
+      const clipped = () =>
+        page.evaluate(() => {
+          const doc = (globalThis as any).document;
+          const win = (globalThis as any).window;
+          const out: string[] = [];
+          for (const el of Array.from(doc.querySelectorAll("p,li,td,th,span,a,button,label,h1,h2,h3,h4,h5,h6,div") as any) as any[]) {
+            if (!String((el as any).innerText ?? "").trim()) continue;
+            const cs = win.getComputedStyle(el);
+            if (!/hidden|clip/.test(cs.overflowY)) continue;
+            if ((el as any).scrollHeight > (el as any).clientHeight + 2 || (el as any).scrollWidth > (el as any).clientWidth + 2) {
+              out.push(`${String((el as any).tagName).toLowerCase()}${(el as any).id ? "#" + (el as any).id : ""}:${String((el as any).innerText).trim().slice(0, 40)}`);
+              if (out.length >= 50) break;
+            }
+          }
+          return out;
+        });
+      const clipBefore = new Set(await clipped());
+      await page.evaluate(() => {
+        const doc = (globalThis as any).document;
+        const st = doc.createElement("style");
+        st.textContent = "*,*::before,*::after{line-height:1.5!important;letter-spacing:.12em!important;word-spacing:.16em!important}p{margin-bottom:2em!important}";
+        doc.head.appendChild(st);
+      });
+      spacingClip = (await clipped()).filter((d) => !clipBefore.has(d)).slice(0, 8);
     } catch {}
 
     return json({
@@ -186,6 +275,9 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
       focusable,
       undersized,
       obscured: Array.from(obscured),
+      noFocusInd: Array.from(noFocusInd),
+      nontextContrast,
+      spacingClip,
       escape,
     });
   } catch (e) {
