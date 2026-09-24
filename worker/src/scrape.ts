@@ -109,6 +109,8 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
     // Escape (a dialog that ignores it is a hard trap).
     const focusTrace: string[] = [];
     let focusable = 0;
+    let undersized: { d: string; w: number; h: number }[] = [];
+    const obscured = new Set<string>();
     let escape: { inDialog: boolean; responds: boolean } | null = null;
     const FOCUSABLE_SEL =
       'a[href],button,input,select,textarea,summary,area[href],video[controls],audio[controls],[tabindex]:not([tabindex="-1"])';
@@ -124,20 +126,46 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
         return `${idx}:${desc}`;
       }, FOCUSABLE_SEL);
     try {
-      focusable = await page.evaluate((sel) => {
+      const census = await page.evaluate((sel) => {
         const doc = (globalThis as any).document;
         const win = (globalThis as any).window;
         let n = 0;
-        for (const el of Array.from(doc.querySelectorAll(sel) as any)) {
-          const r = (el as any).getBoundingClientRect();
+        const under: { d: string; w: number; h: number }[] = [];
+        Array.from(doc.querySelectorAll(sel) as any).forEach((el: any, idx: number) => {
+          const r = el.getBoundingClientRect();
           const cs = win.getComputedStyle(el);
-          if (r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && !(el as any).disabled) n++;
-        }
-        return n;
+          if (!(r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && !el.disabled)) return;
+          n++;
+          // WCAG 2.5.8 — targets under 24x24px in both dimensions. Exempts
+          // inline text links and UA-default checkbox/radio sizing per the
+          // criterion's own exceptions.
+          const tag = String(el.tagName).toLowerCase();
+          const inlineLink = tag === "a" && !!el.closest("p,li,td,blockquote,figcaption");
+          const uaSized = tag === "input" && /^(checkbox|radio)$/i.test(String(el.type ?? ""));
+          if (r.width < 24 && r.height < 24 && !inlineLink && !uaSized) {
+            under.push({ d: `${idx}:${tag}${el.id ? "#" + el.id : ""}`, w: Math.round(r.width), h: Math.round(r.height) });
+          }
+        });
+        return { count: n, under };
       }, FOCUSABLE_SEL);
+      focusable = census.count;
+      undersized = census.under;
       for (let i = 0; i < 24; i++) {
         await page.keyboard.press("Tab");
-        focusTrace.push(String(await readFocus()));
+        const entry = String(await readFocus());
+        focusTrace.push(entry);
+        // WCAG 2.4.11 — a focused element fully covered by author content
+        // (sticky header, banner, overlay) is hidden from keyboard users.
+        const hidden = await page.evaluate(() => {
+          const doc = (globalThis as any).document;
+          const el = doc.activeElement;
+          if (!el || el === doc.body || !(el as any).getBoundingClientRect) return false;
+          const r = (el as any).getBoundingClientRect();
+          if (r.width === 0 || r.height === 0) return false;
+          const top = doc.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          return !!top && top !== el && !(el as any).contains(top);
+        });
+        if (hidden) obscured.add(entry);
       }
       const beforeEsc = await readFocus();
       const inDialog = await page.evaluate(() => {
@@ -156,6 +184,8 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
       facts: data.facts,
       focus: focusTrace,
       focusable,
+      undersized,
+      obscured: Array.from(obscured),
       escape,
     });
   } catch (e) {
