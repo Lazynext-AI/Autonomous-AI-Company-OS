@@ -18,10 +18,13 @@ header{padding:48px 0 32px}
 h1{font-size:34px;font-weight:800;margin-bottom:10px}
 .sub{color:var(--muted);font-size:15px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:24px 0 48px}
-.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;transition:border-color .15s}
+.card{position:relative;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;transition:border-color .15s}
+.card .cardlink{color:inherit;text-decoration:none}
+.card .cardlink::after{content:"";position:absolute;inset:0;border-radius:14px}
+.card .cardlink:hover{text-decoration:underline}
 .card:hover{border-color:var(--accent)}
 .card .ic{width:40px;height:40px;border-radius:10px;background:var(--accentBg);display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:14px}
-.card h3{font-size:16px;font-weight:700;margin-bottom:6px}
+.card h2{font-size:16px;font-weight:700;margin-bottom:6px}
 .card p{font-size:13px;color:var(--muted);line-height:1.6}
 code,pre{background:var(--input);border:1px solid var(--border);border-radius:8px;font-family:ui-monospace,monospace;font-size:13px}
 pre{padding:16px;margin:12px 0;overflow-x:auto;color:var(--accentSoft)}
@@ -40,18 +43,19 @@ footer{border-top:1px solid var(--border);padding:28px 0;color:var(--muted);font
 <div class="wrap">
 <nav>
   <a class="logo" href="/"><span>◆</span> Lazynext</a>
-  <a class="btn" href="https://dashboard.lazynext.com">Dashboard →</a>
+  <a class="btn" href="https://dashboard.lazynext.com">Dashboard</a>
 </nav>
+<main>
 <header>
   <h1>Documentation</h1>
   <p class="sub">Everything about the Lazynext platform — API, agents, integrations.</p>
 </header>
 
 <div class="grid">
-  <a class="card" href="https://ai-company.lazynext.com/api/v1/docs"><div class="ic">⚡</div><h3>API reference</h3><p>REST endpoints, scopes, rate limits — interactive Swagger docs.</p></a>
-  <a class="card" href="#quickstart"><div class="ic">▶</div><h3>Quickstart</h3><p>Clone, configure, make dev — your company starts running.</p></a>
-  <a class="card" href="https://penpot.lazynext.com"><div class="ic">◐</div><h3>Design system</h3><p>132 boards + tokens.json — the full product blueprint.</p></a>
-  <a class="card" href="https://github.com/Lazynext-Platform"><div class="ic">◆</div><h3>Source</h3><p>The whole platform, open on GitHub.</p></a>
+  <div class="card"><div class="ic">⚡</div><h2><a class="cardlink" href="https://ai-company.lazynext.com/api/v1/docs">API reference</a></h2><p>REST endpoints, scopes, rate limits — interactive Swagger docs.</p></div>
+  <div class="card"><div class="ic">▶</div><h2><a class="cardlink" href="#quickstart">Quickstart</a></h2><p>Clone, configure, make dev — your company starts running.</p></div>
+  <div class="card"><div class="ic">◐</div><h2><a class="cardlink" href="https://penpot.lazynext.com">Design system</a></h2><p>132 boards + tokens.json — the full product blueprint.</p></div>
+  <div class="card"><div class="ic">◆</div><h2><a class="cardlink" href="https://github.com/Lazynext-Platform">GitHub</a></h2><p>The whole platform, open on GitHub.</p></div>
 </div>
 
 <section id="quickstart">
@@ -80,7 +84,8 @@ make dev</pre>
 </table>
 </section>
 
-<footer>◆ Lazynext · Docs · <a href="/" style="color:var(--accentSoft)">lazynext.com</a></footer>
+</main>
+<footer>◆ Lazynext · Docs · lazynext.com</footer>
 </div>
 </body>
 </html>

@@ -52,12 +52,12 @@ h2{font-size:36px;font-weight:800;text-align:center;margin-bottom:12px}
 .feat p{font-size:14px;color:var(--muted);line-height:1.6}
 .how{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:40px;display:grid;grid-template-columns:repeat(3,1fr);gap:32px}
 .step .n{width:36px;height:36px;border-radius:10px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;margin-bottom:14px}
-.step h4{font-size:16px;font-weight:700;margin-bottom:6px}
+.step h3{font-size:16px;font-weight:700;margin-bottom:6px}
 .step p{font-size:14px;color:var(--muted);line-height:1.6}
 .tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
 .tier{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:32px}
 .tier.hl{border-color:var(--accent);background:var(--accentBg)}
-.tier h4{font-size:15px;font-weight:700}
+.tier h3{font-size:15px;font-weight:700}
 .tier .price{font-size:40px;font-weight:800;margin:14px 0}
 .tier .price span{font-size:15px;color:var(--muted);font-weight:400}
 .tier ul{list-style:none;margin:18px 0 24px}
@@ -82,18 +82,20 @@ footer{border-top:1px solid var(--border);padding:40px 0;color:var(--muted);font
     <a href="#how">How it works</a>
     <a href="#agents">Agents</a>
     <a href="/pricing">Pricing</a>
-    <a href="https://penpot.lazynext.com">Design</a>
+    <a href="https://penpot.lazynext.com">Design system</a>
     <a class="btn btn-ghost" href="https://dashboard.lazynext.com">Dashboard</a>
     <a class="btn btn-primary" href="https://dashboard.lazynext.com/signup">Get started</a>
   </div>
 </nav>
-
+</div>
+<main>
+<div class="wrap">
 <header class="hero">
   <div class="badge">Autonomous AI Company OS</div>
   <h1>A company that<br/><em>builds itself.</em></h1>
   <p class="sub">12 agents research, plan, build, test and ship real products — on your infrastructure, under your rules. You watch it work.</p>
   <div class="cta">
-    <a class="btn btn-primary" href="https://dashboard.lazynext.com/signup" style="padding:16px 32px;font-size:15px">Open dashboard →</a>
+    <a class="btn btn-primary" href="https://dashboard.lazynext.com/signup" style="padding:16px 32px;font-size:15px">Get started</a>
     <a class="btn btn-ghost" href="#how" style="padding:16px 32px;font-size:15px">How it works</a>
   </div>
   <div class="stats">
@@ -122,9 +124,9 @@ footer{border-top:1px solid var(--border);padding:40px 0;color:var(--muted);font
   <h2>How it works</h2>
   <p class="sub2">From an idea to a deployed product — no human in the loop.</p>
   <div class="how">
-    <div class="step"><div class="n">1</div><h4>Research</h4><p>Agents crawl markets with Cloudflare Browser Rendering, pick a product wedge, and write a plan into the shared brain.</p></div>
-    <div class="step"><div class="n">2</div><h4>Build</h4><p>The crew assigns tasks, writes code, runs tests in isolated sandboxes and reviews each other's work.</p></div>
-    <div class="step"><div class="n">3</div><h4>Ship</h4><p>Products deploy to Cloudflare, get their own GitHub repo, and report back to your dashboard and inbox.</p></div>
+    <div class="step"><div class="n">1</div><h3>Research</h3><p>Agents crawl markets with Cloudflare Browser Rendering, pick a product wedge, and write a plan into the shared brain.</p></div>
+    <div class="step"><div class="n">2</div><h3>Build</h3><p>The crew assigns tasks, writes code, runs tests in isolated sandboxes and reviews each other's work.</p></div>
+    <div class="step"><div class="n">3</div><h3>Ship</h3><p>Products deploy to Cloudflare, get their own GitHub repo, and report back to your dashboard and inbox.</p></div>
   </div>
 </div>
 </section>
@@ -157,9 +159,9 @@ footer{border-top:1px solid var(--border);padding:40px 0;color:var(--muted);font
   <h2>Pricing</h2>
   <p class="sub2">Cheaper than one engineer. Runs all night.</p>
   <div class="tiers">
-    <div class="tier"><h4>Starter</h4><div class="price">$0<span>/mo</span></div><ul><li>3 agents</li><li>1 product</li><li>Dashboard</li><li>Community support</li></ul><a class="btn btn-ghost" href="https://dashboard.lazynext.com/signup">Start free</a></div>
-    <div class="tier hl"><h4>Company</h4><div class="price">$49<span>/mo</span></div><ul><li>12 agents</li><li>5 products</li><li>API + webhooks + CLI</li><li>Weekly briefings</li><li>Priority support</li></ul><a class="btn btn-primary" href="https://dashboard.lazynext.com/signup">Start company</a></div>
-    <div class="tier"><h4>Enterprise</h4><div class="price">Custom</div><ul><li>Unlimited agents</li><li>SSO + audit log</li><li>Custom domains</li><li>Dedicated support</li></ul><a class="btn btn-ghost" href="mailto:hello@lazynext.com">Talk to us</a></div>
+    <div class="tier"><h3>Starter</h3><div class="price">$0<span>/mo</span></div><ul><li>3 agents</li><li>1 product</li><li>Dashboard</li><li>Community support</li></ul><a class="btn btn-ghost" href="https://dashboard.lazynext.com/signup">Get started</a></div>
+    <div class="tier hl"><h3>Company</h3><div class="price">$49<span>/mo</span></div><ul><li>12 agents</li><li>5 products</li><li>API + webhooks + CLI</li><li>Weekly briefings</li><li>Priority support</li></ul><a class="btn btn-primary" href="https://dashboard.lazynext.com/signup">Get started</a></div>
+    <div class="tier"><h3>Enterprise</h3><div class="price">Custom</div><ul><li>Unlimited agents</li><li>SSO + audit log</li><li>Custom domains</li><li>Dedicated support</li></ul><a class="btn btn-ghost" href="mailto:support@lazynext.com">support@lazynext.com</a></div>
   </div>
 </div>
 </section>
@@ -169,9 +171,9 @@ footer{border-top:1px solid var(--border);padding:40px 0;color:var(--muted);font
   <div class="ctaband">
     <h2>Your company runs while you sleep.</h2>
     <p>Dashboard, PWA, REST API, MCP, CLI, webhooks, SDK and email — watch it work from anywhere.</p>
-    <a class="btn btn-primary" href="https://dashboard.lazynext.com/signup" style="padding:16px 36px;font-size:15px">Launch Lazynext →</a>
+    <a class="btn btn-primary" href="https://dashboard.lazynext.com/signup" style="padding:16px 36px;font-size:15px">Get started</a>
     <form id="waitlist" style="margin-top:24px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-      <input type="email" required placeholder="you@company.com" style="background:#0A0A0B;border:1px solid #26262E;border-radius:10px;padding:12px 18px;color:#FAFAFA;font-size:14px;min-width:240px"/>
+      <input type="email" required aria-label="Email address" placeholder="you@company.com" style="background:#0A0A0B;border:1px solid #26262E;border-radius:10px;padding:12px 18px;color:#FAFAFA;font-size:14px;min-width:240px"/>
       <button type="submit" style="background:#8B5CF6;color:#fff;border:0;border-radius:10px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer">Join waitlist</button>
     </form>
     <p id="wlmsg" style="margin-top:12px;font-size:13px;color:#A78BFA"></p>
@@ -191,14 +193,15 @@ document.getElementById('waitlist').addEventListener('submit',async e=>{
 </div>
 </section>
 
+</main>
 <footer>
 <div class="wrap fgrid">
   <div><b>◆ Lazynext</b> · The Autonomous AI Company OS</div>
   <div class="flinks">
     <a href="https://dashboard.lazynext.com">Dashboard</a>
     <a href="/docs">Docs</a>
-    <a href="https://ai-company.lazynext.com/api/v1/docs">API</a>
-    <a href="https://penpot.lazynext.com">Design</a>
+    <a href="https://ai-company.lazynext.com/api/v1/docs">API reference</a>
+    <a href="https://penpot.lazynext.com">Design system</a>
     <a href="https://github.com/Lazynext-Platform">GitHub</a>
     <a href="/status">Status</a>
     <a href="/changelog">Changelog</a>

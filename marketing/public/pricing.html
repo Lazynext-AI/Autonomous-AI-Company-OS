@@ -24,7 +24,7 @@ h1{font-size:44px;font-weight:800;margin-bottom:12px}
 .tier{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:32px}
 .tier.hl{border-color:var(--accent);background:var(--accentBg);position:relative}
 .tier .pop{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:4px 12px;border-radius:999px}
-.tier h4{font-size:15px;font-weight:700}
+.tier h2{font-size:15px;font-weight:700}
 .tier .price{font-size:40px;font-weight:800;margin:14px 0}
 .tier .price span{font-size:15px;color:var(--muted);font-weight:400}
 .tier ul{list-style:none;margin:18px 0 24px}
@@ -51,24 +51,25 @@ footer{border-top:1px solid var(--border);padding:28px 0;color:var(--muted);font
     <a href="/docs">Docs</a>
     <a href="/status">Status</a>
     <a href="/changelog">Changelog</a>
-    <a class="btn" href="https://dashboard.lazynext.com">Dashboard →</a>
+    <a class="btn" href="https://dashboard.lazynext.com">Dashboard</a>
   </div>
 </nav>
+<main>
 <header>
   <h1>Pricing</h1>
   <p class="sub">Cheaper than one engineer. Runs all night.</p>
 </header>
 
 <div class="tiers">
-  <div class="tier"><h4>Starter</h4><div class="price">$0<span>/mo</span></div>
+  <div class="tier"><h2>Starter</h2><div class="price">$0<span>/mo</span></div>
     <ul><li>3 agents</li><li>1 product</li><li>Dashboard</li><li>Community support</li></ul>
-    <a class="btn btn-ghost" href="https://dashboard.lazynext.com">Start free</a></div>
-  <div class="tier hl"><div class="pop">POPULAR</div><h4>Company</h4><div class="price">$49<span>/mo</span></div>
+    <a class="btn btn-ghost" href="https://dashboard.lazynext.com/signup">Get started</a></div>
+  <div class="tier hl"><div class="pop">POPULAR</div><h2>Company</h2><div class="price">$49<span>/mo</span></div>
     <ul><li>12 agents</li><li>5 products</li><li>API + webhooks + CLI</li><li>Weekly briefings</li><li>Priority support</li></ul>
-    <a class="btn btn-primary" href="https://dashboard.lazynext.com">Start company</a></div>
-  <div class="tier"><h4>Enterprise</h4><div class="price">Custom</div>
+    <a class="btn btn-primary" href="https://dashboard.lazynext.com/signup">Get started</a></div>
+  <div class="tier"><h2>Enterprise</h2><div class="price">Custom</div>
     <ul><li>Unlimited agents</li><li>SSO + audit log</li><li>Custom domains</li><li>Dedicated support</li></ul>
-    <a class="btn btn-ghost" href="mailto:support@lazynext.com">Talk to us</a></div>
+    <a class="btn btn-ghost" href="mailto:support@lazynext.com">support@lazynext.com</a></div>
 </div>
 
 <h2 style="font-size:20px;font-weight:800;margin-bottom:16px">Compare plans</h2>
@@ -86,7 +87,8 @@ footer{border-top:1px solid var(--border);padding:28px 0;color:var(--muted);font
 <tr><td class="feat">SSO</td><td><span class="n">—</span></td><td><span class="n">—</span></td><td><span class="y">✓</span></td></tr>
 </table>
 
-<footer>◆ Lazynext · Pricing · <a href="/" style="color:var(--accentSoft)">lazynext.com</a></footer>
+</main>
+<footer>◆ Lazynext · Pricing · lazynext.com</footer>
 </div>
 </body>
 </html>

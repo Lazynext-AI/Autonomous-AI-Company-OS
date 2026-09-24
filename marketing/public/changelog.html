@@ -19,7 +19,7 @@ h1{font-size:34px;font-weight:800;margin-bottom:10px}
 .sub{color:var(--muted);font-size:15px}
 .entry{display:flex;gap:24px;padding:28px 0;border-bottom:1px solid var(--border)}
 .date{font-family:ui-monospace,monospace;font-size:12px;color:var(--muted);width:100px;flex-shrink:0;padding-top:3px}
-.body h3{font-size:16px;font-weight:700;margin-bottom:8px}
+.body h2{font-size:16px;font-weight:700;margin-bottom:8px}
 .tag{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;margin-right:8px}
 .tag.new{background:var(--accentBg);color:var(--accentSoft)}
 .tag.fix{background:#0E2A1E;color:var(--ok)}
@@ -31,8 +31,9 @@ footer{border-top:1px solid var(--border);padding:28px 0;color:var(--muted);font
 <div class="wrap">
 <nav>
   <a class="logo" href="/"><span>◆</span> Lazynext</a>
-  <a class="btn" href="https://dashboard.lazynext.com">Dashboard →</a>
+  <a class="btn" href="https://dashboard.lazynext.com">Dashboard</a>
 </nav>
+<main>
 <header>
   <h1>Changelog</h1>
   <p class="sub">Everything new in the platform — live from the repo.</p>
@@ -41,26 +42,27 @@ footer{border-top:1px solid var(--border);padding:28px 0;color:var(--muted);font
 <div id="live"></div>
 
 <div class="entry"><div class="date">2026-09-21</div><div class="body">
-  <span class="tag new">New</span><h3>Public launch surface</h3>
+  <span class="tag new">New</span><h2>Public launch surface</h2>
   <p>Marketing site live at lazynext.com — landing, docs, status. Dashboard rebuilt to the full design system with 9-section sidebar, login gate and custom 404.</p>
 </div></div>
 
 <div class="entry"><div class="date">2026-09-21</div><div class="body">
-  <span class="tag new">New</span><h3>Design system v1</h3>
+  <span class="tag new">New</span><h2>Design system v1</h2>
   <p>132-board Penpot blueprint — every screen, modal, email, breakpoint and component, wired into a 367-interaction clickable prototype. Machine-readable tokens.json ships with the repo.</p>
 </div></div>
 
 <div class="entry"><div class="date">2026-09-20</div><div class="body">
-  <span class="tag new">New</span><h3>Public API + MCP</h3>
+  <span class="tag new">New</span><h2>Public API + MCP</h2>
   <p>REST /api/v1 with lzk_* hashed keys, scopes and per-key rate limits. MCP server (protocol 2026-07-28) with 8 tools. Python SDK, CLI, signed webhooks and OpenAPI docs.</p>
 </div></div>
 
 <div class="entry"><div class="date">2026-09-20</div><div class="body">
-  <span class="tag fix">Fix</span><h3>Migration to Atlas + Cloudflare</h3>
+  <span class="tag fix">Fix</span><h2>Migration to Atlas + Cloudflare</h2>
   <p>LLM moved to Atlas Cloud; persistence to D1, KV and Vectorize; hosting to Workers + Pages. Supabase, Redis, Anthropic, Vercel and Railway fully removed.</p>
 </div></div>
 
-<footer>◆ Lazynext · Changelog · <a href="/" style="color:var(--accentSoft)">lazynext.com</a></footer>
+</main>
+<footer>◆ Lazynext · Changelog · lazynext.com</footer>
 </div>
 <script>
 // Live commits from the public repo — newest first, deduped against the
@@ -78,7 +80,7 @@ fetch("https://api.github.com/repos/Lazynext-Platform/Autonomous-AI-Company-Oper
       el.className = "entry";
       el.innerHTML =
         `<div class="date">${date}</div><div class="body">` +
-        `${tag}<h3 style="display:inline">${msg.replace(/</g,"&lt;")}</h3>` +
+        `${tag}<h3 style="display:inline">${msg.replace(/</g,"&lt;")}</h2>` +
         `<p><a href="${c.html_url}" style="color:var(--accentSoft)">${c.sha.slice(0,7)}</a> · ${c.commit.author.name.replace(/</g,"&lt;")}</p></div>`;
       host.appendChild(el);
     });
