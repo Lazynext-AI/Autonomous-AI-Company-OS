@@ -242,6 +242,11 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
       const value = await env.EPHEMERAL.get(b.key);
       return json({ value });
     }
+    case "/kv/list": {
+      const b = await readBody<{ prefix: string }>(req);
+      const list = await env.EPHEMERAL.list({ prefix: b.prefix ?? "" });
+      return json({ keys: list.keys.map((k) => k.name) });
+    }
     case "/kv/put": {
       const b = await readBody<{ key: string; value: string; ttl?: number }>(req);
       // ttl: 0 = persistent write; omitted/other values get a >=60s floor
@@ -401,6 +406,47 @@ async function advanceLeadSequence(env: Env) {
       "<p>Your 14-day Pro trial ends in 3 days. Your subscription then continues at $9/mo automatically — cancel any time before then to keep the free tier.</p>",
     );
     if (s.ok) await env.EPHEMERAL.put(`trial:${email}:reminded`, "1", { expirationTtl: 31_536_000 });
+  }
+
+  // Pro site monitoring — rescan each mon:<email>:<hash> record once a day
+  // and alert via Brevo when the score drops >= 10 points (DROP_THRESHOLD;
+  // record shape mirrors src/monitor.js in the accessibility-checker repo).
+  const mons = await env.EPHEMERAL.list({ prefix: "mon:" });
+  for (const k of mons.keys) {
+    const raw = await env.EPHEMERAL.get(k.name);
+    if (!raw) continue;
+    let rec: { url?: string; email?: string; last_score?: number | null; scans?: number; alerts?: number };
+    try {
+      rec = JSON.parse(raw);
+    } catch {
+      continue;
+    }
+    if (!rec?.url || !rec?.email) continue;
+    const scan = await fetch("https://accessibility-checker.dry-hall-6a50.workers.dev/scan", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url: rec.url, license: rec.email }),
+    }).catch(() => null);
+    if (!scan?.ok) continue;
+    const d = (await scan.json()) as { score?: number; report?: string };
+    if (typeof d.score !== "number") continue;
+    const prev = typeof rec.last_score === "number" ? rec.last_score : null;
+    const dropped = prev !== null && prev - d.score >= 10;
+    await env.EPHEMERAL.put(k.name, JSON.stringify({
+      ...rec,
+      last_score: d.score,
+      last_scan_at: Date.now(),
+      scans: (rec.scans ?? 0) + 1,
+      alerts: (rec.alerts ?? 0) + (dropped ? 1 : 0),
+    }));
+    if (dropped) {
+      await brevoSend(
+        env,
+        rec.email,
+        `Accessibility alert: ${rec.url} dropped to ${d.score}/100`,
+        `<p>Your monitored page <b>${rec.url}</b> scored <b>${d.score}/100</b> — down ${(prev ?? 0) - d.score} points from ${prev}.</p><p>Full report: <a href="${d.report ?? ""}">${d.report ?? ""}</a></p>`,
+      );
+    }
   }
 }
 
