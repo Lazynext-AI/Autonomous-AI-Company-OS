@@ -329,6 +329,15 @@ Return 5-10 UNIQUE tasks. Return ONLY the JSON array."""
                 message="Skipping QA alert - live_urls not configured (expected before deployment)"
             )
             return
+
+        # Skip alerts for gate-rejected deliverables - the task was infeasible, not buggy;
+        # a remediation task hits the same gates and escalates again
+        if "deliverable rejected" in error_details:
+            self.logger.info(
+                "qa_alert_skipped_gate_rejection",
+                message="Skipping QA alert - deliverable rejections are task-spec issues, not bugs"
+            )
+            return
         
         component = (alert.affected_component or "").lower()
         assign = "devops" if component in {"api_health", "runtime", "deployment", "health"} else "backend"
