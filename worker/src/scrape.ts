@@ -137,6 +137,8 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
     // (so downstream analysis knows what Tab *should* reach) and probe
     // Escape (a dialog that ignores it is a hard trap).
     const focusTrace: string[] = [];
+    const backtrace: string[] = [];
+    const clickTraps: { trigger: string; focusOutside: boolean; escapeDead: boolean; noExit: boolean }[] = [];
     let focusable = 0;
     let undersized: { d: string; w: number; h: number }[] = [];
     let undersizedAAA: { d: string; w: number; h: number }[] = [];
@@ -221,6 +223,90 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
       });
       await page.keyboard.press("Escape");
       escape = { inDialog, responds: String(await readFocus()) !== String(beforeEsc) };
+
+      // Backward trace — Shift+Tab retreat from wherever forward focus ended.
+      // Regions that let focus in but swallow Shift+Tab are a trap class the
+      // forward-only trace cannot see.
+      try {
+        await page.keyboard.down("Shift");
+        for (let i = 0; i < 8; i++) {
+          await page.keyboard.press("Tab");
+          backtrace.push(String(await readFocus()));
+        }
+        await page.keyboard.up("Shift");
+      } catch {
+        await page.keyboard.up("Shift").catch(() => {});
+      }
+
+      // Click-activated dialogs — a modal that only exists after a click is
+      // invisible to markup scanning and to a plain Tab trace. Click likely
+      // triggers; when a dialog/alertdialog actually appears, test whether
+      // keyboard users can reach it and exit it.
+      try {
+        page.on("dialog", (d: any) => d.dismiss().catch(() => {}));
+        const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+        const openDialog = () =>
+          page.evaluate(() => {
+            const doc = (globalThis as any).document;
+            const win = (globalThis as any).window;
+            const dlg = Array.from(doc.querySelectorAll('dialog[open],[role="dialog"],[role="alertdialog"]')).find((el: any) => {
+              const r = el.getBoundingClientRect();
+              const cs = win.getComputedStyle(el);
+              return r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && cs.display !== "none";
+            });
+            if (!dlg) return null;
+            const act = doc.activeElement;
+            return {
+              inside: !!(act && act !== doc.body && ((dlg as any) === act || (dlg as any).contains(act))),
+              controls: (dlg as any).querySelectorAll('a[href],button,input,select,textarea,summary,[tabindex]:not([tabindex="-1"])').length,
+            };
+          });
+        const triggers = await page.$$(
+          '[aria-haspopup="dialog"],[aria-haspopup="true"],[data-bs-toggle],[data-toggle],[data-target],[data-modal],button',
+        );
+        for (const h of triggers.slice(0, 4)) {
+          const urlBefore = page.url();
+          const desc = await page.evaluate((el: any) => {
+            const doc = (globalThis as any).document;
+            const sel = 'a[href],button,input,select,textarea,summary,area[href],video[controls],audio[controls],[tabindex]:not([tabindex="-1"])';
+            const idx = Array.from(doc.querySelectorAll(sel)).indexOf(el);
+            const r = el.getBoundingClientRect();
+            if (!(r.width > 0 && r.height > 0)) return null;
+            // A button inside a form with no/unknown type submits on click —
+            // probing it navigates the page rather than opening UI.
+            if (el.tagName === "BUTTON" && el.closest("form") && (el.getAttribute("type") ?? "submit") === "submit") return null;
+            const txt = String(el.innerText ?? el.getAttribute?.("aria-label") ?? "").trim();
+            return `${idx}:${String(el.tagName).toLowerCase()}${el.id ? "#" + el.id : ""}${txt ? ":" + txt.slice(0, 25) : ""}`;
+          }, h);
+          if (!desc) continue;
+          if (await openDialog()) break; // earlier probe left a dialog open — state unrecoverable
+          await h.click().catch(() => {});
+          await sleep(350);
+          if (page.url() !== urlBefore) {
+            await page.goBack().catch(() => {});
+            continue;
+          }
+          const opened = await openDialog();
+          if (!opened) continue;
+          const beforeEscProbe = await readFocus();
+          await page.keyboard.press("Escape");
+          await sleep(150);
+          const still = await openDialog();
+          clickTraps.push({
+            trigger: desc,
+            focusOutside: !opened.inside,
+            escapeDead: !!still && String(await readFocus()) === String(beforeEscProbe),
+            noExit: opened.controls === 0,
+          });
+          if (still) {
+            // Backdrop click to try dismissing a stuck overlay; if it won't
+            // close, further triggers can't be probed meaningfully.
+            await page.mouse.click(5, 5).catch(() => {});
+            await sleep(150);
+            if (await openDialog()) break;
+          }
+        }
+      } catch {}
 
       // WCAG 1.4.11 (AA) — non-text contrast: an interactive component's
       // visual boundary (border, outline, or fill) must reach 3:1 against
@@ -309,6 +395,8 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
       styles: data.styles,
       facts: data.facts,
       focus: focusTrace,
+      backtrace,
+      clickTraps,
       focusable,
       undersized,
       undersizedAAA,
