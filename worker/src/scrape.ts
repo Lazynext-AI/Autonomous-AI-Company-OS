@@ -3,6 +3,31 @@
 import puppeteer from "@cloudflare/puppeteer";
 import { Env, json } from "./gateway";
 
+type Brw = Awaited<ReturnType<typeof puppeteer.launch>>;
+
+// Fresh browser launches are the dominant render cost (cold pool starts
+// measured at ~60s). Reuse an idle session when one exists, and launch with
+// keep_alive so disconnect leaves the browser warm for the next request.
+async function launchBrowser(browser: NonNullable<Env["BROWSER"]>): Promise<Brw> {
+  const sessions = (await puppeteer.sessions(browser).catch(() => [])) as {
+    sessionId?: string;
+    connectionId?: string | null;
+  }[];
+  const idle = sessions.find((s) => s.sessionId && !s.connectionId);
+  if (idle?.sessionId) {
+    const b = await puppeteer.connect(browser, idle.sessionId).catch(() => null);
+    if (b) return b;
+  }
+  return puppeteer.launch(browser, { keep_alive: 120_000 });
+}
+
+// Release the websocket but leave the session running (keep_alive) so a later
+// request can reconnect instead of paying a cold launch.
+async function releaseBrowser(browser: Brw | undefined) {
+  if (!browser) return;
+  await browser.disconnect().catch(() => browser.close().catch(() => {}));
+}
+
 export async function handleScrape(req: Request, env: Env): Promise<Response> {
   const { url, max_chars = 6000 } = (await req.json()) as { url?: string; max_chars?: number };
   if (!url || !/^https?:\/\//i.test(url)) return json({ error: "valid url required" }, 400);
@@ -10,7 +35,7 @@ export async function handleScrape(req: Request, env: Env): Promise<Response> {
 
   let browser;
   try {
-    browser = await puppeteer.launch(env.BROWSER);
+    browser = await launchBrowser(env.BROWSER);
     const page = await browser.newPage();
     await page.setUserAgent(
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
@@ -37,7 +62,7 @@ export async function handleScrape(req: Request, env: Env): Promise<Response> {
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e), provider: "cloudflare-browser" }, 502);
   } finally {
-    if (browser) await browser.close().catch(() => {});
+    await releaseBrowser(browser);
   }
 }
 
@@ -49,7 +74,7 @@ export async function handlePdf(req: Request, env: Env): Promise<Response> {
 
   let browser;
   try {
-    browser = await puppeteer.launch(env.BROWSER);
+    browser = await launchBrowser(env.BROWSER);
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: "networkidle0", timeout: 30000 });
     const pdf = await page.pdf({ printBackground: true });
@@ -57,7 +82,7 @@ export async function handlePdf(req: Request, env: Env): Promise<Response> {
   } catch (e: any) {
     return json({ error: e instanceof Error ? e.message : String(e), provider: "cloudflare-browser" }, 502);
   } finally {
-    if (browser) await browser.close().catch(() => {});
+    await releaseBrowser(browser);
   }
 }
 
@@ -71,7 +96,7 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
 
   let browser;
   try {
-    browser = await puppeteer.launch(env.BROWSER);
+    browser = await launchBrowser(env.BROWSER);
     const page = await browser.newPage();
     await page.setUserAgent(
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
@@ -192,29 +217,46 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
       focusable = census.count;
       undersized = census.under;
       undersizedAAA = census.underAAA;
-      for (let i = 0; i < 24; i++) {
-        await page.keyboard.press("Tab");
-        const entry = String(await readFocus());
-        focusTrace.push(entry);
-        // WCAG 2.4.11 — a focused element fully covered by author content
-        // (sticky header, banner, overlay) is hidden from keyboard users.
-        // WCAG 2.4.13 — focus appearance: no outline AND no box-shadow on the
-        // focused element means keyboard users can't see where focus is.
-        const probe = await page.evaluate(() => {
+      // Merged read — one websocket round-trip per Tab press instead of two.
+      // WCAG 2.4.11 — a focused element fully covered by author content
+      // (sticky header, banner, overlay) is hidden from keyboard users.
+      // WCAG 2.4.13 — focus appearance: no outline AND no box-shadow on the
+      // focused element means keyboard users can't see where focus is.
+      const readFocusProbe = () =>
+        page.evaluate((sel) => {
           const doc = (globalThis as any).document;
           const win = (globalThis as any).window;
           const el = doc.activeElement;
-          if (!el || el === doc.body || !(el as any).getBoundingClientRect) return { hidden: false, noInd: false };
+          if (!el || el === doc.body || !(el as any).getBoundingClientRect)
+            return { entry: "body", hidden: false, noInd: false };
+          const idx = Array.from(doc.querySelectorAll(sel) as any).indexOf(el);
+          const desc = `${String(el.tagName).toLowerCase()}${el.id ? "#" + el.id : ""}${String((el as any).innerText ?? "").trim() ? ":" + String((el as any).innerText).trim().slice(0, 25) : ""}`;
           const r = (el as any).getBoundingClientRect();
           const hidden = r.width > 0 && r.height > 0
             ? (() => { const top = doc.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!top && top !== el && !(el as any).contains(top); })()
             : false;
           const cs = win.getComputedStyle(el);
           const noInd = !(parseFloat(cs.outlineWidth) > 0 && cs.outlineStyle !== "none") && cs.boxShadow === "none";
-          return { hidden, noInd };
-        });
+          return { entry: `${idx}:${desc}`, hidden, noInd };
+        }, FOCUSABLE_SEL);
+      const seen = new Set<string>();
+      let stall = 0;
+      let prev = "";
+      for (let i = 0; i < 24; i++) {
+        await page.keyboard.press("Tab");
+        const probe = (await readFocusProbe()) as { entry: string; hidden: boolean; noInd: boolean };
+        const entry = probe.entry;
+        focusTrace.push(entry);
         if (probe.hidden) obscured.add(entry);
         if (probe.noInd && entry !== "body") noFocusInd.add(entry);
+        // Early exits — each press costs a remote round-trip. The rules only
+        // need the signature: a ≥4-press stall proves a trap; seeing every
+        // focusable proves coverage. Subset cycles never reach full coverage,
+        // so they keep the full 24-press window for detection.
+        stall = entry === prev ? stall + 1 : 1;
+        prev = entry;
+        if (entry !== "body") seen.add(entry);
+        if (stall >= 4 || (focusable > 0 && seen.size >= focusable)) break;
       }
       const beforeEsc = await readFocus();
       const inDialog = await page.evaluate(() => {
@@ -229,9 +271,15 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
       // forward-only trace cannot see.
       try {
         await page.keyboard.down("Shift");
+        let bstall = 0;
+        let bprev = "";
         for (let i = 0; i < 8; i++) {
           await page.keyboard.press("Tab");
-          backtrace.push(String(await readFocus()));
+          const e = String(await readFocus());
+          backtrace.push(e);
+          bstall = e === bprev ? bstall + 1 : 1;
+          bprev = e;
+          if (bstall >= 4) break; // ≥4-run stall is the full trap signature
         }
         await page.keyboard.up("Shift");
       } catch {
@@ -409,6 +457,6 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e), provider: "cloudflare-browser" }, 502);
   } finally {
-    if (browser) await browser.close().catch(() => {});
+    await releaseBrowser(browser);
   }
 }
