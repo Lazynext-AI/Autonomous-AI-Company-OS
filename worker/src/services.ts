@@ -394,6 +394,13 @@ export async function enrollLead(
   if (await env.EPHEMERAL.get(`unsub:${email}`)) return { ok: true, suppressed: true };
   const existing = await env.EPHEMERAL.get(`lead:${email}:stage`);
   await env.EPHEMERAL.put(`lead:${email}`, source, { expirationTtl: 31_536_000 });
+  // Mirror into email_contacts — the campaign send loop reads subscribed
+  // rows from this table; without it leads never become broadcast
+  // recipients. WHERE NOT EXISTS keeps a prior row (and its subscribed
+  // state) intact. Suppressed addresses already early-returned above.
+  await env.DB.prepare(
+    "INSERT INTO email_contacts (email, subscribed, source) SELECT ?, 1, ? WHERE NOT EXISTS (SELECT 1 FROM email_contacts WHERE email = ?)",
+  ).bind(email, source, email).run();
   const br = await brevoAddContact(env, email, { SOURCE: source });
   let sent = false;
   if (!existing) {
