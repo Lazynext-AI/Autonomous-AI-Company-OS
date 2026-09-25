@@ -63,6 +63,11 @@ _INFEASIBLE_SPECS: list[tuple[str, str]] = [
     ("per-user personalization", r"personaliz\w*\b[^,.;]{0,40}\b(recommendation|feature|system|experience|dashboard|engine|guidance)|per[\s-]?user (recommendation|feature|personalization)|saved (history|scans|reports)|scan history"),
     ("monitoring system", r"monitoring (system|service|dashboard|platform)|uptime monitor"),
     ("python-stack deliverable", r"\b[\w/.-]*\.py\b|\bpytest\b"),
+    ("src/ test file", r"\bsrc/[\w/.-]*tests?\.(?:js|mjs)\b"),
+    ("generic wcag-detection", r"\b(detect|identify|report on|check for)\w*\s+[^,.;]{0,40}\bwcag\b[^,;]{0,40}\b(guideline |success )?violations?\b|\bfeature\b[^,.;]{0,50}\bwcag\b[^,;]{0,40}\bviolations?\b"),
+    ("section 508", r"\bsection[\s-]?508\b"),
+    ("multi-page scan", r"\b(scan|crawl)\w*\s+[^,.;]{0,25}\bmultiple pages?\b|\bmulti[\s-]?page (scan|crawl|report)\b"),
+    ("audit-report doc churn", r"\b(conduct|perform|produce|deliver|write up)\w*\s+[^,.;]{0,30}\baudit\b|\baudit (report|documentation)\b"),
 ]
 INFEASIBLE_TASK_PATTERNS: list[tuple[str, "re.Pattern[str]"]] = [
     (label, re.compile(p, re.IGNORECASE)) for label, p in _INFEASIBLE_SPECS

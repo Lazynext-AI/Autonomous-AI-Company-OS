@@ -879,6 +879,11 @@ const INFEASIBLE_TASK_PATTERNS: [string, RegExp][] = [
   ["per-user personalization", /personaliz\w*\b[^,.;]{0,40}\b(recommendation|feature|system|experience|dashboard|engine|guidance)|per[\s-]?user (recommendation|feature|personalization)|saved (history|scans|reports)|scan history/i],
   ["monitoring system", /monitoring (system|service|dashboard|platform)|uptime monitor/i],
   ["python-stack deliverable", /\b[\w/.-]*\.py\b|\bpytest\b/i],
+  ["src/ test file", /\bsrc\/[\w/.-]*tests?\.(?:js|mjs)\b/i],
+  ["generic wcag-detection", /\b(detect|identify|report on|check for)\w*\s+[^,.;]{0,40}\bwcag\b[^,;]{0,40}\b(guideline |success )?violations?\b|\bfeature\b[^,.;]{0,50}\bwcag\b[^,;]{0,40}\bviolations?\b/i],
+  ["section 508", /\bsection[\s-]?508\b/i],
+  ["multi-page scan", /\b(scan|crawl)\w*\s+[^,.;]{0,25}\bmultiple pages?\b|\bmulti[\s-]?page (scan|crawl|report)\b/i],
+  ["audit-report doc churn", /\b(conduct|perform|produce|deliver|write up)\w*\s+[^,.;]{0,30}\baudit\b|\baudit (report|documentation)\b/i],
 ];
 function infeasibleTaskReason(desc: string): string | null {
   for (const [label, pat] of INFEASIBLE_TASK_PATTERNS) if (pat.test(desc)) return label;
