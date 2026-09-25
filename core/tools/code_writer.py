@@ -8,6 +8,7 @@ from typing import Optional, Any
 import structlog
 
 from core.config import get_settings
+from core.tools.bin_resolver import find_binary
 from core.tools.code_validator import CodeValidator
 from core.tools.file_manager import FileManager
 from core.tools.git_manager import GitManager
@@ -296,11 +297,17 @@ class CodeWriter:
         test_dir = repo_root / "test"
         if not test_dir.is_dir() or not any(test_dir.glob("*.test.mjs")):
             return None
+        node = find_binary("node")
+        if not node:
+            return None  # node genuinely absent — CI remains the backstop
         try:
             # Bare `node --test` auto-discovers test files — same invocation
             # as CI. (`node --test test/` resolves the dir as a module path.)
+            # `node` is resolved via find_binary: under launchd the PATH is
+            # /usr/bin:/bin so a bare lookup fails and this gate silently
+            # no-ops on every write (PR #87 shipped a broken test that way).
             proc = await asyncio.create_subprocess_exec(
-                "node", "--test",
+                node, "--test",
                 cwd=str(repo_root),
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,

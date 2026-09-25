@@ -9,6 +9,7 @@ from typing import Optional
 import structlog
 
 from core.config import get_settings
+from core.tools.bin_resolver import find_binary
 
 logger = structlog.get_logger(__name__)
 
@@ -95,6 +96,11 @@ def _worker_subdomain() -> str:
 
 async def _run(cmd: list[str], cwd: Optional[Path] = None, timeout: int = 300) -> tuple[int, str]:
     """Run a command, return (returncode, combined output)."""
+    # launchd PATH is /usr/bin:/bin — npm/npx/wrangler live in Homebrew
+    # prefixes, so bare names raise FileNotFoundError for the fleet.
+    resolved = find_binary(cmd[0])
+    if resolved:
+        cmd = [resolved, *cmd[1:]]
     proc = await asyncio.create_subprocess_exec(
         *cmd,
         cwd=str(cwd) if cwd else None,
