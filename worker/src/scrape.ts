@@ -168,6 +168,7 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
     let undersized: { d: string; w: number; h: number }[] = [];
     let undersizedAAA: { d: string; w: number; h: number }[] = [];
     const obscured = new Set<string>();
+    const obscuredPartial = new Set<string>();
     const noFocusInd = new Set<string>();
     let nontextContrast: { d: string; ratio: number }[] = [];
     let spacingClip: string[] = [];
@@ -220,6 +221,9 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
       // Merged read — one websocket round-trip per Tab press instead of two.
       // WCAG 2.4.11 — a focused element fully covered by author content
       // (sticky header, banner, overlay) is hidden from keyboard users.
+      // WCAG 2.4.12 (AAA) — stricter: even partial coverage fails, so the
+      // probe samples the centre plus all four corners and reports
+      // centre-free/corner-covered elements separately.
       // WCAG 2.4.13 — focus appearance: no outline AND no box-shadow on the
       // focused element means keyboard users can't see where focus is.
       const readFocusProbe = () =>
@@ -228,16 +232,30 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
           const win = (globalThis as any).window;
           const el = doc.activeElement;
           if (!el || el === doc.body || !(el as any).getBoundingClientRect)
-            return { entry: "body", hidden: false, noInd: false };
+            return { entry: "body", hidden: false, partial: false, noInd: false };
           const idx = Array.from(doc.querySelectorAll(sel) as any).indexOf(el);
           const desc = `${String(el.tagName).toLowerCase()}${el.id ? "#" + el.id : ""}${String((el as any).innerText ?? "").trim() ? ":" + String((el as any).innerText).trim().slice(0, 25) : ""}`;
           const r = (el as any).getBoundingClientRect();
-          const hidden = r.width > 0 && r.height > 0
-            ? (() => { const top = doc.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!top && top !== el && !(el as any).contains(top); })()
-            : false;
+          let hidden = false;
+          let partial = false;
+          if (r.width > 0 && r.height > 0) {
+            const inset = Math.min(4, r.width / 4, r.height / 4);
+            const covered = (x: number, y: number) => {
+              const top = doc.elementFromPoint(x, y);
+              return !!top && top !== el && !(el as any).contains(top);
+            };
+            const centre = covered(r.left + r.width / 2, r.top + r.height / 2);
+            const corner =
+              covered(r.left + inset, r.top + inset) ||
+              covered(r.right - inset, r.top + inset) ||
+              covered(r.left + inset, r.bottom - inset) ||
+              covered(r.right - inset, r.bottom - inset);
+            hidden = centre; // centre covered ≈ entirely hidden → 2.4.11
+            partial = !centre && corner; // corner-only coverage → 2.4.12 (AAA)
+          }
           const cs = win.getComputedStyle(el);
           const noInd = !(parseFloat(cs.outlineWidth) > 0 && cs.outlineStyle !== "none") && cs.boxShadow === "none";
-          return { entry: `${idx}:${desc}`, hidden, noInd };
+          return { entry: `${idx}:${desc}`, hidden, partial, noInd };
         }, FOCUSABLE_SEL);
       const seen = new Set<string>();
       let stall = 0;
@@ -249,10 +267,11 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
       const maxTab = focusable > 24 && focusable <= 40 ? focusable + 2 : 24;
       for (let i = 0; i < maxTab; i++) {
         await page.keyboard.press("Tab");
-        const probe = (await readFocusProbe()) as { entry: string; hidden: boolean; noInd: boolean };
+        const probe = (await readFocusProbe()) as { entry: string; hidden: boolean; partial: boolean; noInd: boolean };
         const entry = probe.entry;
         focusTrace.push(entry);
         if (probe.hidden) obscured.add(entry);
+        if (probe.partial) obscuredPartial.add(entry);
         if (probe.noInd && entry !== "body") noFocusInd.add(entry);
         // Early exits — each press costs a remote round-trip. The rules only
         // need the signature: a ≥4-press stall proves a trap; seeing every
@@ -495,6 +514,7 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
       undersized,
       undersizedAAA,
       obscured: Array.from(obscured),
+      obscuredPartial: Array.from(obscuredPartial),
       noFocusInd: Array.from(noFocusInd),
       nontextContrast,
       spacingClip,
