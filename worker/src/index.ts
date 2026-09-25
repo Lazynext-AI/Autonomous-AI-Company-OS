@@ -852,13 +852,38 @@ function b64(s: string): string {
   return btoa(bin);
 }
 
-async function ghPutFile(env: Env, repo: string, path: string, content: string, message: string): Promise<{ ok: boolean; url?: string; error?: string }> {
-  const existing = await gh(env, "GET", `/repos/${repo}/contents/${path}`);
+async function ghPutFile(env: Env, repo: string, path: string, content: string, message: string, branch?: string): Promise<{ ok: boolean; url?: string; error?: string }> {
+  const existing = await gh(env, "GET", `/repos/${repo}/contents/${path}${branch ? `?ref=${encodeURIComponent(branch)}` : ""}`);
   const body: Record<string, unknown> = { message, content: b64(content) };
+  if (branch) body.branch = branch;
   if (existing.ok && existing.data.sha) body.sha = existing.data.sha;
   const r = await gh(env, "PUT", `/repos/${repo}/contents/${path}`, body);
   if (!r.ok) return { ok: false, error: JSON.stringify(r.data).slice(0, 300) };
   return { ok: true, url: (r.data.content as { html_url?: string } | undefined)?.html_url };
+}
+
+// Branch-per-task for cloud commits — mirrors the local git_manager gate.
+// Without this every verified cloud write lands unreviewed on main.
+async function ghCreateBranch(env: Env, repo: string, name: string): Promise<{ ok: boolean; error?: string }> {
+  const base = await gh(env, "GET", `/repos/${repo}/git/ref/heads/main`);
+  if (!base.ok) return { ok: false, error: "main ref lookup failed" };
+  const sha = (base.data.object as { sha?: string } | undefined)?.sha;
+  if (!sha) return { ok: false, error: "main sha missing" };
+  const r = await gh(env, "POST", `/repos/${repo}/git/refs`, { ref: `refs/heads/${name}`, sha });
+  if (r.ok) return { ok: true };
+  // 422 = branch already exists (task retry) — reuse it.
+  if (r.status === 422) return { ok: true };
+  return { ok: false, error: JSON.stringify(r.data).slice(0, 300) };
+}
+
+async function ghOpenPr(env: Env, repo: string, branch: string, title: string): Promise<string | null> {
+  const owner = repo.split("/")[0];
+  const existing = await gh(env, "GET", `/repos/${repo}/pulls?head=${encodeURIComponent(`${owner}:${branch}`)}&state=open`);
+  if (existing.ok && Array.isArray(existing.data) && existing.data[0])
+    return (existing.data[0] as { html_url?: string }).html_url ?? null;
+  const r = await gh(env, "POST", `/repos/${repo}/pulls`, { title: title.slice(0, 100), head: branch, base: "main" });
+  if (r.ok) return (r.data.html_url as string | undefined) ?? null;
+  return null;
 }
 
 // Repo file listing + content fetch — gives generation and verification the
@@ -1164,17 +1189,28 @@ async function executeTask(env: Env, ctx: ExecutionContext, brain: Brain, urls: 
     }
     const v = await verifyArtifact(env, brain, task, path, content);
     if (v.ok) {
-      const put = await ghPutFile(env, repo, path, content, `${task.agent_id}: ${(meta?.summary ?? task.description).slice(0, 60)}`);
+      // Branch + PR — verified artifacts still land unreviewed if written
+      // straight to main (a doc-gutting fleet commit proved it). Same
+      // invariant as the local git_manager: agent-* branch, PR, human triage.
+      const branch = `agent-${task.task_id}-${path.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase().slice(0, 40)}`;
+      const br = await ghCreateBranch(env, repo, branch);
+      if (!br.ok) {
+        await env.DB.prepare("UPDATE task_log SET status='failed', error_log=json_insert(error_log,'$[#]',?), completed_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?")
+          .bind(`branch failed: ${br.error}`, task.id).run();
+        return { task: task.task_id, error: br.error };
+      }
+      const put = await ghPutFile(env, repo, path, content, `${task.agent_id}: ${(meta?.summary ?? task.description).slice(0, 60)}`, branch);
       if (!put.ok) {
         await env.DB.prepare("UPDATE task_log SET status='failed', error_log=json_insert(error_log,'$[#]',?), completed_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?")
           .bind(put.error ?? "github commit failed", task.id).run();
         return { task: task.task_id, error: put.error };
       }
+      const prUrl = await ghOpenPr(env, repo, branch, `${task.agent_id}: ${(meta?.summary ?? task.description).slice(0, 60)}`);
       await env.DB.prepare("UPDATE task_log SET status='completed', result=?, completed_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?")
-        .bind(put.url ?? `https://github.com/${repo}/blob/main/${path}`, task.id).run();
-      const text = `Done: ${task.description.slice(0, 80)} → ${put.url ?? path}`;
+        .bind(prUrl ?? put.url ?? `https://github.com/${repo}/blob/${branch}/${path}`, task.id).run();
+      const text = `Done: ${task.description.slice(0, 80)} → ${prUrl ?? put.url ?? path}`;
       await publishToBus(env, ctx, "conversations", JSON.stringify({ from: task.agent_id, agent: task.agent_id, text, model: "workers-ai/llama-3.3-70b", event: "task_completed", task: task.task_id }));
-      return { task: task.task_id, agent: task.agent_id, path, url: put.url, verified: v.how, attempts: attempt + 1 };
+      return { task: task.task_id, agent: task.agent_id, path, url: prUrl ?? put.url, verified: v.how, attempts: attempt + 1 };
     }
     feedback = v.issue ?? "verification failed";
   }
