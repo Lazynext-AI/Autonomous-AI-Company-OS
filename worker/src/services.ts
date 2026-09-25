@@ -144,8 +144,12 @@ export async function handleServices(
     await update(env, "email_campaigns", id, { status: "sending" });
     let sent = 0;
     for (const c of contacts as { email: string }[]) {
+      if (await env.EPHEMERAL.get(`unsub:${c.email.toLowerCase()}`)) continue;
       try {
-        const r = await brevoSend(env, c.email, String(camp.subject), String(camp.html));
+        const r = await brevoSend(
+          env, c.email, String(camp.subject),
+          String(camp.html) + await marketingFooter(env, c.email),
+          undefined, await unsubHeaders(env, c.email));
         if (r.ok) sent++;
       } catch {}
     }
@@ -236,6 +240,7 @@ async function brevoCred(env: Env): Promise<{ from: string; key: string } | null
 
 export async function brevoSend(
   env: Env, to: string, subject: string, html: string, name?: string,
+  headers?: Record<string, string>,
 ): Promise<{ ok: boolean; status: number; messageId?: string; error?: string }> {
   const cred = await brevoCred(env);
   if (!cred)
@@ -248,10 +253,31 @@ export async function brevoSend(
       to: [{ email: to, ...(name ? { name } : {}) }],
       subject,
       htmlContent: html,
+      ...(headers ? { headers } : {}),
     }),
   });
   const d = (await r.json().catch(() => ({}))) as { messageId?: string; message?: string };
   return { ok: r.ok, status: r.status, messageId: d.messageId, error: d.message };
+}
+
+// Hard-blacklist a recipient in Brevo itself (PUT /v3/contacts/{email}) so a
+// suppressed address can't be mailed even if our own KV/D1 flags are missed.
+// Brevo rejects SMTP sends to blacklisted contacts before they hit the wire.
+export async function brevoBlacklist(
+  env: Env, email: string,
+): Promise<{ ok: boolean; status: number; error?: string }> {
+  const cred = await brevoCred(env);
+  if (!cred) return { ok: false, status: 503, error: "brevo not connected" };
+  const r = await fetch(
+    `https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}`,
+    {
+      method: "PUT",
+      headers: { "api-key": cred.key, "content-type": "application/json" },
+      body: JSON.stringify({ emailBlacklisted: true }),
+    },
+  );
+  const d = (await r.json().catch(() => ({}))) as { message?: string };
+  return { ok: r.ok || r.status === 204, status: r.status, error: d.message };
 }
 
 // Add/update a Brevo contact — lead capture for product outbound.
@@ -270,7 +296,61 @@ export async function brevoAddContact(
   return { ok: r.ok || r.status === 204, status: r.status, error: d.message };
 }
 
-// Reads conn:signwell from KV (bare API key; "test:" prefix → test_mode sends
+// --- Marketing-email unsubscribe (CAN-SPAM / GDPR / RFC 8058) ----------------
+// Every marketing send (lead sequence + campaigns) carries an HMAC-signed
+// per-recipient unsubscribe link. Signing key is API_TOKEN — the product
+// worker's PLATFORM_TOKEN holds the same secret, so checker.lazynext.com's
+// public /unsubscribe route can verify links this worker minted. A wrong or
+// missing sig means the link can't silence anyone but its real recipient.
+export async function unsubSig(env: Env, email: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw", new TextEncoder().encode(env.API_TOKEN ?? ""),
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
+  );
+  const buf = await crypto.subtle.sign(
+    "HMAC", key, new TextEncoder().encode(email.toLowerCase()));
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 24);
+}
+
+export async function unsubUrl(env: Env, email: string): Promise<string> {
+  return `https://checker.lazynext.com/unsubscribe?email=${
+    encodeURIComponent(email.toLowerCase())}&sig=${await unsubSig(env, email)}`;
+}
+
+// Footer appended to marketing html — opt-out mechanism + why-they-got-it
+// disclosure. Transactional mail (confirm/verify/reset/report/alerts/trial
+// notices) is exempt and deliberately does NOT get this.
+export async function marketingFooter(env: Env, email: string): Promise<string> {
+  const url = await unsubUrl(env, email);
+  return `<hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px">` +
+    `<p style="font-size:12px;color:#64748b;line-height:1.5">You're receiving ` +
+    `this because you signed up at Accessibility Checker for product updates ` +
+    `and a discount code. <a href="${url}">Unsubscribe</a> anytime — these ` +
+    `emails stop immediately.</p>`;
+}
+
+// List-Unsubscribe headers give mail clients a native unsubscribe affordance;
+// the Post header is RFC 8058 one-click (Gmail/Yahoo bulk-sender requirement).
+export async function unsubHeaders(
+  env: Env, email: string,
+): Promise<Record<string, string>> {
+  return {
+    "List-Unsubscribe": `<${await unsubUrl(env, email)}>`,
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  };
+}
+
+// Single mutation path for every unsubscribe surface: KV suppression flag
+// (sequence/campaign loops check it), D1 opt-out (campaign recipient query),
+// and the Brevo-side blacklist (last-resort wire block). Idempotent.
+export async function unsubscribeEmail(env: Env, email: string): Promise<void> {
+  email = email.toLowerCase();
+  await env.EPHEMERAL.put(`unsub:${email}`, "1", { expirationTtl: 31_536_000 });
+  await env.DB.prepare(
+    "UPDATE email_contacts SET subscribed = 0 WHERE email = ?").bind(email).run();
+  await brevoBlacklist(env, email).catch(() => {});
+}
 // are free, unlimited and not legally binding), then calls the SignWell API.
 // Returns {connected:false} when no credential is set.
 async function signwellFetch(

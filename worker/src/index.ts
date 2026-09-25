@@ -18,7 +18,7 @@ import { getContainer } from "@cloudflare/containers";
 export { CodeExecContainer } from "./exec_container";
 import { handleWidget } from "./widget";
 import { fanOut, handleWebhooks, publishToBus } from "./webhooks";
-import { handleServices, handleSignwellWebhook, brevoSend, brevoAddContact } from "./services";
+import { handleServices, handleSignwellWebhook, brevoSend, brevoAddContact, marketingFooter, unsubHeaders, unsubscribeEmail } from "./services";
 
 export { Env };
 
@@ -196,13 +196,20 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
       const b = await readBody<{ email: string; source?: string }>(req);
       if (!b.email?.includes("@")) return json({ error: "valid email required" }, 400);
       const email = b.email.toLowerCase();
+      // Suppressed addresses don't get re-added — an unsubscribe survives a
+      // fresh lead-form submission (opt-out beats a new capture until the
+      // recipient explicitly re-opts-in through support).
+      if (await env.EPHEMERAL.get(`unsub:${email}`))
+        return json({ ok: true, suppressed: true });
       const existing = await env.EPHEMERAL.get(`lead:${email}:stage`);
       await env.EPHEMERAL.put(`lead:${email}`, b.source ?? "unknown", { expirationTtl: 31_536_000 });
       const br = await brevoAddContact(env, email, { SOURCE: b.source ?? "unknown" });
       let sent = false;
       if (!existing) {
         await env.EPHEMERAL.put(`lead:${email}:joined`, String(Date.now()), { expirationTtl: 31_536_000 });
-        const s = await brevoSend(env, email, SEQUENCE[0].subject, SEQUENCE[0].html);
+        const s = await brevoSend(env, email, SEQUENCE[0].subject,
+          SEQUENCE[0].html + await marketingFooter(env, email),
+          undefined, await unsubHeaders(env, email));
         sent = s.ok;
         await env.EPHEMERAL.put(`lead:${email}:stage`, s.ok ? "1" : "0", { expirationTtl: 31_536_000 });
       }
@@ -210,6 +217,16 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
         "INSERT INTO bus_messages (channel, payload, created_at) VALUES ('leads.events', ?, datetime('now'))",
       ).bind(JSON.stringify({ email, source: b.source, brevo: br.ok, seq_sent: sent })).run();
       return json({ ok: true, brevo: br.ok, seq_sent: sent });
+    }
+
+    case "/unsubscribe": {
+      // Internal mutation route — the product worker's public /unsubscribe
+      // page verifies the signed link, then calls here to do the writes
+      // (KV flag + D1 opt-out + Brevo blacklist, all in unsubscribeEmail).
+      const b = await readBody<{ email: string }>(req);
+      if (!b.email?.includes("@")) return json({ error: "email required" }, 400);
+      await unsubscribeEmail(env, b.email);
+      return json({ ok: true });
     }
 
     case "/bus/ack": {
@@ -399,12 +416,15 @@ async function advanceLeadSequence(env: Env) {
   for (const k of list) {
     if (k.name.endsWith(":stage") || k.name.endsWith(":joined")) continue;
     const email = k.name.slice(5);
+    if (await env.EPHEMERAL.get(`unsub:${email}`)) continue;
     const stage = parseInt((await env.EPHEMERAL.get(`lead:${email}:stage`)) ?? "0", 10);
     const joined = parseInt((await env.EPHEMERAL.get(`lead:${email}:joined`)) ?? "0", 10);
     if (!joined || stage >= SEQUENCE.length) continue;
     const days = (Date.now() - joined) / 86_400_000;
     if (days >= SEQ_DAYS[stage]) {
-      const s = await brevoSend(env, email, SEQUENCE[stage].subject, SEQUENCE[stage].html).catch(() => null);
+      const s = await brevoSend(env, email, SEQUENCE[stage].subject,
+        SEQUENCE[stage].html + await marketingFooter(env, email),
+        undefined, await unsubHeaders(env, email)).catch(() => null);
       if (s?.ok) await env.EPHEMERAL.put(`lead:${email}:stage`, String(stage + 1), { expirationTtl: 31_536_000 });
     }
   }
