@@ -1,6 +1,7 @@
 """Base agent - abstract class with retry-diversify-escalate protocol."""
 
 import asyncio
+import re
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -35,6 +36,24 @@ _DETERMINISTIC_VETO_MARKERS = (
     "deliverable blocked:",
     "deliverable rejected: task-fit",
     "deliverable rejected: phantom",
+    "phantom_completion:",
+)
+
+# A result claims a file deliverable when it carries a File: path marker in
+# comment/header form (``// File:``, ``# File:``, ``<!-- File:``, ``#### File:``)
+# or opens straight with a code fence. Real code completions always carry
+# write evidence appended by post_task_hook ([Files written:], [Committed to
+# git], git branch, or a PR URL). Claim without evidence = phantom completion:
+# the blob was produced but write_code placed/committed nothing (protected
+# path, veto, parse failure) — historically these were marked `completed`
+# anyway, and 200+ such rows had to be corrected by hand.
+_ARTIFACT_CLAIM_RE = re.compile(
+    r"(?m)^\s*(?:#{1,4}|/{2}|<!--|\*{1,2})?\s*File:\s*[\w./-]+\.[a-z0-9]+",
+    re.IGNORECASE,
+)
+_ARTIFACT_EVIDENCE_RE = re.compile(
+    r"\[Files written:|\[Committed to git\]|\[Pushed to remote\]|"
+    r"git_branch|/pull/\d|github\.com/[\w.-]+/[\w.-]+/(?:blob|tree|commit|pull)"
 )
 
 
@@ -293,6 +312,19 @@ class BaseAgent(ABC):
                     # protected-skipped) so the task retries instead of
                     # "completing" with nothing shipped.
                     await self.post_task_hook(task, result)
+                if result.success and self._phantom_artifact_claim(result):
+                    # Claims file artifacts but nothing was written or
+                    # committed — recording `completed` would mint a phantom
+                    # row. Veto so it retries; a transient miss (parse slip,
+                    # one-off veto) can still ship on a later attempt, while
+                    # persistent phantoms exhaust attempts and die as
+                    # `failed`/`infeasible:` via the deterministic-veto path.
+                    result.success = False
+                    result.error = (
+                        "phantom_completion: result claims file artifacts "
+                        "(File: markers / code blob) but write_code produced "
+                        "no files_written or git evidence"
+                    )
                 if result.success:
                     self._injected_context = ""
                     await self.on_success(task, result)
@@ -384,6 +416,14 @@ class BaseAgent(ABC):
     @staticmethod
     def _is_deterministic_veto(error: str) -> bool:
         return any(m in error.lower() for m in _DETERMINISTIC_VETO_MARKERS)
+
+    @staticmethod
+    def _phantom_artifact_claim(result: TaskResult) -> bool:
+        """Result asserts a file deliverable that never touched disk or git."""
+        out = result.output or ""
+        if not out or _ARTIFACT_EVIDENCE_RE.search(out):
+            return False
+        return bool(out.lstrip().startswith("```") or _ARTIFACT_CLAIM_RE.search(out))
 
     async def on_success(self, task: TaskMessage, result: TaskResult) -> None:
         """Handle successful task completion."""

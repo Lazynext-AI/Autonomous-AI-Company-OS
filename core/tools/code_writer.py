@@ -46,25 +46,21 @@ def extract_code_blocks(text: str) -> list[dict[str, str]]:
 
 def infer_filename(code: str, language: str, task_description: str) -> Optional[str]:
     """Infer filename from code content, comments, and task description."""
-    # Check for file path in comment (e.g., # File: app/api/auth.py or // File: app/pages/login.tsx)
+    # Check for file path in comment (e.g., # File: scripts/x.py or // File: src/x.js)
     file_comment = re.search(r"(?:#|//)\s*File:\s*([^\n]+)", code, re.IGNORECASE)
     if file_comment:
         return file_comment.group(1).strip()
 
     # Check for common patterns
     desc_lower = task_description.lower()
+    # No FastAPI/Next.js surface exists — the product repo is vanilla JS
+    # (src/*.js modules behind worker.js + index.html) and the platform is
+    # Python agents + a TypeScript Worker. Code written for those stacks is
+    # a hallucinated deliverable; unplaceable beats a ghost app/ tree.
     if "from fastapi import" in code or "@app.post" in code or "@app.get" in code or "@router" in code:
-        if "auth" in desc_lower or "login" in desc_lower or "register" in desc_lower:
-            return "app/api/auth.py"
-        elif "user" in desc_lower:
-            return "app/api/users.py"
-        return "app/api/routes.py"
-    if "import React" in code or "export default" in code or "from 'next" in code:
-        if "page" in desc_lower or "route" in desc_lower:
-            return "app/pages/page.tsx"
-        elif "component" in desc_lower:
-            return "app/components/component.tsx"
-        return "app/pages/page.tsx"
+        return None
+    if re.search(r"from ['\"]react['\"]|from ['\"]next[/']|import React", code):
+        return None
     if "CREATE TABLE" in code.upper() or "ALTER TABLE" in code.upper() or "migration" in desc_lower:
         import time
         return f"migrations/{int(time.time())}_migration.sql"
@@ -72,7 +68,7 @@ def infer_filename(code: str, language: str, task_description: str) -> Optional[
         # Try to extract function/class name
         func_match = re.search(r"def\s+(\w+)", code)
         if func_match:
-            return f"app/{func_match.group(1)}.py"
+            return f"scripts/{func_match.group(1)}.py"
     if language == "yaml" or ".yml" in desc_lower or ".yaml" in desc_lower:
         if "github" in desc_lower or "ci" in desc_lower or "workflow" in desc_lower:
             return ".github/workflows/deploy.yml"
@@ -85,10 +81,15 @@ def infer_filename(code: str, language: str, task_description: str) -> Optional[
         elif "setup" in desc_lower:
             return "scripts/setup.sh"
         return "scripts/script.sh"
-    if language == "javascript" or language == "js":
+    if language == "javascript" or language == "js" or language == "mjs":
         if "config" in desc_lower:
             return "config.js"
-        return "app/script.js"
+        export_match = re.search(
+            r"export\s+(?:async\s+)?(?:function|class|const)\s+(\w+)", code
+        )
+        if export_match:
+            return f"src/{export_match.group(1)}.js"
+        return None
     if language == "toml":
         return "pyproject.toml" if "project" in desc_lower or "poetry" in desc_lower else "config.toml"
     return None
