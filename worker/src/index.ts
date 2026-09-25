@@ -873,6 +873,28 @@ const TASK_STOP = new Set(["task", "the", "and", "for", "with", "that", "this", 
 function contentWords(d: string): Set<string> {
   return new Set(d.toLowerCase().split(/\s+/).map((w) => w.replace(/[.,:;()]/g, "")).filter((w) => w.length > 3 && !TASK_STOP.has(w)));
 }
+// Exact set-intersection misses inflected paraphrases — "track" vs "tracking",
+// "analyze" vs "analyzing" were the same task under new wording. Words count
+// as related when they share a stem: the shorter word's first min(len,5)
+// chars match ("test"~"testing", "scan"~"scanner") while distinct roots like
+// "report"/"repository" stay apart ("repor" ≠ "repos").
+function wordsRelated(a: string, b: string): boolean {
+  if (a === b) return true;
+  const n = Math.min(a.length, b.length, 5);
+  return n >= 4 && a.slice(0, n) === b.slice(0, n);
+}
+function relatedOverlap(smaller: Set<string>, larger: Set<string>): number {
+  let inter = 0;
+  for (const w of smaller) {
+    for (const x of larger) {
+      if (wordsRelated(w, x)) {
+        inter++;
+        break;
+      }
+    }
+  }
+  return inter;
+}
 async function taskAlreadyTried(env: Env, desc: string): Promise<boolean> {
   const rows = await env.DB.prepare(
     "SELECT description FROM task_log WHERE created_at > datetime('now','-24 hours') ORDER BY created_at DESC LIMIT 60",
@@ -895,9 +917,7 @@ async function taskAlreadyTried(env: Env, desc: string): Promise<boolean> {
     const b = contentWords(t);
     if (!a.size || !b.size) continue;
     const [sm, lg] = a.size <= b.size ? [a, b] : [b, a];
-    let inter = 0;
-    for (const w of sm) if (lg.has(w)) inter++;
-    if (inter >= Math.max(2, Math.floor((sm.size + 1) / 2))) return true;
+    if (relatedOverlap(sm, lg) >= Math.max(2, Math.floor((sm.size + 1) / 2))) return true;
   }
   return false;
 }

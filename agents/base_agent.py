@@ -268,6 +268,7 @@ class BaseAgent(ABC):
                         self._injected_context = f"RAG context: {rag_result.answer or 'No relevant knowledge found.'}"
                     else:
                         self._injected_context = "RAG unavailable for this run. Continue with internal best practices."
+                    self._inject_last_error(last_error)
                     result = await self.execute_task(task)
                 elif attempt == 3:
                     await self.message_bus.publish(
@@ -286,6 +287,7 @@ class BaseAgent(ABC):
                         self._injected_context = "\n".join(knowledge_prompts)
                     else:
                         self._injected_context = "Knowledge agent had no immediate guidance. Continue with best effort."
+                    self._inject_last_error(last_error)
                     result = await self.execute_task(task)
                 elif attempt == 4:
                     try:
@@ -302,6 +304,7 @@ class BaseAgent(ABC):
                             task.description,
                         )
                     self._injected_context = f"Decomposed subtasks: {decomp}"
+                    self._inject_last_error(last_error)
                     result = await self.execute_task(task)
                 else:
                     break
@@ -412,6 +415,22 @@ class BaseAgent(ABC):
             except Exception as e:
                 self.logger.warning("reward_engine_failure_path_failed", error=str(e))
         self.current_task = None
+
+    def _inject_last_error(self, last_error: str) -> None:
+        """Fold the previous attempt's failure into the retry context — the
+        retry prompt sees what broke (test tail, gate reason) instead of
+        regenerating blind and repeating the same defect."""
+        if not last_error:
+            return
+        feedback = (
+            "Previous attempt failed — fix this, do not retry blind: "
+            f"{last_error[:800]}"
+        )
+        self._injected_context = (
+            f"{self._injected_context}\n\n{feedback}"
+            if self._injected_context
+            else feedback
+        )
 
     @staticmethod
     def _is_deterministic_veto(error: str) -> bool:

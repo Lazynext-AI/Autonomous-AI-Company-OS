@@ -263,6 +263,16 @@ class CTOAgent(BaseAgent):
                 return {w.strip(".,:;()") for w in desc.split()
                         if len(w) > 3 and w not in stop}
 
+            def words_related(a: str, b: str) -> bool:
+                # Exact matches miss inflected paraphrases ("track"/"tracking",
+                # "analyze"/"analyzing") — count a shared stem: the shorter
+                # word's first min(len,5) chars as common prefix. Distinct
+                # roots like "report"/"repository" stay apart.
+                if a == b:
+                    return True
+                n = min(len(a), len(b), 5)
+                return n >= 4 and a[:n] == b[:n]
+
             for task in recent_tasks:
                 task_desc = (task.get("description") or "").lower().strip()
                 status = task.get("status", "")
@@ -270,15 +280,19 @@ class CTOAgent(BaseAgent):
                 if not task_desc or len(desc_lower) < 15:
                     continue
 
-                # Substring match, then content-word overlap for paraphrases
-                # ("security scan" vs "security audit" vs "vulnerability
-                # assessment" — the same task reworded).
+                # Substring match, then stemmed content-word overlap for
+                # paraphrases ("security scan" vs "security audit" vs
+                # "vulnerability assessment" — the same task reworded).
                 similar = desc_lower in task_desc or task_desc in desc_lower
                 if not similar:
                     a, b = content_words(desc_lower), content_words(task_desc)
                     if a and b:
                         smaller, larger = (a, b) if len(a) <= len(b) else (b, a)
-                        similar = len(smaller & larger) >= max(2, (len(smaller) + 1) // 2)
+                        inter = sum(
+                            1 for w in smaller
+                            if any(words_related(w, x) for x in larger)
+                        )
+                        similar = inter >= max(2, (len(smaller) + 1) // 2)
                 if not similar:
                     continue
 
