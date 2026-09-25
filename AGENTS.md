@@ -7,7 +7,8 @@ D1 + KV (`EPHEMERAL`) + Vectorize (`VECTORS`, index `company-knowledge`, 384d)
 ## Live surfaces
 
 - Platform worker: `https://ai-company-os.dry-hall-6a50.workers.dev`
-- Product worker: `https://accessibility-checker.dry-hall-6a50.workers.dev` — this is what `index.html` calls. A second script `accessibility-checker-api` mirrors the same code (recreated after it was found deleted — error 1042 means "no worker on that route"; keep both in sync when deploying).
+- Product worker: `https://accessibility-checker.dry-hall-6a50.workers.dev` — this is what `index.html` calls. A second script `accessibility-checker-api` mirrors the same code (recreated after it was found deleted — error 1042 means "no worker on that route"; keep both in sync when deploying). Canonical brand domain: `checker.lazynext.com`.
+- Product agent surfaces (commit `8e74e82`): `POST /mcp` (JSON-RPC tools `scan_url`/`scan_html`/`get_report`/`list_rules`, GET→405 no SSE), `POST /a2a` (`message/send`/`tasks/send`/`tasks/get` — task id IS the report id, replayed from `report:` KV), `GET /.well-known/agent.json`, `GET /widget.js` (Shadow-DOM embed), `/sw.js` (PWA shell cache; scans stay network-only). All in `src/agent_surfaces.js` + `src/scan_pipeline.js` — the extracted scan core shared by `/scan`/MCP/A2A so the 3/day free quota can't be bypassed by switching protocol. Product SDKs in-repo: `sdk/js` (`@lazynext/accessibility-checker`) + `sdk/go`.
 - Dashboard: `https://dashboard.lazynext.com` (session cookie `lazynext_session`)
 - Product repo: `github.com/Lazynext-Platform/accessibility-checker` (mirrored at `products/accessibility-checker`)
 
