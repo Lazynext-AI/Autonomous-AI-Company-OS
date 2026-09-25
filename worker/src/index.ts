@@ -709,17 +709,58 @@ async function operate(env: Env, ctx: ExecutionContext, brain: Brain, urls: Reco
     } catch {}
   }
 
-  if (task && (pending?.c ?? 0) < 25 && !(await taskAlreadyTried(env, task))) {
-    // Dedupe: skip if the same task is already queued or running.
-    await env.DB.prepare(
-      "INSERT INTO task_log (task_id, agent_id, description, status, created_at) SELECT lower(hex(randomblob(4))), ?, ?, 'pending', strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE NOT EXISTS (SELECT 1 FROM task_log WHERE description=? AND status IN ('pending','in_progress'))",
-    )
-      .bind(a.id, task, task)
-      .run();
+  let taskDropped: string | undefined;
+  if (task && (pending?.c ?? 0) < 25) {
+    const infeasible = infeasibleTaskReason(task);
+    if (infeasible) {
+      // Terminal failed row — attempts=3 keeps agentTick from requeuing, and
+      // the row feeds taskAlreadyTried so paraphrases stay dead for 24h.
+      await env.DB.prepare(
+        "INSERT INTO task_log (task_id, agent_id, description, status, attempts, error_log, created_at) VALUES (lower(hex(randomblob(4))), ?, ?, 'failed', 3, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
+      )
+        .bind(a.id, task, `infeasible: ${infeasible} (auto-killed at insert)`)
+        .run();
+      taskDropped = infeasible;
+    } else if (!(await taskAlreadyTried(env, task))) {
+      // Dedupe: skip if the same task is already queued or running.
+      await env.DB.prepare(
+        "INSERT INTO task_log (task_id, agent_id, description, status, created_at) SELECT lower(hex(randomblob(4))), ?, ?, 'pending', strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE NOT EXISTS (SELECT 1 FROM task_log WHERE description=? AND status IN ('pending','in_progress'))",
+      )
+        .bind(a.id, task, task)
+        .run();
+    }
   }
   const payload = JSON.stringify({ from: a.id, agent: a.id, text: status, model: "workers-ai/llama-3.3-70b", ...(task ? { task } : {}) });
   const id = await publishToBus(env, ctx, "conversations", payload);
-  return { phase: "operating", id, agent: a.id, text: status, task };
+  return { phase: "operating", id, agent: a.id, text: status, task, ...(taskDropped ? { taskDropped } : {}) };
+}
+
+// Deterministic kill-list for generated tasks that can never ship —
+// impossible classes (user accounts on an accountless SPA, PDF scanning on an
+// HTML scanner, native apps) or already-shipped systems (analytics, email,
+// monitoring, exports). Prompt bounds are advisory; this gate is not. Kept
+// tight to observed escalation classes — misses still die at the write/test
+// gates. Mirror of agents/strategic/cto_agent.py — keep in sync.
+const INFEASIBLE_TASK_PATTERNS: [string, RegExp][] = [
+  ["landing/multi-page surface", /landing[\s-]?page|multi[\s-]?page|onboarding (flow|wizard|experience)/i],
+  ["a/b experiment", /\b(a\/?b|split)[\s-]?test/i],
+  ["user accounts/auth", /user[\s-]?(account|login|dashboard|profile|registration|auth)|\b(sign[\s-]?up|log[\s-]?in|jwt|oauth|sso|saml)\b/i],
+  ["document-file scanning", /\bpdf\b|\bdocx?\b|document[\s-]?file|file upload/i],
+  ["native app", /mobile app|ios app|android app|react native|desktop app|electron/i],
+  ["analytics/tracking system", /\b(analytics|telemetry|metrics)\b|tracking (system|pixel|infrastructure)|campaign (effectiveness|performance) tracking/i],
+  ["email/notification system", /(notification|alerting) (system|service|engine)|email (system|automation|infrastructure|delivery)|follow[\s-]?up email|\bdrip\b/i],
+  ["feedback surface", /feedback (endpoint|form|system|collection|widget)/i],
+  ["deploy automation", /deploy(ment)? automation|auto[\s-]?deploy|\bci\/?cd\b|deployment pipeline|\brollback\b/i],
+  ["lead capture", /lead (capture|scoring|form)|newsletter/i],
+  ["extra payment provider", /\b(stripe|paypal|paddle|lemonsqueezy|razorpay|payment gateway)\b/i],
+  ["extra email provider", /\b(sendgrid|mailgun|postmark)\b|resend (api|integration|provider)/i],
+  ["export format", /(csv|excel)[\s-]?export|export (to|as) (csv|pdf|excel)/i],
+  ["per-user personalization", /personaliz|saved (history|scans|reports)|scan history/i],
+  ["monitoring system", /monitoring (system|service|dashboard|platform)|uptime monitor/i],
+];
+function infeasibleTaskReason(desc: string): string | null {
+  for (const [label, pat] of INFEASIBLE_TASK_PATTERNS) if (pat.test(desc)) return label;
+  return null;
 }
 
 // Was this task already tried recently — in ANY status? Exact-match dedup on

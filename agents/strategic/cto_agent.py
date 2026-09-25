@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import re
 import uuid
 
 from agents.base_agent import BaseAgent, TaskResult
@@ -30,6 +31,43 @@ RULES:
 3. acceptance_criteria: 2-5 testable criteria. "Returns 401 for invalid credentials".
 4. estimated_minutes: Realistic (15-120).
 5. assign_to: One of backend, frontend, devops, marketing, sales, customer_success."""
+
+
+# Task descriptions matching these are architecturally impossible or
+# already-shipped classes the LLM re-proposes despite prompt bounds (109-task
+# escalation wave on 2026-09-25). Killed at insert to save five doomed
+# attempts each; the terminal failed row also feeds _is_duplicate_task so
+# paraphrases stay suppressed for 24h. Keep patterns tight — a false positive
+# silently drops real work; misses still die at the write/test/fitness gates.
+# Mirrored in worker/src/index.ts (INFEASIBLE_TASK_PATTERNS) — keep in sync.
+_INFEASIBLE_SPECS: list[tuple[str, str]] = [
+    ("landing/multi-page surface", r"landing[\s-]?page|multi[\s-]?page|onboarding (flow|wizard|experience)"),
+    ("a/b experiment", r"\b(a/?b|split)[\s-]?test"),
+    ("user accounts/auth", r"user[\s-]?(account|login|dashboard|profile|registration|auth)|\b(sign[\s-]?up|log[\s-]?in|jwt|oauth|sso|saml)\b"),
+    ("document-file scanning", r"\bpdf\b|\bdocx?\b|document[\s-]?file|file upload"),
+    ("native app", r"mobile app|ios app|android app|react native|desktop app|electron"),
+    ("analytics/tracking system", r"\b(analytics|telemetry|metrics)\b|tracking (system|pixel|infrastructure)|campaign (effectiveness|performance) tracking"),
+    ("email/notification system", r"(notification|alerting) (system|service|engine)|email (system|automation|infrastructure|delivery)|follow[\s-]?up email|\bdrip\b"),
+    ("feedback surface", r"feedback (endpoint|form|system|collection|widget)"),
+    ("deploy automation", r"deploy(ment)? automation|auto[\s-]?deploy|\bci/?cd\b|deployment pipeline|\brollback\b"),
+    ("lead capture", r"lead (capture|scoring|form)|newsletter"),
+    ("extra payment provider", r"\b(stripe|paypal|paddle|lemonsqueezy|razorpay|payment gateway)\b"),
+    ("extra email provider", r"\b(sendgrid|mailgun|postmark)\b|resend (api|integration|provider)"),
+    ("export format", r"(csv|excel)[\s-]?export|export (to|as) (csv|pdf|excel)"),
+    ("per-user personalization", r"personaliz|saved (history|scans|reports)|scan history"),
+    ("monitoring system", r"monitoring (system|service|dashboard|platform)|uptime monitor"),
+]
+INFEASIBLE_TASK_PATTERNS: list[tuple[str, "re.Pattern[str]"]] = [
+    (label, re.compile(p, re.IGNORECASE)) for label, p in _INFEASIBLE_SPECS
+]
+
+
+def infeasible_task_reason(description: str) -> str | None:
+    """Return the dead-class label if a generated task can never ship."""
+    for label, pat in INFEASIBLE_TASK_PATTERNS:
+        if pat.search(description):
+            return label
+    return None
 
 
 class CTOAgent(BaseAgent):
@@ -116,7 +154,22 @@ class CTOAgent(BaseAgent):
                 
                 # Normalize description for duplicate detection
                 desc_normalized = t.description.lower().strip()[:100]
-                
+
+                # Deterministic kill for impossible/already-shipped classes —
+                # prompt bounds are advisory; this gate is not. Recorded as a
+                # terminal failed row so the dedup corpus suppresses
+                # paraphrases for 24h (agentTick only requeues attempts<3).
+                infeasible = infeasible_task_reason(t.description)
+                if infeasible:
+                    self.logger.info("infeasible_task_filtered", description=t.description[:60], reason=infeasible)
+                    await self.task_tracker.create_task(
+                        t.task_id, assign, t.description, status="failed", attempts=3,
+                    )
+                    await self.task_tracker.update_task(
+                        t.task_id, result=f"infeasible: {infeasible} (auto-killed at insert)",
+                    )
+                    continue
+
                 # Check if similar task already exists or was recently completed
                 is_duplicate = await self._is_duplicate_task(desc_normalized, assign)
                 if is_duplicate:
