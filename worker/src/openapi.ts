@@ -23,10 +23,10 @@ export const OPENAPI_SPEC = {
     },
     "/api/v1/waitlist": {
       post: {
-        summary: "Join the public waitlist (no key)",
+        summary: "Join the public waitlist (no key) — enrolls as a lead and starts the email sequence",
         security: [],
         requestBody: { content: { "application/json": { schema: { type: "object", required: ["email"], properties: { email: { type: "string", format: "email" } } } } } },
-        responses: { "200": { description: "Joined" }, "400": { description: "Invalid email" } },
+        responses: { "200": { description: "Joined" }, "400": { description: "Invalid email" }, "429": { description: "Rate limit exceeded (5/day per IP)" } },
       },
     },
     "/api/v1/status": {

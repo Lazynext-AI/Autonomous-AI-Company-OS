@@ -6,6 +6,7 @@
 import { Env, json, authorize, touchKey, extractKey, sha256, generateKey } from "./gateway";
 import { OPENAPI_SPEC, DOCS_HTML } from "./openapi";
 import { publishToBus } from "./webhooks";
+import { enrollLead } from "./services";
 
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 
@@ -189,16 +190,29 @@ export async function handlePublicApi(
   }
 
   // Public waitlist — no API key needed; the marketing form posts here.
+  // Signups also enroll as leads (Brevo contact + sequence email 1), which
+  // sends real email — so the endpoint is per-IP rate limited to stop
+  // third-party-address email bombing.
   if (req.method === "POST" && path === "/api/v1/waitlist") {
     try {
       const b = (await req.json()) as { email?: string };
       const email = (b.email ?? "").trim().toLowerCase();
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
         return json({ error: "valid email required" }, 400);
+      const ip = req.headers.get("cf-connecting-ip") ?? "anon";
+      const day = Math.floor(Date.now() / 86_400_000);
+      const rlKey = `rl:waitlist:${ip}:${day}`;
+      const used = parseInt((await env.EPHEMERAL.get(rlKey)) ?? "0", 10);
+      if (used >= 5) return json({ error: "rate limit exceeded" }, 429);
+      await env.EPHEMERAL.put(rlKey, String(used + 1), { expirationTtl: 172_800 });
       await env.DB.prepare(
         "INSERT OR IGNORE INTO waitlist (email, source) VALUES (?, ?)",
       ).bind(email, "landing").run();
-      return json({ ok: true });
+      // Same intake as /leads: lead KV + Brevo contact + sequence email 1.
+      // Suppressed is folded into a plain ok — a public endpoint shouldn't
+      // reveal an address's suppression state.
+      const r = await enrollLead(env, email, "waitlist").catch(() => null);
+      return json({ ok: true, seq_sent: r?.seq_sent ?? false });
     } catch (e) {
       return json({ error: e instanceof Error ? e.message : String(e) }, 500);
     }

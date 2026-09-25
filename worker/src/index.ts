@@ -18,7 +18,7 @@ import { getContainer } from "@cloudflare/containers";
 export { CodeExecContainer } from "./exec_container";
 import { handleWidget } from "./widget";
 import { fanOut, handleWebhooks, publishToBus } from "./webhooks";
-import { handleServices, handleSignwellWebhook, handleBrevoWebhook, brevoSend, brevoAddContact, marketingFooter, unsubHeaders, unsubscribeEmail } from "./services";
+import { handleServices, handleSignwellWebhook, handleBrevoWebhook, brevoSend, marketingFooter, unsubHeaders, unsubscribeEmail, enrollLead, SEQUENCE, SEQ_DAYS } from "./services";
 
 export { Env };
 
@@ -211,33 +211,13 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
     }
 
     case "/leads": {
-      // Lead capture: product workers relay signups here; we store the lead,
-      // sync it into Brevo and start the Pro conversion sequence (email 1
-      // immediately; a daily sweep in scheduled() sends emails 2 and 3).
+      // Lead capture: product workers relay signups here. Shared intake in
+      // services.enrollLead — KV lead record + Brevo contact + sequence
+      // email 1 immediately (daily sweep sends emails 2 and 3).
       const b = await readBody<{ email: string; source?: string }>(req);
       if (!b.email?.includes("@")) return json({ error: "valid email required" }, 400);
-      const email = b.email.toLowerCase();
-      // Suppressed addresses don't get re-added — an unsubscribe survives a
-      // fresh lead-form submission (opt-out beats a new capture until the
-      // recipient explicitly re-opts-in through support).
-      if (await env.EPHEMERAL.get(`unsub:${email}`))
-        return json({ ok: true, suppressed: true });
-      const existing = await env.EPHEMERAL.get(`lead:${email}:stage`);
-      await env.EPHEMERAL.put(`lead:${email}`, b.source ?? "unknown", { expirationTtl: 31_536_000 });
-      const br = await brevoAddContact(env, email, { SOURCE: b.source ?? "unknown" });
-      let sent = false;
-      if (!existing) {
-        await env.EPHEMERAL.put(`lead:${email}:joined`, String(Date.now()), { expirationTtl: 31_536_000 });
-        const s = await brevoSend(env, email, SEQUENCE[0].subject,
-          SEQUENCE[0].html + await marketingFooter(env, email),
-          undefined, await unsubHeaders(env, email));
-        sent = s.ok;
-        await env.EPHEMERAL.put(`lead:${email}:stage`, s.ok ? "1" : "0", { expirationTtl: 31_536_000 });
-      }
-      await env.DB.prepare(
-        "INSERT INTO bus_messages (channel, payload, created_at) VALUES ('leads.events', ?, datetime('now'))",
-      ).bind(JSON.stringify({ email, source: b.source, brevo: br.ok, seq_sent: sent })).run();
-      return json({ ok: true, brevo: br.ok, seq_sent: sent });
+      const r = await enrollLead(env, b.email, b.source ?? "unknown");
+      return json(r);
     }
 
     case "/unsubscribe": {
@@ -412,24 +392,8 @@ export default {
   },
 };
 
-// Pro conversion sequence (drafted by sales_1 — marketing/pro_sequence.md):
-// email 1 at capture, email 2 at +3d, email 3 at +7d.
-const CHECKOUT_URL = "https://checker.lazynext.com/checkout";
-const SEQUENCE = [
-  {
-    subject: "Unlock full accessibility scanning — your discount inside",
-    html: `<p>Thanks for trying Accessibility Checker — you ran a real rendered-page WCAG scan.</p><p><b>Pro ($9/mo)</b> removes the 3-scans-a-day limit: unlimited rendered scans, site-wide crawls, daily monitoring with alerts, and reports delivered to your inbox. It starts with a 14-day free trial (card up front, cancel any time).</p><p>As promised — <b>20% off</b> your subscription: use code <b>WELCOME20</b> at checkout.</p><p><a href="${CHECKOUT_URL}">Start your free trial →</a></p>`,
-  },
-  {
-    subject: "What teams fix first after their first scan",
-    html: `<p>The most common issues our rendered scans surface: missing landmarks, keyboard-inaccessible pages, and contrast that looks fine in the stylesheet but fails once CSS actually paints.</p><p>Pro runs unlimited scans — iterate on fixes and watch your score climb. Your <b>WELCOME20</b> code still works for 20% off.</p><p><a href="${CHECKOUT_URL}">Go Pro →</a></p>`,
-  },
-  {
-    subject: "Last call: unlimited scans for $9/mo",
-    html: `<p>Your free tier is capped at 3 rendered scans a day. Pro is $9/month, cancels anytime, and every report is shareable with your team.</p><p>Last reminder — <b>WELCOME20</b> takes 20% off: <a href="${CHECKOUT_URL}">start your 14-day free trial →</a></p>`,
-  },
-];
-const SEQ_DAYS = [0, 3, 7];
+// Pro conversion sequence lives in services.ts (SEQUENCE/SEQ_DAYS) so both
+// lead-capture surfaces (/leads, /api/v1/waitlist) share one intake path.
 
 async function advanceLeadSequence(env: Env) {
   const last = await env.EPHEMERAL.get("seq:last_run");

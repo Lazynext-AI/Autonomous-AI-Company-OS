@@ -360,6 +360,56 @@ export async function unsubscribeEmail(env: Env, email: string): Promise<void> {
   await brevoBlacklist(env, email).catch(() => {});
 }
 
+// --- Lead enrollment + Pro conversion sequence -----------------------------
+// Shared intake for every lead-capture surface (/leads, /api/v1/waitlist):
+// suppression check -> KV lead records -> Brevo contact -> sequence email 1
+// immediately -> stage stamp -> bus event. The daily advanceLeadSequence
+// sweep sends emails 2 and 3 at +3d/+7d.
+// Sequence drafted by sales_1 (marketing/pro_sequence.md): email 1 at
+// capture, email 2 at +3d, email 3 at +7d.
+export const CHECKOUT_URL = "https://checker.lazynext.com/checkout";
+export const SEQUENCE = [
+  {
+    subject: "Unlock full accessibility scanning — your discount inside",
+    html: `<p>Thanks for trying Accessibility Checker — you ran a real rendered-page WCAG scan.</p><p><b>Pro ($9/mo)</b> removes the 3-scans-a-day limit: unlimited rendered scans, site-wide crawls, daily monitoring with alerts, and reports delivered to your inbox. It starts with a 14-day free trial (card up front, cancel any time).</p><p>As promised — <b>20% off</b> your subscription: use code <b>WELCOME20</b> at checkout.</p><p><a href="${CHECKOUT_URL}">Start your free trial →</a></p>`,
+  },
+  {
+    subject: "What teams fix first after their first scan",
+    html: `<p>The most common issues our rendered scans surface: missing landmarks, keyboard-inaccessible pages, and contrast that looks fine in the stylesheet but fails once CSS actually paints.</p><p>Pro runs unlimited scans — iterate on fixes and watch your score climb. Your <b>WELCOME20</b> code still works for 20% off.</p><p><a href="${CHECKOUT_URL}">Go Pro →</a></p>`,
+  },
+  {
+    subject: "Last call: unlimited scans for $9/mo",
+    html: `<p>Your free tier is capped at 3 rendered scans a day. Pro is $9/month, cancels anytime, and every report is shareable with your team.</p><p>Last reminder — <b>WELCOME20</b> takes 20% off: <a href="${CHECKOUT_URL}">start your 14-day free trial →</a></p>`,
+  },
+];
+export const SEQ_DAYS = [0, 3, 7];
+
+export async function enrollLead(
+  env: Env, email: string, source = "unknown",
+): Promise<{ ok: boolean; suppressed?: boolean; brevo?: boolean; seq_sent?: boolean }> {
+  email = email.toLowerCase();
+  // Suppressed addresses don't get re-added — an unsubscribe survives a
+  // fresh capture (opt-out beats a new signup until the recipient
+  // explicitly re-opts-in through support).
+  if (await env.EPHEMERAL.get(`unsub:${email}`)) return { ok: true, suppressed: true };
+  const existing = await env.EPHEMERAL.get(`lead:${email}:stage`);
+  await env.EPHEMERAL.put(`lead:${email}`, source, { expirationTtl: 31_536_000 });
+  const br = await brevoAddContact(env, email, { SOURCE: source });
+  let sent = false;
+  if (!existing) {
+    await env.EPHEMERAL.put(`lead:${email}:joined`, String(Date.now()), { expirationTtl: 31_536_000 });
+    const s = await brevoSend(env, email, SEQUENCE[0].subject,
+      SEQUENCE[0].html + await marketingFooter(env, email),
+      undefined, await unsubHeaders(env, email));
+    sent = s.ok;
+    await env.EPHEMERAL.put(`lead:${email}:stage`, s.ok ? "1" : "0", { expirationTtl: 31_536_000 });
+  }
+  await env.DB.prepare(
+    "INSERT INTO bus_messages (channel, payload, created_at) VALUES ('leads.events', ?, datetime('now'))",
+  ).bind(JSON.stringify({ email, source, brevo: br.ok, seq_sent: sent })).run();
+  return { ok: true, brevo: br.ok, seq_sent: sent };
+}
+
 // --- Brevo inbound event webhook ------------------------------------------
 // Closes the deliverability loop: when a recipient hits "Report spam", an
 // address hard-bounces, or Brevo marks it blocked/invalid, Brevo POSTs the
