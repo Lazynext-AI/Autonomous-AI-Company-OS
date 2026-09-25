@@ -764,6 +764,7 @@ const INFEASIBLE_TASK_PATTERNS: [string, RegExp][] = [
   ["export format", /(csv|excel)[\s-]?export|export (to|as) (csv|pdf|excel)/i],
   ["per-user personalization", /personaliz|saved (history|scans|reports)|scan history/i],
   ["monitoring system", /monitoring (system|service|dashboard|platform)|uptime monitor/i],
+  ["python-stack deliverable", /\b[\w/.-]*\.py\b|\bpytest\b/i],
 ];
 function infeasibleTaskReason(desc: string): string | null {
   for (const [label, pat] of INFEASIBLE_TASK_PATTERNS) if (pat.test(desc)) return label;

@@ -56,6 +56,7 @@ _INFEASIBLE_SPECS: list[tuple[str, str]] = [
     ("export format", r"(csv|excel)[\s-]?export|export (to|as) (csv|pdf|excel)"),
     ("per-user personalization", r"personaliz|saved (history|scans|reports)|scan history"),
     ("monitoring system", r"monitoring (system|service|dashboard|platform)|uptime monitor"),
+    ("python-stack deliverable", r"\b[\w/.-]*\.py\b|\bpytest\b"),
 ]
 INFEASIBLE_TASK_PATTERNS: list[tuple[str, "re.Pattern[str]"]] = [
     (label, re.compile(p, re.IGNORECASE)) for label, p in _INFEASIBLE_SPECS
