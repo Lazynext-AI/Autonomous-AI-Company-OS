@@ -558,41 +558,62 @@ async function advanceLeadSequence(env: Env) {
 
   // Shipped-features sync — the task generator's dedup context reads
   // company_brain.shipped_features, but nothing updated it after bootstrap;
-  // stale lists let the generator re-propose already-shipped work. Merged
-  // PRs on the product repo are the truest "shipped" signal and cover both
-  // fleet merges and manual gh merges.
+  // stale lists let the generator re-propose already-shipped work. Commits
+  // on main are the truest "shipped" signal — they cover fleet squash
+  // merges AND direct pushes (manual ships never open PRs).
   const sync = await syncShippedFeatures(env).catch(() => ({ added: -1 }));
   await env.EPHEMERAL.put("brain:features_sync", JSON.stringify({ at: Date.now(), ...sync })).catch(() => {});
 }
 
-// Backfill shipped_features from merged product-repo PRs. Cursor
-// brain:prs_synced stores the newest merged_at processed; first run looks
-// back 30 days so manual ships land too.
-async function syncShippedFeatures(env: Env): Promise<{ added: number; skipped?: string }> {
+// Backfill shipped_features from product-repo commits on main. Covers both
+// squash-merged PRs (message "title (#N)" — suffix stripped) and direct
+// pushes, which the pulls endpoint would miss entirely. Cursor
+// brain:commits_synced stores the newest commit date processed; first run
+// falls back to the legacy brain:prs_synced cursor, then 30 days.
+async function syncShippedFeatures(env: Env): Promise<{ added: number; skipped?: string; truncated?: boolean }> {
   const brain = await env.DB.prepare("SELECT live_urls, shipped_features FROM company_brain LIMIT 1")
     .first<{ live_urls?: string; shipped_features?: string }>();
   if (!brain?.live_urls) return { added: 0, skipped: "no brain" };
   let repo = "";
   try { repo = new URL(String(JSON.parse(brain.live_urls).repo ?? "")).pathname.replace(/^\/+|\.git$/g, ""); } catch { /* fall through */ }
   if (!repo.includes("/")) return { added: 0, skipped: "no repo" };
-  const since = (await env.EPHEMERAL.get("brain:prs_synced").catch(() => null))
+  const since = (await env.EPHEMERAL.get("brain:commits_synced").catch(() => null))
+    ?? (await env.EPHEMERAL.get("brain:prs_synced").catch(() => null))
     ?? new Date(Date.now() - 30 * 86_400_000).toISOString();
-  const r = await gh(env, "GET", `/repos/${repo}/pulls?state=closed&sort=updated&direction=desc&per_page=100`);
-  const list = (Array.isArray(r.data) ? r.data : []) as Record<string, unknown>[];
-  const fresh = list.filter(p => typeof p.merged_at === "string" && (p.merged_at as string) > since);
-  const newest = list.map(p => p.merged_at).filter((m): m is string => typeof m === "string").sort().pop();
-  if (newest) await env.EPHEMERAL.put("brain:prs_synced", newest).catch(() => {});
-  if (!fresh.length) return { added: 0 };
+  // Paginate — a full 100-commit page means more history sits past it; a
+  // single-page cursor advance would skip that window forever.
+  const list: Record<string, unknown>[] = [];
+  let truncated = false;
+  for (let page = 1; page <= 5; page++) {
+    const r = await gh(env, "GET", `/repos/${repo}/commits?since=${encodeURIComponent(since)}&per_page=100&page=${page}`);
+    const chunk = (Array.isArray(r.data) ? r.data : []) as Record<string, unknown>[];
+    list.push(...chunk);
+    if (chunk.length < 100) break;
+    if (page === 5) truncated = true;
+  }
+  const dateOf = (c: Record<string, unknown>) => {
+    const cm = c.commit as Record<string, unknown> | undefined;
+    const ct = cm?.committer as Record<string, unknown> | undefined;
+    return String(ct?.date ?? "");
+  };
+  const fresh = list.filter(c => {
+    const msg = String((c.commit as Record<string, unknown> | undefined)?.message ?? "");
+    return dateOf(c) > since && !/^Merge\b/.test(msg) && (c.parents as unknown[] | undefined)?.length === 1;
+  });
+  const newest = list.map(dateOf).filter(d => d > "").sort().pop();
+  if (newest) await env.EPHEMERAL.put("brain:commits_synced", newest).catch(() => {});
+  if (!fresh.length) return { added: 0, ...(truncated ? { truncated } : {}) };
   const feats: string[] = JSON.parse(brain.shipped_features ?? "[]");
   const have = new Set(feats.map(f => f.toLowerCase()));
   let added = 0;
-  for (const p of fresh.sort((a, b) => String(a.merged_at).localeCompare(String(b.merged_at)))) {
-    const title = String(p.title ?? "").trim();
+  for (const c of fresh.sort((a, b) => dateOf(a).localeCompare(dateOf(b)))) {
+    const msg = String((c.commit as Record<string, unknown> | undefined)?.message ?? "");
+    const title = msg.split("\n")[0].replace(/\s*\(#\d+\)\s*$/, "").trim();
     if (title && !have.has(title.toLowerCase())) { feats.push(title); have.add(title.toLowerCase()); added++; }
   }
   if (added) await env.DB.prepare("UPDATE company_brain SET shipped_features=?, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')")
     .bind(JSON.stringify(feats.slice(-150))).run().catch(() => {});
-  return { added };
+  return { added, ...(truncated ? { truncated } : {}) };
 }
 
 // Autonomous agent loop: a Cloudflare cron tick makes the company act
