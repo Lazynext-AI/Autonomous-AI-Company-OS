@@ -18,7 +18,7 @@ import { getContainer } from "@cloudflare/containers";
 export { CodeExecContainer } from "./exec_container";
 import { handleWidget } from "./widget";
 import { fanOut, handleWebhooks, publishToBus } from "./webhooks";
-import { handleServices, handleSignwellWebhook, brevoSend, brevoAddContact, marketingFooter, unsubHeaders, unsubscribeEmail } from "./services";
+import { handleServices, handleSignwellWebhook, handleBrevoWebhook, brevoSend, brevoAddContact, marketingFooter, unsubHeaders, unsubscribeEmail } from "./services";
 
 export { Env };
 
@@ -361,6 +361,8 @@ export default {
         return cors(req, await handleWebhooks(req, env, ctx, path));
       if (path.startsWith("/api/v1/signwell/webhook/"))
         return cors(req, await handleSignwellWebhook(req, env, path));
+      if (path.startsWith("/api/v1/brevo/events/"))
+        return cors(req, await handleBrevoWebhook(req, env, path));
       if (path.startsWith("/api/v1/crm") || path.startsWith("/api/v1/support") ||
           path.startsWith("/api/v1/booking") || path.startsWith("/api/v1/store") ||
           path.startsWith("/api/v1/marketing") || path.startsWith("/api/v1/signwell"))

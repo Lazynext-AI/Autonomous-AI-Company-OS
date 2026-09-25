@@ -21,6 +21,7 @@ export interface Env {
   GITHUB_TOKEN?: string;
   CF_ACCOUNT_ID?: string;
   CF_API_TOKEN?: string;
+  COMPANY_ADDRESS?: string;
 }
 
 export interface ApiKey {

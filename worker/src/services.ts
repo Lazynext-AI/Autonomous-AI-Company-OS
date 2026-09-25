@@ -319,25 +319,33 @@ export async function unsubUrl(env: Env, email: string): Promise<string> {
 }
 
 // Footer appended to marketing html — opt-out mechanism + why-they-got-it
-// disclosure. Transactional mail (confirm/verify/reset/report/alerts/trial
-// notices) is exempt and deliberately does NOT get this.
+// disclosure + sender identity/physical postal address (CAN-SPAM). The
+// address comes from the COMPANY_ADDRESS worker secret or KV
+// config:company_address — ops sets the real value, we never invent one.
+// Transactional mail (confirm/verify/reset/report/alerts/trial notices) is
+// exempt and deliberately does NOT get this.
 export async function marketingFooter(env: Env, email: string): Promise<string> {
   const url = await unsubUrl(env, email);
+  const addr = env.COMPANY_ADDRESS ??
+    await env.EPHEMERAL.get("config:company_address");
   return `<hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px">` +
     `<p style="font-size:12px;color:#64748b;line-height:1.5">You're receiving ` +
     `this because you signed up at Accessibility Checker for product updates ` +
     `and a discount code. <a href="${url}">Unsubscribe</a> anytime — these ` +
-    `emails stop immediately.</p>`;
+    `emails stop immediately.<br>Lazynext${addr ? ` · ${addr}` : ""}</p>`;
 }
 
 // List-Unsubscribe headers give mail clients a native unsubscribe affordance;
 // the Post header is RFC 8058 one-click (Gmail/Yahoo bulk-sender requirement).
+// Precedence: bulk classifies the mail so providers treat it as bulk (auto-
+// responders suppress replies, filters bucket it correctly).
 export async function unsubHeaders(
   env: Env, email: string,
 ): Promise<Record<string, string>> {
   return {
     "List-Unsubscribe": `<${await unsubUrl(env, email)}>`,
     "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    "Precedence": "bulk",
   };
 }
 
@@ -350,6 +358,37 @@ export async function unsubscribeEmail(env: Env, email: string): Promise<void> {
   await env.DB.prepare(
     "UPDATE email_contacts SET subscribed = 0 WHERE email = ?").bind(email).run();
   await brevoBlacklist(env, email).catch(() => {});
+}
+
+// --- Brevo inbound event webhook ------------------------------------------
+// Closes the deliverability loop: when a recipient hits "Report spam", an
+// address hard-bounces, or Brevo marks it blocked/invalid, Brevo POSTs the
+// event here and we run the SAME suppression as our own unsubscribe — KV
+// flag + D1 opt-out + Brevo blacklist. Path secret (brevo:webhook_secret in
+// KV) is the auth: Brevo sends no credentials, so the URL itself is the
+// credential. Soft bounces/deferrals are transient and deliberately ignored.
+const BREVO_SUPPRESS_EVENTS = new Set([
+  "spam", "hardBounce", "invalid", "invalidEmail", "blocked", "unsubscribed",
+]);
+
+export async function handleBrevoWebhook(
+  req: Request, env: Env, path: string,
+): Promise<Response> {
+  if (req.method !== "POST") return json({ error: "method" }, 405);
+  const sec = path.split("/").pop() ?? "";
+  const expected = await env.EPHEMERAL.get("brevo:webhook_secret");
+  if (!expected || sec !== expected) return json({ error: "forbidden" }, 403);
+  const ev = (await req.json().catch(() => ({}))) as
+    { event?: string; email?: string };
+  const email = (ev.email ?? "").trim().toLowerCase();
+  const suppress = BREVO_SUPPRESS_EVENTS.has(ev.event ?? "") && email.includes("@");
+  if (suppress) await unsubscribeEmail(env, email);
+  const list = JSON.parse(
+    (await env.EPHEMERAL.get("brevo:events")) ?? "[]") as unknown[];
+  list.unshift({ event: ev.event, email, suppressed: suppress,
+    received_at: new Date().toISOString() });
+  await env.EPHEMERAL.put("brevo:events", JSON.stringify(list.slice(0, 50)));
+  return json({ ok: true, suppressed: suppress });
 }
 // are free, unlimited and not legally binding), then calls the SignWell API.
 // Returns {connected:false} when no credential is set.
