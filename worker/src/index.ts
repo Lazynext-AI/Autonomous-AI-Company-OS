@@ -47,6 +47,17 @@ async function handleQuery(env: Env, ctx: ExecutionContext, body: { sql: string;
     return json({ results: res.results ?? [] });
   }
   const res = await stmt.run();
+  // Write-audit: non-read /query calls mutate D1 with no other trail — a
+  // task_log row once vanished leaving zero forensic trace. Log the SQL
+  // (episodic_events inserts skip it — the event row already is the record).
+  if (!/^\s*insert\s+into\s+episodic_events/i.test(body.sql)) {
+    ctx.waitUntil(
+      env.DB.prepare("INSERT INTO episodic_events (scope, payload) VALUES ('query_audit', ?)")
+        .bind(JSON.stringify({ sql: body.sql.slice(0, 4000), changes: res.meta.changes ?? 0 }))
+        .run()
+        .catch(() => undefined),
+    );
+  }
   // Briefing inserts double as events for webhook subscribers.
   if (/insert\s+into\s+briefings/i.test(body.sql) && res.success) {
     ctx.waitUntil(
@@ -56,9 +67,19 @@ async function handleQuery(env: Env, ctx: ExecutionContext, body: { sql: string;
   return json({ success: res.success, meta: res.meta });
 }
 
-async function handleBatch(env: Env, body: { statements: { sql: string; params?: unknown[] }[] }) {
+async function handleBatch(env: Env, ctx: ExecutionContext, body: { statements: { sql: string; params?: unknown[] }[] }) {
   const stmts = body.statements.map((s) => env.DB.prepare(s.sql).bind(...(s.params ?? [])));
   const results = await env.DB.batch(stmts);
+  // Same write-audit as /query — a DELETE through /batch must not evade it.
+  const audit = body.statements
+    .filter((s) => !isReadQuery(s.sql) && !/^\s*insert\s+into\s+episodic_events/i.test(s.sql))
+    .map((s) =>
+      env.DB.prepare("INSERT INTO episodic_events (scope, payload) VALUES ('query_audit', ?)")
+        .bind(JSON.stringify({ sql: s.sql.slice(0, 4000), batch: true }))
+        .run()
+        .catch(() => undefined),
+    );
+  if (audit.length) ctx.waitUntil(Promise.all(audit));
   return json({
     results: results.map((r) => ({
       success: r.success,
@@ -146,7 +167,7 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
     case "/query":
       return handleQuery(env, ctx, await readBody(req));
     case "/batch":
-      return handleBatch(env, await readBody(req));
+      return handleBatch(env, ctx, await readBody(req));
 
     case "/bus/publish": {
       const b = await readBody<{ channel: string; payload: string }>(req);
