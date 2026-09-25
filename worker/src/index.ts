@@ -777,20 +777,26 @@ async function operate(env: Env, ctx: ExecutionContext, brain: Brain, urls: Reco
 // tight to observed escalation classes — misses still die at the write/test
 // gates. Mirror of agents/strategic/cto_agent.py — keep in sync.
 const INFEASIBLE_TASK_PATTERNS: [string, RegExp][] = [
-  ["landing/multi-page surface", /landing[\s-]?page|multi[\s-]?page|onboarding (flow|wizard|experience)/i],
+  // Kill decisions gate on the deliverable being the dead thing — build-verbs
+  // before infra nouns — so "optimize the landing page", "write a follow-up
+  // email", or "sales outreach targeting mobile app developers" survive while
+  // "build a mobile app" / "create a new landing page" still die. The
+  // pre-2026-09-25 ungated patterns had a measured false-positive streak
+  // (7/7 native-app kills were legit marketing/docs tasks).
+  ["landing/multi-page surface", /\b(build|create|develop|launch|add|ship|spin[\s-]?up)\w*\s+(?:an?\s+|the\s+|our\s+)?(?:(?:new|separate|dedicated|extra|additional)[\s-]?)?(?:\w+[\s-]?){0,2}(landing|marketing|sales|promo)[\s-]?page|multi[\s-]?page|onboarding (flow|wizard|experience)/i],
   ["a/b experiment", /\b(a\/?b|split)[\s-]?test/i],
-  ["user accounts/auth", /user[\s-]?(account|login|dashboard|profile|registration|auth)|\b(sign[\s-]?up|log[\s-]?in|jwt|oauth|sso|saml)\b/i],
-  ["document-file scanning", /\bpdf\b|\bdocx?\b|document[\s-]?file|file upload/i],
-  ["native app", /mobile app|ios app|android app|react native|desktop app|electron/i],
-  ["analytics/tracking system", /\b(analytics|telemetry|metrics)\b|tracking (system|pixel|infrastructure)|campaign (effectiveness|performance) tracking/i],
-  ["email/notification system", /(notification|alerting) (system|service|engine)|email (system|automation|infrastructure|delivery)|follow[\s-]?up email|\bdrip\b/i],
+  ["user accounts/auth", /\b(jwt|sso|saml)\b|\b(build|create|develop|implement|add|new)\w*\s+[^,.;]{0,25}\b(user[\s-]?(accounts?|dashboard|profile|registration)|sign[\s-]?up|log[\s-]?in|oauth)/i],
+  ["document-file scanning", /\bpdf\b[^,.;]{0,30}\b(scan|pars|import|upload|process|analy|extract)\w*|\b(scan|pars|import|upload|process|analy|extract)\w*\b[^,.;]{0,30}\bpdf\b|\bpdf[\s-]?(documents?|files?)\b|\bdocx\b|word (doc|document|file)|document[\s-]?file|file upload/i],
+  ["native app", /\b(build|develop|create|implement|ship|code|write|design|architect|launch|release|add)\w*\s+(?:an?\s+|the\s+|our\s+)?(?:new\s+)?(?:mobile|ios|android|desktop|native|electron|react[\s-]native)\s+(?:app|application|client)\b/i],
+  ["analytics/tracking system", /\banalytics\b|\btelemetry\b|tracking (system|pixel|infrastructure)|campaign (effectiveness|performance) tracking|metrics (system|dashboard|module|pipeline|infrastructure|collection|tracking)|(dashboard|module|system|pipeline|platform|service|feature)\b[^,.;]{0,55}\bmetrics\b|\b(implement|build|add|create|develop|set\s?up)\w*\s+tracking\b/i],
+  ["email/notification system", /(notification|alerting|messaging) (system|service|engine|infrastructure)|email (system|infrastructure|delivery)|\b(build|create|develop|implement|add|automate|set\s?up)\w*\s+[^,.;]{0,25}\b(email automation|drip (campaign|sequence)|follow[\s-]?up (email )?(sequence|automation|system|engine))/i],
   ["feedback surface", /feedback (endpoint|form|system|collection|widget)/i],
   ["deploy automation", /deploy(ment)? automation|auto[\s-]?deploy|\bci\/?cd\b|deployment pipeline|\brollback\b/i],
-  ["lead capture", /lead (capture|scoring|form)|newsletter/i],
+  ["lead capture", /\b(build|create|develop|implement|add|new)\w*\s+[^,.;]{0,25}\blead[\s-]?(capture|scoring|form)\b|newsletter (system|feature|platform|signup|engine)/i],
   ["extra payment provider", /\b(stripe|paypal|paddle|lemonsqueezy|razorpay|payment gateway)\b/i],
   ["extra email provider", /\b(sendgrid|mailgun|postmark)\b|resend (api|integration|provider)/i],
   ["export format", /(csv|excel)[\s-]?export|export (to|as) (csv|pdf|excel)/i],
-  ["per-user personalization", /personaliz|saved (history|scans|reports)|scan history/i],
+  ["per-user personalization", /personaliz\w*\b[^,.;]{0,40}\b(recommendation|feature|system|experience|dashboard|engine|guidance)|per[\s-]?user (recommendation|feature|personalization)|saved (history|scans|reports)|scan history/i],
   ["monitoring system", /monitoring (system|service|dashboard|platform)|uptime monitor/i],
   ["python-stack deliverable", /\b[\w/.-]*\.py\b|\bpytest\b/i],
 ];

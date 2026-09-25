@@ -41,20 +41,26 @@ RULES:
 # silently drops real work; misses still die at the write/test/fitness gates.
 # Mirrored in worker/src/index.ts (INFEASIBLE_TASK_PATTERNS) — keep in sync.
 _INFEASIBLE_SPECS: list[tuple[str, str]] = [
-    ("landing/multi-page surface", r"landing[\s-]?page|multi[\s-]?page|onboarding (flow|wizard|experience)"),
+    # Kill decisions gate on the deliverable being the dead thing — build-verbs
+    # before infra nouns — so "optimize the landing page", "write a follow-up
+    # email", or "sales outreach targeting mobile app developers" survive while
+    # "build a mobile app" / "create a new landing page" still die. The
+    # pre-2026-09-25 ungated patterns had a measured false-positive streak
+    # (7/7 native-app kills were legit marketing/docs tasks).
+    ("landing/multi-page surface", r"\b(build|create|develop|launch|add|ship|spin[\s-]?up)\w*\s+(?:an?\s+|the\s+|our\s+)?(?:(?:new|separate|dedicated|extra|additional)[\s-]?)?(?:\w+[\s-]?){0,2}(landing|marketing|sales|promo)[\s-]?page|multi[\s-]?page|onboarding (flow|wizard|experience)"),
     ("a/b experiment", r"\b(a/?b|split)[\s-]?test"),
-    ("user accounts/auth", r"user[\s-]?(account|login|dashboard|profile|registration|auth)|\b(sign[\s-]?up|log[\s-]?in|jwt|oauth|sso|saml)\b"),
-    ("document-file scanning", r"\bpdf\b|\bdocx?\b|document[\s-]?file|file upload"),
-    ("native app", r"mobile app|ios app|android app|react native|desktop app|electron"),
-    ("analytics/tracking system", r"\b(analytics|telemetry|metrics)\b|tracking (system|pixel|infrastructure)|campaign (effectiveness|performance) tracking"),
-    ("email/notification system", r"(notification|alerting) (system|service|engine)|email (system|automation|infrastructure|delivery)|follow[\s-]?up email|\bdrip\b"),
+    ("user accounts/auth", r"\b(jwt|sso|saml)\b|\b(build|create|develop|implement|add|new)\w*\s+[^,.;]{0,25}\b(user[\s-]?(accounts?|dashboard|profile|registration)|sign[\s-]?up|log[\s-]?in|oauth)"),
+    ("document-file scanning", r"\bpdf\b[^,.;]{0,30}\b(scan|pars|import|upload|process|analy|extract)\w*|\b(scan|pars|import|upload|process|analy|extract)\w*\b[^,.;]{0,30}\bpdf\b|\bpdf[\s-]?(documents?|files?)\b|\bdocx\b|word (doc|document|file)|document[\s-]?file|file upload"),
+    ("native app", r"\b(build|develop|create|implement|ship|code|write|design|architect|launch|release|add)\w*\s+(?:an?\s+|the\s+|our\s+)?(?:new\s+)?(?:mobile|ios|android|desktop|native|electron|react[\s-]native)\s+(?:app|application|client)\b"),
+    ("analytics/tracking system", r"\banalytics\b|\btelemetry\b|tracking (system|pixel|infrastructure)|campaign (effectiveness|performance) tracking|metrics (system|dashboard|module|pipeline|infrastructure|collection|tracking)|(dashboard|module|system|pipeline|platform|service|feature)\b[^,.;]{0,55}\bmetrics\b|\b(implement|build|add|create|develop|set\s?up)\w*\s+tracking\b"),
+    ("email/notification system", r"(notification|alerting|messaging) (system|service|engine|infrastructure)|email (system|infrastructure|delivery)|\b(build|create|develop|implement|add|automate|set\s?up)\w*\s+[^,.;]{0,25}\b(email automation|drip (campaign|sequence)|follow[\s-]?up (email )?(sequence|automation|system|engine))"),
     ("feedback surface", r"feedback (endpoint|form|system|collection|widget)"),
     ("deploy automation", r"deploy(ment)? automation|auto[\s-]?deploy|\bci/?cd\b|deployment pipeline|\brollback\b"),
-    ("lead capture", r"lead (capture|scoring|form)|newsletter"),
+    ("lead capture", r"\b(build|create|develop|implement|add|new)\w*\s+[^,.;]{0,25}\blead[\s-]?(capture|scoring|form)\b|newsletter (system|feature|platform|signup|engine)"),
     ("extra payment provider", r"\b(stripe|paypal|paddle|lemonsqueezy|razorpay|payment gateway)\b"),
     ("extra email provider", r"\b(sendgrid|mailgun|postmark)\b|resend (api|integration|provider)"),
     ("export format", r"(csv|excel)[\s-]?export|export (to|as) (csv|pdf|excel)"),
-    ("per-user personalization", r"personaliz|saved (history|scans|reports)|scan history"),
+    ("per-user personalization", r"personaliz\w*\b[^,.;]{0,40}\b(recommendation|feature|system|experience|dashboard|engine|guidance)|per[\s-]?user (recommendation|feature|personalization)|saved (history|scans|reports)|scan history"),
     ("monitoring system", r"monitoring (system|service|dashboard|platform)|uptime monitor"),
     ("python-stack deliverable", r"\b[\w/.-]*\.py\b|\bpytest\b"),
 ]

@@ -41,3 +41,50 @@ def test_existing_dead_classes_still_caught() -> None:
     assert infeasible_task_reason("add a landing page") == "landing/multi-page surface"
     assert infeasible_task_reason("implement Stripe payments") == "extra payment provider"
     assert infeasible_task_reason("scan PDF documents") == "document-file scanning"
+
+
+def test_deliverable_gated_patterns() -> None:
+    # Dead classes that only kill when the noun IS the deliverable —
+    # verb + optional qualifier + noun, not a bare substring.
+    for desc in (
+        "Develop a mobile app that scans websites",
+        "Create an iOS application for report viewing",
+        "Build a react native client",
+        "Create a new landing page for the Q4 campaign",
+        "Develop PDF document scanning capabilities",
+        "Develop a new module for PDF document analysis",
+        "Build a lead capture system",
+        "Set up drip campaign automation",
+        "Develop personalized accessibility recommendations",
+        "Create a dashboard to track key metrics",
+        "Implement tracking for user engagement",
+        "Add a signup form with OAuth",
+    ):
+        assert infeasible_task_reason(desc) is not None, desc
+
+
+def test_audience_and_copy_mentions_survive() -> None:
+    # Measured false positives — every one of these was auto-killed by the
+    # ungated patterns before 2026-09-25 despite being legit marketing/docs
+    # work. The dead noun appearing in an audience/context phrase must not
+    # kill the task; only the deliverable noun kills.
+    for desc in (
+        "Create a sales outreach campaign targeting mobile app developers",
+        "Create a sales outreach sequence to target mobile app development companies and accessibility consultants",
+        "Develop a targeted marketing campaign to promote the accessibility checker product to mobile app development companies",
+        "Develop a tutorial on how to integrate the Accessibility Checker tool into a mobile app development workflow",
+        "Create a technical guide for integrating the accessibility checker product with popular mobile app development tools",
+        "Create a guide for customers on how to use the Accessibility Checker tool to improve the accessibility of their mobile apps",
+        "Optimize the product's landing page for better conversion rates",
+        "Improve the accessibility checker product's landing page to increase conversion rates",
+        "Write a follow-up email template for trial users",
+        "Create newsletter content for existing customers",
+        "Create email templates for sales outreach and lead capture",
+        "Write personalized outreach emails to accessibility consultants",
+        "Improve the PDF report styling and layout",
+        "Create a doc explaining the SDK authentication flow",
+        "Create a report to analyze trial extension requests and conversion funnel metrics",
+        "Improve the login page accessibility",
+        "Add scan metrics to the existing dashboard",
+    ):
+        assert infeasible_task_reason(desc) is None, desc
