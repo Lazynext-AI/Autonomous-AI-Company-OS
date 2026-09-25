@@ -139,6 +139,7 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
     const focusTrace: string[] = [];
     let focusable = 0;
     let undersized: { d: string; w: number; h: number }[] = [];
+    let undersizedAAA: { d: string; w: number; h: number }[] = [];
     const obscured = new Set<string>();
     const noFocusInd = new Set<string>();
     let nontextContrast: { d: string; ratio: number }[] = [];
@@ -163,6 +164,7 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
         const win = (globalThis as any).window;
         let n = 0;
         const under: { d: string; w: number; h: number }[] = [];
+        const underAAA: { d: string; w: number; h: number }[] = [];
         Array.from(doc.querySelectorAll(sel) as any).forEach((el: any, idx: number) => {
           const r = el.getBoundingClientRect();
           const cs = win.getComputedStyle(el);
@@ -177,11 +179,17 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
           if (r.width < 24 && r.height < 24 && !inlineLink && !uaSized) {
             under.push({ d: `${idx}:${tag}${el.id ? "#" + el.id : ""}`, w: Math.round(r.width), h: Math.round(r.height) });
           }
+          // WCAG 2.5.5 (AAA) — targets under 44x44px. The <24px band is already
+          // an AA failure (2.5.8); this captures the 24-43px band between them.
+          if (r.width < 44 && r.height < 44 && !(r.width < 24 && r.height < 24) && !inlineLink && !uaSized) {
+            underAAA.push({ d: `${idx}:${tag}${el.id ? "#" + el.id : ""}`, w: Math.round(r.width), h: Math.round(r.height) });
+          }
         });
-        return { count: n, under };
+        return { count: n, under, underAAA };
       }, FOCUSABLE_SEL);
       focusable = census.count;
       undersized = census.under;
+      undersizedAAA = census.underAAA;
       for (let i = 0; i < 24; i++) {
         await page.keyboard.press("Tab");
         const entry = String(await readFocus());
@@ -303,6 +311,7 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
       focus: focusTrace,
       focusable,
       undersized,
+      undersizedAAA,
       obscured: Array.from(obscured),
       noFocusInd: Array.from(noFocusInd),
       nontextContrast,

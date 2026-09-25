@@ -78,7 +78,7 @@ D1 + KV (`EPHEMERAL`) + Vectorize (`VECTORS`, index `company-knowledge`, 384d)
 
 ## Product worker deploys
 
-`accessibility-checker` has no wrangler.toml — it deploys via the Cloudflare scripts Upload API (multipart). Two traps, both hit and verified:
+`accessibility-checker` has no wrangler.toml — deploy with `node scripts/deploy.mjs` inside `products/accessibility-checker` (env: `CLOUDFLARE_DEPLOY_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`; uploads all modules to **both** script names and health-checks each). Manual multipart deploys — two traps, both hit and verified:
 
 - `bindings` omitted from upload metadata **silently drops them at runtime** — the settings API still lists them but `env.PLATFORM` is undefined (error 1101). Always re-send the full non-secret binding set.
 - `secret_text` nuance (verified live 2026-09-25): a secret binding listed **without** `text` fails 10021, but a secret **omitted entirely** keeps its existing value — `env.PLATFORM_TOKEN` survived an upload that didn't list it. Omit secrets; never send them with empty text. `PLATFORM_TOKEN` = the worker bearer = `.env`'s `CLOUDFLARE_API_TOKEN`.
