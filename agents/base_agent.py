@@ -26,6 +26,17 @@ if TYPE_CHECKING:
     from core.evaluation.reward_engine import RewardEngine
     from core.evaluation.scorer import PerformanceScorer
 
+# Spec-level vetoes where the task can never ship as written — protected-path
+# blocks, task-fit rejections, and phantom-import rejections are static gate
+# outcomes that retry identically forever, so they die as `failed` instead of
+# escalating for human review. Deliberately absent: "repo test suite failed"
+# and runtime exceptions — both may be real fixable defects worth human eyes.
+_DETERMINISTIC_VETO_MARKERS = (
+    "deliverable blocked:",
+    "deliverable rejected: task-fit",
+    "deliverable rejected: phantom",
+)
+
 
 class TaskResult(BaseModel):
     """Task execution result."""
@@ -214,6 +225,7 @@ class BaseAgent(ABC):
         await self.agent_memory.mark_prompts_consumed(self.agent_id)
         extra_context = "\n".join(prompts) if prompts else ""
         last_error = ""
+        attempt_errors: list[str] = []
         last_result = TaskResult(
             task_id=task.task_id,
             success=False,
@@ -289,6 +301,7 @@ class BaseAgent(ABC):
                     err_msg = result.error or "Task returned unsuccessful result"
                     last_error = err_msg
                     last_result = result
+                    attempt_errors.append(err_msg)
                     await self.agent_memory.record_task_failed(
                         self.agent_id, task.task_id, err_msg, result.approach_used
                     )
@@ -305,36 +318,57 @@ class BaseAgent(ABC):
                     error=last_error,
                     approach_used=f"attempt_{attempt}_exception",
                 )
+                attempt_errors.append(last_error)
                 self.logger.error("attempt_failed", attempt=attempt, error=last_error)
                 await self.agent_memory.increment_retry(self.agent_id)
                 await self.task_tracker.append_error(task.task_id, last_error, attempt)
 
-        await self.task_tracker.mark_escalated(
-            task.task_id,
-            self.agent_id,
-            last_error or f"Task {task.task_id} failed after retries",
-            5,
-        )
-        await self.episodic_memory.add_event(
-            self.agent_id, "task_escalated", f"Task {task.task_id} escalated after 5 attempts"
-        )
-        await self.message_bus.publish(
-            Channels.QA_ALERTS,
-            QAAlertMessage(
-                from_agent=self.agent_id,
-                severity="HIGH",
-                error_details=f"Task {task.task_id} failed after 5 attempts. Last error: {last_error}",
-            ),
-        )
-        await self.message_bus.publish(
-            Channels.HR_REQUESTS,
-            HRRequestMessage(
-                from_agent=self.agent_id,
-                request_type="spawn_agent",
-                role_needed=self.role,
-                reason="Task escalated",
-            ),
-        )
+        if attempt_errors and all(
+            self._is_deterministic_veto(e) for e in attempt_errors
+        ):
+            # Every attempt hit a spec-level veto (protected paths, task-fit,
+            # phantom imports) — the task can never ship as specified, so it
+            # dies as `failed` rather than escalated. No QA alert or HR spawn:
+            # a human cannot fix a task spec that violates static gates.
+            # Test-gate failures and exceptions stay escalatable — they may be
+            # real implementation defects worth human review.
+            await self.task_tracker.mark_failed(
+                task.task_id,
+                self.agent_id,
+                f"infeasible: spec-level veto — {last_error or 'deterministic rejection'}",
+                5,
+            )
+            await self.episodic_memory.add_event(
+                self.agent_id, "task_failed_terminal",
+                f"Task {task.task_id} failed terminally — deterministic veto",
+            )
+        else:
+            await self.task_tracker.mark_escalated(
+                task.task_id,
+                self.agent_id,
+                last_error or f"Task {task.task_id} failed after retries",
+                5,
+            )
+            await self.episodic_memory.add_event(
+                self.agent_id, "task_escalated", f"Task {task.task_id} escalated after 5 attempts"
+            )
+            await self.message_bus.publish(
+                Channels.QA_ALERTS,
+                QAAlertMessage(
+                    from_agent=self.agent_id,
+                    severity="HIGH",
+                    error_details=f"Task {task.task_id} failed after 5 attempts. Last error: {last_error}",
+                ),
+            )
+            await self.message_bus.publish(
+                Channels.HR_REQUESTS,
+                HRRequestMessage(
+                    from_agent=self.agent_id,
+                    request_type="spawn_agent",
+                    role_needed=self.role,
+                    reason="Task escalated",
+                ),
+            )
         if self.reward_engine:
             try:
                 await self.reward_engine.process_score(
@@ -346,6 +380,10 @@ class BaseAgent(ABC):
             except Exception as e:
                 self.logger.warning("reward_engine_failure_path_failed", error=str(e))
         self.current_task = None
+
+    @staticmethod
+    def _is_deterministic_veto(error: str) -> bool:
+        return any(m in error.lower() for m in _DETERMINISTIC_VETO_MARKERS)
 
     async def on_success(self, task: TaskMessage, result: TaskResult) -> None:
         """Handle successful task completion."""

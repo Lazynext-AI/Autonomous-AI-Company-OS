@@ -200,6 +200,10 @@ class BackendAgent(BaseAgent):
                     elif write_result.get("tests_failed"):
                         result.error = "Deliverable rejected: repo test suite failed — fix and reship"
                         result.lesson = "Generated code must pass the repo's node --test suite"
+                    elif write_result.get("phantom_imports"):
+                        result.error = ("Deliverable rejected: phantom imports — generated code "
+                                        "references modules that don't exist")
+                        result.lesson = "Import only package.json deps or Node builtins"
                     else:
                         result.error = "Deliverable rejected: task-fit review found it wrong for this product"
                         result.lesson = "Generated code must fit the real product surface"
