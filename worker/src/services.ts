@@ -367,8 +367,12 @@ export async function unsubscribeEmail(env: Env, email: string): Promise<void> {
 // flag + D1 opt-out + Brevo blacklist. Path secret (brevo:webhook_secret in
 // KV) is the auth: Brevo sends no credentials, so the URL itself is the
 // credential. Soft bounces/deferrals are transient and deliberately ignored.
+// NOTE on event names: the *registration* enum uses camelCase ("hardBounce",
+// "invalid") but the actual POST payloads carry snake_case values
+// ("hard_bounce", "invalid_email") — so we normalize before matching.
 const BREVO_SUPPRESS_EVENTS = new Set([
-  "spam", "hardBounce", "invalid", "invalidEmail", "blocked", "unsubscribed",
+  "spam", "complaint", "hardbounce", "invalidemail", "invalid",
+  "blocked", "unsubscribed",
 ]);
 
 export async function handleBrevoWebhook(
@@ -378,17 +382,27 @@ export async function handleBrevoWebhook(
   const sec = path.split("/").pop() ?? "";
   const expected = await env.EPHEMERAL.get("brevo:webhook_secret");
   if (!expected || sec !== expected) return json({ error: "forbidden" }, 403);
-  const ev = (await req.json().catch(() => ({}))) as
-    { event?: string; email?: string };
-  const email = (ev.email ?? "").trim().toLowerCase();
-  const suppress = BREVO_SUPPRESS_EVENTS.has(ev.event ?? "") && email.includes("@");
-  if (suppress) await unsubscribeEmail(env, email);
+  const body = await req.json().catch(() => ({})) as
+    { event?: string; email?: string; events?: { event?: string; email?: string }[] }
+    | { event?: string; email?: string }[];
+  // Brevo sends one object per event; a `batched` webhook (not enabled today)
+  // would deliver an array or {events:[...]} — handle all shapes.
+  const events: { event?: string; email?: string }[] = Array.isArray(body)
+    ? body
+    : Array.isArray(body?.events) ? body.events : [body];
   const list = JSON.parse(
     (await env.EPHEMERAL.get("brevo:events")) ?? "[]") as unknown[];
-  list.unshift({ event: ev.event, email, suppressed: suppress,
-    received_at: new Date().toISOString() });
+  let suppressedAny = false;
+  for (const ev of events) {
+    const email = (ev.email ?? "").trim().toLowerCase();
+    const name = (ev.event ?? "").toLowerCase().replace(/[_-]/g, "");
+    const suppress = BREVO_SUPPRESS_EVENTS.has(name) && email.includes("@");
+    if (suppress) { await unsubscribeEmail(env, email); suppressedAny = true; }
+    list.unshift({ event: ev.event, email, suppressed: suppress,
+      received_at: new Date().toISOString() });
+  }
   await env.EPHEMERAL.put("brevo:events", JSON.stringify(list.slice(0, 50)));
-  return json({ ok: true, suppressed: suppress });
+  return json({ ok: true, suppressed: suppressedAny });
 }
 // are free, unlimited and not legally binding), then calls the SignWell API.
 // Returns {connected:false} when no credential is set.
