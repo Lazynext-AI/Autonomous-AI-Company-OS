@@ -438,6 +438,9 @@ async function advanceLeadSequence(env: Env) {
     const email = k.name.slice(6);
     const started = parseInt((await env.EPHEMERAL.get(k.name)) ?? "0", 10);
     if (!started || (Date.now() - started) / 86_400_000 < 11) continue;
+    // Notification-class send — honor suppression (unsubscribed addresses
+    // include hard-bounces; daily mail to them damages sender reputation).
+    if (await env.EPHEMERAL.get(`unsub:${email}`)) continue;
     const s = await brevoSend(
       env, email,
       "Your Accessibility Checker Pro trial ends in 3 days",
@@ -496,6 +499,9 @@ async function advanceLeadSequence(env: Env) {
       }));
       sweep.scanned++;
       if (dropped) {
+        // Same suppression rule as the trial reminder above — a monitor alert
+        // is a recurring notification, not an action-confirmation.
+        if (await env.EPHEMERAL.get(`unsub:${rec.email}`)) continue;
         await brevoSend(
           env,
           rec.email,

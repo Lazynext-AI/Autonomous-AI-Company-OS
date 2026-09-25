@@ -242,7 +242,12 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
       const seen = new Set<string>();
       let stall = 0;
       let prev = "";
-      for (let i = 0; i < 24; i++) {
+      // Adaptive depth: coverage needs a trace of `focusable` presses, so a
+      // census in the 25–40 band gets a matching window (+2 slack presses for
+      // body/chrome hops). Beyond 40 coverage is unprovable anyway — keep the
+      // 24-press cycle-detection window rather than paying extra round-trips.
+      const maxTab = focusable > 24 && focusable <= 40 ? focusable + 2 : 24;
+      for (let i = 0; i < maxTab; i++) {
         await page.keyboard.press("Tab");
         const probe = (await readFocusProbe()) as { entry: string; hidden: boolean; noInd: boolean };
         const entry = probe.entry;
@@ -341,6 +346,17 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
         const triggers = await page.$$(
           '[aria-haspopup="dialog"],[aria-haspopup="true"],[data-bs-toggle],[data-toggle],[data-target],[data-modal],button',
         );
+        // Poll for a state instead of a fixed sleep — exits as soon as the
+        // predicate holds, only pays the full wait when it never does.
+        const poll = async (ms: number, until: () => Promise<unknown>) => {
+          const t0 = Date.now();
+          let v = await until();
+          while (!v && Date.now() - t0 < ms) {
+            await sleep(60);
+            v = await until();
+          }
+          return v;
+        };
         for (const h of triggers.slice(0, 4)) {
           const urlBefore = page.url();
           const desc = await page.evaluate((el: any) => {
@@ -358,7 +374,7 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
           if (!desc) continue;
           if (await openDialog()) break; // earlier probe left a dialog open — state unrecoverable
           await h.click().catch(() => {});
-          await sleep(350);
+          await poll(350, () => openDialog());
           if (page.url() !== urlBefore) {
             await page.goBack().catch(() => {});
             continue;
@@ -367,7 +383,8 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
           if (!opened) continue;
           const beforeEscProbe = await readFocus();
           await page.keyboard.press("Escape");
-          await sleep(150);
+          // Wait for the dialog to close — up to 150ms, usually faster.
+          await poll(150, async () => ((await openDialog()) ? null : "closed"));
           const still = await openDialog();
           clickTraps.push({
             trigger: desc,
@@ -379,7 +396,7 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
             // Backdrop click to try dismissing a stuck overlay; if it won't
             // close, further triggers can't be probed meaningfully.
             await page.mouse.click(5, 5).catch(() => {});
-            await sleep(150);
+            await poll(150, async () => ((await openDialog()) ? null : "closed"));
             if (await openDialog()) break;
           }
         }
