@@ -64,6 +64,7 @@ _INFEASIBLE_SPECS: list[tuple[str, str]] = [
     ("monitoring system", r"monitoring (system|service|dashboard|platform)|uptime monitor"),
     ("python-stack deliverable", r"\b[\w/.-]*\.py\b|\bpytest\b"),
     ("src/ test file", r"\bsrc/[\w/.-]*tests?\.(?:js|mjs)\b"),
+    ("deeper-coverage deliverable", r"\bdeeper\b[^,.;]{0,30}\b(wcag|ux|accessibility)?[\s-]?coverage\b"),
     ("generic wcag-detection", r"\b(detect|identify|report on|check for)\w*\s+[^,.;]{0,40}\bwcag\b[^,;]{0,40}\b(guideline |success )?violations?\b|\bfeature\b[^,.;]{0,50}\bwcag\b[^,;]{0,40}\bviolations?\b"),
     ("section 508", r"\bsection[\s-]?508\b"),
     ("multi-page scan", r"\b(scan|crawl)\w*\s+[^,.;]{0,25}\bmultiple pages?\b|\bmulti[\s-]?page (scan|crawl|report)\b"),
