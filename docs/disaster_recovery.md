@@ -34,6 +34,17 @@ the `.sql` to the same `d1 execute --file` command.
 3. Re-deploy both product workers if scripts were lost (see AGENTS.md —
    `accessibility-checker` + `accessibility-checker-api` must stay in sync).
 
+## Restore drills
+
+| Date | Drill | Result |
+|---|---|---|
+| 2026-09-26 | `backups/d1-20260924-060635.sql` (5.5 MB) loaded into local sqlite3 | **PASS** — 24 tables, `PRAGMA integrity_check` = ok. Row counts: `task_log` 415 (293 completed at snapshot), `agent_memories` 13, `knowledge_chunks` 258, `bus_messages` 1150, `briefings` 49, `episodic_events` 1914. |
+
+Remaining unproven step: the **remote** leg — `d1 execute --remote --file`
+into a scratch D1 database end-to-end. Re-run this drill after each schema
+migration; a dump that parses today can silently rot after the next
+`ALTER TABLE`.
+
 ## Known gaps
 
 - Artifact retention is 30 days — for longer history, download monthly or
