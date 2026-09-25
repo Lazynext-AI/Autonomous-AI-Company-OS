@@ -674,15 +674,21 @@ async function operate(env: Env, ctx: ExecutionContext, brain: Brain, urls: Reco
 
   // Failed/completed tasks feed back as a do-not-repeat list — exact-match
   // dedup alone lets the same idea regenerate under slightly different wording.
+  // Dead-corpus rows persist past the 24h window so killed classes stay dead.
   const recent = await env.DB.prepare(
     "SELECT description FROM task_log WHERE status IN ('failed','completed','escalated') ORDER BY created_at DESC LIMIT 15",
   )
     .all<{ description: string }>()
     .catch(() => ({ results: [] as { description: string }[] }));
-  const doneCtx = (recent.results ?? [])
+  const dead = await env.DB.prepare(
+    `SELECT description FROM task_log WHERE ${DEAD_CORPUS_WHERE} ORDER BY created_at DESC LIMIT 20`,
+  )
+    .all<{ description: string }>()
+    .catch(() => ({ results: [] as { description: string }[] }));
+  const doneCtx = [...(recent.results ?? []), ...(dead.results ?? [])]
     .map((r) => r.description)
     .filter(Boolean)
-    .slice(0, 15)
+    .slice(0, 30)
     .map((d) => d.slice(0, 60))
     .join(" | ");
 
@@ -714,7 +720,8 @@ async function operate(env: Env, ctx: ExecutionContext, brain: Brain, urls: Reco
     const infeasible = infeasibleTaskReason(task);
     if (infeasible) {
       // Terminal failed row — attempts=3 keeps agentTick from requeuing, and
-      // the row feeds taskAlreadyTried so paraphrases stay dead for 24h.
+      // the infeasible: marker lands it in the dead corpus so paraphrases
+      // stay dead permanently (not just for the 24h live window).
       await env.DB.prepare(
         "INSERT INTO task_log (task_id, agent_id, description, status, attempts, error_log, created_at) VALUES (lower(hex(randomblob(4))), ?, ?, 'failed', 3, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
       )
@@ -763,6 +770,16 @@ function infeasibleTaskReason(desc: string): string | null {
   return null;
 }
 
+// Terminal dead corpus: rows that died on a deterministic gate or were
+// retired as obsolete/superseded. Unlike the rolling 24h window these stay
+// dedup-visible forever — a paraphrased respawn of an impossible class is
+// guaranteed churn, and an old completed-purpose task should not be rebuilt.
+// Markers: error_log "infeasible:" (auto-kill + classifier), result
+// "retired:"/"obsolete:"/"infeasible:" (sweep annotations + local gate),
+// error_log "Deliverable " (write/test/fitness vetoes that burned attempts).
+const DEAD_CORPUS_WHERE =
+  "status IN ('failed','escalated') AND (result LIKE '%retired:%' OR result LIKE '%obsolete:%' OR result LIKE '%infeasible:%' OR error_log LIKE '%infeasible:%' OR error_log LIKE '%Deliverable %')";
+
 // Was this task already tried recently — in ANY status? Exact-match dedup on
 // pending only lets the same idea respawn under new wording forever (three
 // tasks rewrote the same doc file). Substring + content-word overlap catches
@@ -777,9 +794,16 @@ async function taskAlreadyTried(env: Env, desc: string): Promise<boolean> {
   )
     .all<{ description: string }>()
     .catch(() => ({ results: [] as { description: string }[] }));
+  // Dead corpus has no time bound — impossible/retired classes must never
+  // regenerate, however old the terminal row is.
+  const dead = await env.DB.prepare(
+    `SELECT description FROM task_log WHERE ${DEAD_CORPUS_WHERE} ORDER BY created_at DESC LIMIT 500`,
+  )
+    .all<{ description: string }>()
+    .catch(() => ({ results: [] as { description: string }[] }));
   const d = desc.toLowerCase().trim();
   const a = contentWords(d);
-  for (const r of rows.results ?? []) {
+  for (const r of [...(rows.results ?? []), ...(dead.results ?? [])]) {
     const t = (r.description ?? "").toLowerCase().trim();
     if (!t) continue;
     if (d.includes(t) || t.includes(d)) return true;

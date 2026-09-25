@@ -196,23 +196,41 @@ class CTOAgent(BaseAgent):
         await self.check_agent_workloads()
 
     async def _get_recent_tasks(self) -> list[dict]:
-        """Get recent tasks from task_log for duplicate prevention."""
+        """Get recent tasks + the terminal dead corpus for duplicate prevention."""
         try:
             from core.cloudflare_client import CloudflareClient
             from datetime import datetime, timedelta, timezone
-            
+
             client = CloudflareClient()
             if not client.is_configured():
                 return []
-            
+
             # Get tasks from last 24h — a 2h window lets the same idea
             # regenerate once older attempts scroll out of view.
             cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
-            
+
             def _fetch():
-                r = client.table("task_log").select("description,status,agent_id").gte("created_at", cutoff).order("created_at", ascending=False).limit(50).execute()
-                return r.data or []
-            
+                live = (client.table("task_log")
+                        .select("description,status,agent_id,created_at")
+                        .gte("created_at", cutoff)
+                        .order("created_at", ascending=False).limit(50)
+                        .execute().data or [])
+                # Terminal dead corpus: rows killed by a deterministic veto or
+                # retired as obsolete/superseded stay dedup-visible past the
+                # 24h window — a paraphrased respawn of an impossible class is
+                # guaranteed churn. Ordinary failures keep the 24h window so
+                # legit retries aren't suppressed forever.
+                dead = client.query(
+                    "SELECT description,status,agent_id,created_at FROM task_log "
+                    "WHERE status IN ('failed','escalated') AND (result LIKE ? "
+                    "OR result LIKE ? OR result LIKE ? OR error_log LIKE ? "
+                    "OR error_log LIKE ?) ORDER BY created_at DESC LIMIT 500",
+                    ["%retired:%", "%obsolete:%", "%infeasible:%",
+                     "%infeasible:%", "%Deliverable %"])
+                rows = live + dead
+                rows.sort(key=lambda r: r.get("created_at") or "", reverse=True)
+                return rows
+
             return await asyncio.to_thread(_fetch)
         except Exception as e:
             self.logger.warning("recent_tasks_fetch_failed", error=str(e))

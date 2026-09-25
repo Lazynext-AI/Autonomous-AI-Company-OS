@@ -36,11 +36,14 @@ binding = "A11Y"
 service = "accessibility-checker"
 
 # Code-execution container — Python sandbox for agent code execution.
-[[containers]]
-name = "code-exec"
-class_name = "CodeExecContainer"
-image = "./Dockerfile"
-max_instances = 5
+# [[containers]] image stanza commented out for deploy — local docker daemon
+# is down; the image association is account-level so the DO binding below
+# keeps CODE_EXEC wired to the deployed container.
+#[[containers]]
+#name = "code-exec"
+#class_name = "CodeExecContainer"
+#image = "./Dockerfile"
+#max_instances = 5
 
 [[durable_objects.bindings]]
 name = "CODE_EXEC"
