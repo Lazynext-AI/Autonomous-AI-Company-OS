@@ -258,39 +258,68 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
         if (entry !== "body") seen.add(entry);
         if (stall >= 4 || (focusable > 0 && seen.size >= focusable)) break;
       }
-      const beforeEsc = await readFocus();
-      const inDialog = await page.evaluate(() => {
-        const el = (globalThis as any).document.activeElement;
-        return !!(el && (el as any).closest && (el as any).closest('dialog,[role="dialog"]'));
-      });
-      await page.keyboard.press("Escape");
-      escape = { inDialog, responds: String(await readFocus()) !== String(beforeEsc) };
-
-      // Backward trace — Shift+Tab retreat from wherever forward focus ended.
-      // Regions that let focus in but swallow Shift+Tab are a trap class the
-      // forward-only trace cannot see.
-      try {
-        await page.keyboard.down("Shift");
-        let bstall = 0;
-        let bprev = "";
-        for (let i = 0; i < 8; i++) {
-          await page.keyboard.press("Tab");
-          const e = String(await readFocus());
-          backtrace.push(e);
-          bstall = e === bprev ? bstall + 1 : 1;
-          bprev = e;
-          if (bstall >= 4) break; // ≥4-run stall is the full trap signature
+      // When the census found no focusables or the forward trace already
+      // hard-stalled (stall >= 4 — the full trap signature downstream), the
+      // Escape/backtrace/click probes below cannot surface any rule the
+      // forward trace didn't already flag. Skipping them saves ~20 round
+      // trips on keyboard-inaccessible or trapped pages.
+      const probesDone = focusable === 0 || stall >= 4;
+      if (!probesDone) {
+        // Escape probe — before-state and in-dialog merged into one
+        // round-trip. Focus on <body> can never be inside a dialog, so the
+        // probe is skipped entirely in that case (escape stays null and the
+        // downstream check simply doesn't fire).
+        const preEsc = (await page.evaluate((sel) => {
+          const doc = (globalThis as any).document;
+          const el = doc.activeElement;
+          const inside = !!(el && (el as any).closest && (el as any).closest('dialog,[role="dialog"]'));
+          if (!el || el === doc.body) return { entry: "body", inDialog: inside };
+          const idx = Array.from(doc.querySelectorAll(sel) as any).indexOf(el);
+          const desc = `${String(el.tagName).toLowerCase()}${el.id ? "#" + el.id : ""}${String((el as any).innerText ?? "").trim() ? ":" + String((el as any).innerText).trim().slice(0, 25) : ""}`;
+          return { entry: `${idx}:${desc}`, inDialog: inside };
+        }, FOCUSABLE_SEL)) as { entry: string; inDialog: boolean };
+        if (preEsc.entry !== "body" || preEsc.inDialog) {
+          await page.keyboard.press("Escape");
+          escape = { inDialog: preEsc.inDialog, responds: String(await readFocus()) !== preEsc.entry };
         }
-        await page.keyboard.up("Shift");
-      } catch {
-        await page.keyboard.up("Shift").catch(() => {});
+
+        // Backward trace — Shift+Tab retreat from wherever forward focus
+        // ended. Regions that let focus in but swallow Shift+Tab are a trap
+        // class the forward-only trace cannot see. Early exits mirror the
+        // downstream exclusions: reaching 'body' or the first forward-focused
+        // element means the retreat completed (neither can be flagged), and a
+        // completed 2-cycle tail is the signature findTailCycle needs.
+        const firstFwd = focusTrace.find((t) => t !== "body") ?? "";
+        try {
+          await page.keyboard.down("Shift");
+          let bstall = 0;
+          let bprev = "";
+          for (let i = 0; i < 8; i++) {
+            await page.keyboard.press("Tab");
+            const e = String(await readFocus());
+            backtrace.push(e);
+            bstall = e === bprev ? bstall + 1 : 1;
+            bprev = e;
+            const n = backtrace.length;
+            const twoCycle = n >= 6
+              && backtrace[n - 1] === backtrace[n - 3] && backtrace[n - 3] === backtrace[n - 5]
+              && backtrace[n - 2] === backtrace[n - 4] && backtrace[n - 4] === backtrace[n - 6]
+              && backtrace[n - 1] !== backtrace[n - 2];
+            if (bstall >= 4 || e === "body" || e === firstFwd || twoCycle) break;
+          }
+          await page.keyboard.up("Shift");
+        } catch {
+          await page.keyboard.up("Shift").catch(() => {});
+        }
       }
 
       // Click-activated dialogs — a modal that only exists after a click is
       // invisible to markup scanning and to a plain Tab trace. Click likely
       // triggers; when a dialog/alertdialog actually appears, test whether
-      // keyboard users can reach it and exit it.
-      try {
+      // keyboard users can reach it and exit it. Gated with the other deep
+      // probes: with zero focusables no keyboard user can reach a trigger,
+      // and after a forward hard-stall the page is already flagged trapped.
+      if (!probesDone) try {
         page.on("dialog", (d: any) => d.dismiss().catch(() => {}));
         const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         const openDialog = () =>
