@@ -555,6 +555,44 @@ async function advanceLeadSequence(env: Env) {
   ]) {
     await env.DB.prepare(sql).run().catch(() => {});
   }
+
+  // Shipped-features sync — the task generator's dedup context reads
+  // company_brain.shipped_features, but nothing updated it after bootstrap;
+  // stale lists let the generator re-propose already-shipped work. Merged
+  // PRs on the product repo are the truest "shipped" signal and cover both
+  // fleet merges and manual gh merges.
+  const sync = await syncShippedFeatures(env).catch(() => ({ added: -1 }));
+  await env.EPHEMERAL.put("brain:features_sync", JSON.stringify({ at: Date.now(), ...sync })).catch(() => {});
+}
+
+// Backfill shipped_features from merged product-repo PRs. Cursor
+// brain:prs_synced stores the newest merged_at processed; first run looks
+// back 30 days so manual ships land too.
+async function syncShippedFeatures(env: Env): Promise<{ added: number; skipped?: string }> {
+  const brain = await env.DB.prepare("SELECT live_urls, shipped_features FROM company_brain LIMIT 1")
+    .first<{ live_urls?: string; shipped_features?: string }>();
+  if (!brain?.live_urls) return { added: 0, skipped: "no brain" };
+  let repo = "";
+  try { repo = new URL(String(JSON.parse(brain.live_urls).repo ?? "")).pathname.replace(/^\/+|\.git$/g, ""); } catch { /* fall through */ }
+  if (!repo.includes("/")) return { added: 0, skipped: "no repo" };
+  const since = (await env.EPHEMERAL.get("brain:prs_synced").catch(() => null))
+    ?? new Date(Date.now() - 30 * 86_400_000).toISOString();
+  const r = await gh(env, "GET", `/repos/${repo}/pulls?state=closed&sort=updated&direction=desc&per_page=100`);
+  const list = (Array.isArray(r.data) ? r.data : []) as Record<string, unknown>[];
+  const fresh = list.filter(p => typeof p.merged_at === "string" && (p.merged_at as string) > since);
+  const newest = list.map(p => p.merged_at).filter((m): m is string => typeof m === "string").sort().pop();
+  if (newest) await env.EPHEMERAL.put("brain:prs_synced", newest).catch(() => {});
+  if (!fresh.length) return { added: 0 };
+  const feats: string[] = JSON.parse(brain.shipped_features ?? "[]");
+  const have = new Set(feats.map(f => f.toLowerCase()));
+  let added = 0;
+  for (const p of fresh.sort((a, b) => String(a.merged_at).localeCompare(String(b.merged_at)))) {
+    const title = String(p.title ?? "").trim();
+    if (title && !have.has(title.toLowerCase())) { feats.push(title); have.add(title.toLowerCase()); added++; }
+  }
+  if (added) await env.DB.prepare("UPDATE company_brain SET shipped_features=?, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')")
+    .bind(JSON.stringify(feats.slice(-150))).run().catch(() => {});
+  return { added };
 }
 
 // Autonomous agent loop: a Cloudflare cron tick makes the company act
