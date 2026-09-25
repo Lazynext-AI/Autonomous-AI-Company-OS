@@ -1,0 +1,3 @@
+# Authenticated dashboard — nothing here is indexable.
+User-agent: *
+Disallow: /
