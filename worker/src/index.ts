@@ -625,9 +625,12 @@ async function agentTick(env: Env, ctx: ExecutionContext) {
 
   // Requeue one failed task that still has attempts left — a retry with the
   // failure as feedback often succeeds; capped so permanently-broken tasks
-  // stay dead instead of looping forever.
+  // stay dead instead of looping forever. Dead-corpus rows (obsolete:/retired:/
+  // infeasible:/Deliverable markers) are excluded — attempts<3 alone isn't a
+  // death certificate, since sweep annotations and the local tracker's
+  // update-path kills can leave the counter low on terminal rows.
   await env.DB.prepare(
-    "UPDATE task_log SET status='pending' WHERE id=(SELECT id FROM task_log WHERE status='failed' AND attempts<3 ORDER BY created_at LIMIT 1)",
+    `UPDATE task_log SET status='pending' WHERE id=(SELECT id FROM task_log WHERE status='failed' AND attempts<3 AND NOT (${DEAD_CORPUS_WHERE}) ORDER BY created_at LIMIT 1)`,
   ).run().catch(() => {});
 
   // Sweep stale in_progress claims to failed — a fleet process killed

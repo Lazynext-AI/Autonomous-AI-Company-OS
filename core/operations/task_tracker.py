@@ -81,7 +81,18 @@ class TaskTracker:
             return
         row = await self.get_task(task_id)
         if row is not None:
-            await self.update_task(task_id, agent_id=agent_id, description=description[:4000], status=status)
+            # Update path must honor a kill's attempts too — status='failed'
+            # with attempts=3 on an existing row would otherwise leave the
+            # counter low and the cloud agentTick requeue would resurrect it.
+            # Zero is skipped so a pending-refresh doesn't wipe a live counter.
+            fields: dict[str, Any] = {
+                "agent_id": agent_id,
+                "description": description[:4000],
+                "status": status,
+            }
+            if attempts > 0:
+                fields["attempts"] = attempts
+            await self.update_task(task_id, **fields)
             return
 
         payload = {

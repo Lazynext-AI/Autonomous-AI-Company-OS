@@ -26,11 +26,14 @@ async def test_message_bus_pubsub() -> None:
             description="Test task",
         )
         await bus.publish(Channels.CTO_TASKS, msg)
-        msgs = await bus.read_messages(Channels.CTO_TASKS, "agents", "test_consumer", count=5)
-        assert len(msgs) >= 1
-        _, received = msgs[0]
-        assert isinstance(received, TaskMessage)
-        assert received.description == "Test task"
+        # The shared bus can hold production backlog ahead of ours — find the
+        # message this test published rather than trusting position.
+        msgs = await bus.read_messages(Channels.CTO_TASKS, "agents", "test_consumer", count=50)
+        received = next(
+            (m for _, m in msgs if isinstance(m, TaskMessage) and m.description == "Test task"),
+            None,
+        )
+        assert received is not None
     finally:
         await bus.close()
 
