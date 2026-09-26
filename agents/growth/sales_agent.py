@@ -123,6 +123,8 @@ Return plain text with:
                     f"company={lead.get('company') or ''}, "
                     f"email={lead.get('email') or 'none'}\n"
                     f"Research notes: {(lead.get('notes') or '')[:800]}\n"
+                    "Competitors that sell accessibility products/services "
+                    "are disqualified — never nurture a rival.\n"
                     'Reply {"score":0-10,"verdict":"qualified|nurture|'
                     'disqualified","why":"<=160 chars"}',
                 )
