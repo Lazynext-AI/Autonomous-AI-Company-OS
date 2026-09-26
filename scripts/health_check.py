@@ -23,6 +23,20 @@ CHECKS = {
     "public-api": "https://ai-company.lazynext.com/api/v1/health",
     "dashboard": "https://dashboard.lazynext.com",
     "penpot": "https://penpot.lazynext.com",
+    "a11y-checker-domain": "https://checker.lazynext.com/health",
+    "a11y-api-domain": "https://api.lazynext.com/health",
+}
+# The product deploys the same bundle to two scripts (accessibility-checker +
+# accessibility-checker-api). deploy.mjs keeps them in sync, but nothing
+# detects a manual single-script deploy — compare a deterministic surface
+# (/rules, the 74-rule manifest) on both workers.dev origins and alert on
+# any byte difference. Also covers script liveness: a fetch failure fails
+# the pair.
+DRIFT_PAIRS = {
+    "a11y-mirror": (
+        "https://accessibility-checker.dry-hall-6a50.workers.dev/rules",
+        "https://accessibility-checker-api.dry-hall-6a50.workers.dev/rules",
+    ),
 }
 STATE_FILE = Path(".health_state.json")
 
@@ -40,8 +54,20 @@ def check(url: str) -> bool:
         return False
 
 
+def fetch_body(url: str) -> bytes | None:
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "healthcheck/1.0"})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return r.read() if r.status < 400 else None
+    except Exception:
+        return None
+
+
 async def main() -> int:
     now = {name: check(url) for name, url in CHECKS.items()}
+    for name, (a, b) in DRIFT_PAIRS.items():
+        body_a, body_b = fetch_body(a), fetch_body(b)
+        now[name] = body_a is not None and body_a == body_b
     prev = json.loads(STATE_FILE.read_text()) if STATE_FILE.exists() else {}
     failed = [k for k, ok in now.items() if not ok]
     recovered = [k for k in prev if not prev.get(k) and now.get(k)]
