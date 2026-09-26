@@ -1,0 +1,4 @@
+name = "status-redirect"
+main = "worker.js"
+compatibility_date = "2025-09-01"
+preview_urls = false
