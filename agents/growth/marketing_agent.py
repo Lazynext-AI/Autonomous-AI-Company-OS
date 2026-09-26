@@ -84,3 +84,23 @@ Return plain text with:
             "growth_experiment_planned",
             plan[:300],
         )
+        await self._post_to_connected_socials(plan)
+
+    async def _post_to_connected_socials(self, plan: str) -> None:
+        """Publish the experiment to any connected social connectors — inert
+        until a conn:* credential exists (Settings → Connector library)."""
+        try:
+            from core.tools import call_connector, connector_status
+            status = await connector_status()
+            for cid in ("x", "linkedin"):
+                if not status.get(cid):
+                    continue
+                post = await self.call_llm(
+                    "You write short social posts. Return only the post text — no preamble.",
+                    f"Turn this growth experiment into one {cid} post "
+                    f"(<=270 chars, plain text):\n{plan[:3000]}",
+                )
+                result = await call_connector(cid, post.strip()[:3000])
+                self.logger.info("social_post_attempted", connector=cid, ok=result.get("ok"))
+        except Exception as e:
+            self.logger.warning("social_post_skipped", error=str(e))

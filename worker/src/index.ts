@@ -366,7 +366,8 @@ export default {
         return cors(req, await handleBrevoWebhook(req, env, path));
       if (path.startsWith("/api/v1/crm") || path.startsWith("/api/v1/support") ||
           path.startsWith("/api/v1/booking") || path.startsWith("/api/v1/store") ||
-          path.startsWith("/api/v1/marketing") || path.startsWith("/api/v1/signwell"))
+          path.startsWith("/api/v1/marketing") || path.startsWith("/api/v1/signwell") ||
+          path.startsWith("/api/v1/connectors"))
         return cors(req, await handleServices(req, env, ctx, path));
       if (path.startsWith("/api/")) return cors(req, await handlePublicApi(req, env, ctx, path));
 

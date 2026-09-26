@@ -159,6 +159,29 @@ export async function handleServices(
     return json({ ok: true, id, sent, total: contacts.length });
   }
 
+  // --- Connector invocation -------------------------------------------------
+  // Worker-side dispatch for the Connector library — Settings → Connector
+  // library writes conn:<id> to KV; core/tools/connectors.py mirrors this for
+  // the local fleet. Nothing runs until a credential is connected.
+  if (path === "/api/v1/connectors" && req.method === "GET") {
+    const status: Record<string, boolean> = {};
+    for (const id of CONNECTOR_IDS) status[id] = Boolean(await connCred(env, id));
+    return json({ connectors: status });
+  }
+  const connMatch = path.match(/^\/api\/v1\/connectors\/([a-z]+)$/);
+  if (connMatch && req.method === "POST") {
+    const id = connMatch[1];
+    if (!CONNECTOR_IDS.includes(id)) return json({ error: `unknown connector '${id}'` }, 404);
+    const cred = await connCred(env, id);
+    if (!cred) return json({ error: `'${id}' not connected — set it in Settings → Connector library` }, 503);
+    const out = await callConnector(env, id, cred, b);
+    ctx.waitUntil(
+      env.DB.prepare("INSERT INTO episodic_events (scope, payload) VALUES ('connector', ?)")
+        .bind(JSON.stringify({ id, ok: out.ok, status: out.status })).run().catch(() => undefined),
+    );
+    return json(out, out.ok ? 200 : out.status ?? 502);
+  }
+
   // --- SignWell e-sign ------------------------------------------------------
   // The only signing path — credential lives in KV as conn:signwell (bare API
   // key from signwell.com/app → API; prefix "test:" for unlimited free
@@ -486,4 +509,113 @@ async function signwell(
   const r = await signwellFetch(env, method, endpoint, body);
   if (!r.connected) return json({ connected: false, ...r.data }, 503);
   return json({ connected: true, ok: r.ok, status: r.status, ...r.data }, r.ok ? 200 : r.status);
+}
+
+// --- Connector dispatch -------------------------------------------------------
+// The ids the dashboard Connector library offers. brevo/signwell have their own
+// dedicated routes but still report status here; POST dispatch covers the
+// connectors that have no other invocation path.
+const CONNECTOR_IDS = ["x", "linkedin", "meta", "twilio", "whatsapp", "brevo", "signwell"];
+
+// KV conn:<id> first (the dashboard write path), then a matching CONN_<ID>
+// worker secret — same resolution order as core/tools/connectors.py.
+async function connCred(env: Env, id: string): Promise<string | null> {
+  return (await env.EPHEMERAL.get(`conn:${id}`))
+    ?? ((env as unknown as Record<string, unknown>)[`CONN_${id.toUpperCase()}`] as string | undefined)
+    ?? null;
+}
+
+async function connPost(
+  url: string, init: RequestInit,
+): Promise<{ ok: boolean; status: number; body?: unknown; error?: string }> {
+  const r = await fetch(url, init);
+  const data = (await r.json().catch(() => ({}))) as Record<string, unknown>;
+  return { ok: r.ok, status: r.status, body: data,
+    error: r.ok ? undefined : String(data.message ?? data.error ?? r.status) };
+}
+
+// Worker-side mirror of connectors.py's _DISPATCH. Social connectors take
+// {text}; messaging connectors take {to, text}; brevo takes {to, subject, html}.
+async function callConnector(
+  env: Env, id: string, cred: string, b: Record<string, unknown>,
+): Promise<{ ok: boolean; status?: number; body?: unknown; error?: string }> {
+  const text = String(b.text ?? "").slice(0, 10000);
+  switch (id) {
+    case "x": {
+      if (!text) return { ok: false, error: "text required" };
+      return connPost("https://api.twitter.com/2/tweets", {
+        method: "POST",
+        headers: { authorization: `Bearer ${cred}`, "content-type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+    }
+    case "linkedin": {
+      if (!text) return { ok: false, error: "text required" };
+      return connPost("https://api.linkedin.com/v2/ugcPosts", {
+        method: "POST",
+        headers: { authorization: `Bearer ${cred}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          author: "urn:li:organization:lazynext",
+          lifecycleState: "PUBLISHED",
+          specificContent: {
+            "com.linkedin.ugc.ShareContent": {
+              shareCommentary: { text },
+              shareMediaCategory: "NONE",
+            },
+          },
+          visibility: { "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC" },
+        }),
+      });
+    }
+    case "meta": {
+      if (!text) return { ok: false, error: "text required" };
+      // cred: "<access_token>:<ad_account_id>"
+      const [token, acct = ""] = cred.split(":", 2);
+      if (!acct) return { ok: false, error: "conn:meta must be '<access_token>:<ad_account_id>'" };
+      return connPost(`https://graph.facebook.com/v19.0/act_${acct}/ads`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: text.slice(0, 120), access_token: token }),
+      });
+    }
+    case "twilio": {
+      // cred: "<account_sid>:<auth_token>:<from_number>"
+      const [sid = "", token = "", from = ""] = cred.split(":", 3);
+      const to = String(b.to ?? "");
+      if (!to || !text) return { ok: false, error: "to + text required" };
+      if (!sid || !token || !from)
+        return { ok: false, error: "conn:twilio must be '<account_sid>:<auth_token>:<from_number>'" };
+      return connPost(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+        method: "POST",
+        headers: {
+          authorization: `Basic ${btoa(`${sid}:${token}`)}`,
+          "content-type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({ To: to, From: from, Body: text }).toString(),
+      });
+    }
+    case "whatsapp": {
+      // cred: "<access_token>:<phone_number_id>"
+      const [token, pid = ""] = cred.split(":", 2);
+      const to = String(b.to ?? "");
+      if (!to || !text) return { ok: false, error: "to + text required" };
+      if (!pid) return { ok: false, error: "conn:whatsapp must be '<access_token>:<phone_number_id>'" };
+      return connPost(`https://graph.facebook.com/v19.0/${pid}/messages`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          messaging_product: "whatsapp", to, type: "text", text: { body: text },
+        }),
+      });
+    }
+    case "brevo": {
+      const to = String(b.to ?? "");
+      if (!to) return { ok: false, error: "to required" };
+      return brevoSend(env, to, String(b.subject ?? "Lazynext"), String(b.html ?? text));
+    }
+    case "signwell":
+      return { ok: false, error: "use /api/v1/signwell/send for signing" };
+    default:
+      return { ok: false, error: `unknown connector '${id}'` };
+  }
 }
