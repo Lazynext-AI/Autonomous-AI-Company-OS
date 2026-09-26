@@ -31,7 +31,7 @@ const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; nam
     group: "Social posting", icon: Share2,
     items: [
       { id: "x", name: "X / Twitter", hint: "API key + secret — agents post marketing tweets" },
-      { id: "linkedin", name: "LinkedIn", hint: "Access token — agents post B2B content" },
+      { id: "linkedin", name: "LinkedIn", hint: "access_token[:org_id] — agents post B2B content" },
       { id: "meta", name: "Meta Ads", hint: "Access token + ad account id — run paid campaigns" },
     ],
   },

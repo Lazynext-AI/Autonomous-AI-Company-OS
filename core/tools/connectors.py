@@ -20,8 +20,12 @@ async def _credential(connector_id: str) -> str | None:
     """Resolve a connector credential: KV `conn:<id>` → env `CONN_<ID>`."""
     s = get_settings()
     # Env var fallback first (e.g. CONN_X), then the worker KV store.
+    # brevo additionally accepts the platform BREVO_API_KEY — the same
+    # resolution the worker's brevoSend uses, so send capability == status.
     import os
     env_val = os.environ.get(f"CONN_{connector_id.upper()}")
+    if not env_val and connector_id == "brevo":
+        env_val = os.environ.get("BREVO_API_KEY")
     if env_val:
         return env_val
     if s.cloudflare_api_url and s.cloudflare_api_token:
@@ -64,11 +68,15 @@ async def _x(text: str, cred: str) -> dict:
 
 
 async def _linkedin(text: str, cred: str) -> dict:
+    # cred: "<access_token>" or "<access_token>:<numeric_org_id>" — the author
+    # URN needs the org's numeric id; bare "lazynext" is a best-effort default
+    # LinkedIn may reject (invalid URN → 4xx).
+    token, _, org = cred.partition(":")
     return await _post(
         "https://api.linkedin.com/v2/ugcPosts",
-        headers={"authorization": f"Bearer {cred}"},
+        headers={"authorization": f"Bearer {token}"},
         json_body={
-            "author": "urn:li:organization:lazynext",
+            "author": f"urn:li:organization:{org or 'lazynext'}",
             "lifecycleState": "PUBLISHED",
             "specificContent": {
                 "com.linkedin.ugc.ShareContent": {

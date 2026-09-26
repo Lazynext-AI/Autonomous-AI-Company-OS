@@ -165,16 +165,27 @@ export async function handleServices(
   // the local fleet. Nothing runs until a credential is connected.
   if (path === "/api/v1/connectors" && req.method === "GET") {
     const status: Record<string, boolean> = {};
-    for (const id of CONNECTOR_IDS) status[id] = Boolean(await connCred(env, id));
+    // brevo reports actual send capability (conn:brevo OR BREVO_API_KEY
+    // secret), not just whether the connector-library key exists.
+    for (const id of CONNECTOR_IDS)
+      status[id] = id === "brevo" ? Boolean(await brevoCred(env)) : Boolean(await connCred(env, id));
     return json({ connectors: status });
   }
   const connMatch = path.match(/^\/api\/v1\/connectors\/([a-z]+)$/);
   if (connMatch && req.method === "POST") {
     const id = connMatch[1];
     if (!CONNECTOR_IDS.includes(id)) return json({ error: `unknown connector '${id}'` }, 404);
+    // Dispatch acts AS the company on external networks (post to our X,
+    // send Brevo mail via our verified sender to any address). An ordinary
+    // 'write' key minted for CRM/store work must not get that — admin only.
+    if (!(key!.scopes ?? "").split(",").map((s) => s.trim()).includes("admin"))
+      return json({ error: "scope 'admin' required — connector dispatch acts as the company" }, 403);
+    // brevoSend resolves conn:brevo then the BREVO_API_KEY secret — the
+    // connector is "connected" whenever either exists.
     const cred = await connCred(env, id);
-    if (!cred) return json({ error: `'${id}' not connected — set it in Settings → Connector library` }, 503);
-    const out = await callConnector(env, id, cred, b);
+    if (!cred && !(id === "brevo" && (await brevoCred(env))))
+      return json({ error: `'${id}' not connected — set it in Settings → Connector library` }, 503);
+    const out = await callConnector(env, id, cred ?? "", b);
     ctx.waitUntil(
       env.DB.prepare("INSERT INTO episodic_events (scope, payload) VALUES ('connector', ?)")
         .bind(JSON.stringify({ id, ok: out.ok, status: out.status })).run().catch(() => undefined),
@@ -517,8 +528,10 @@ async function signwell(
 // connectors that have no other invocation path.
 const CONNECTOR_IDS = ["x", "linkedin", "meta", "twilio", "whatsapp", "brevo", "signwell"];
 
-// KV conn:<id> first (the dashboard write path), then a matching CONN_<ID>
-// worker secret — same resolution order as core/tools/connectors.py.
+// KV conn:<id> first — the dashboard write path is the runtime source of
+// truth — then a CONN_<ID> worker secret as static fallback. The local fleet
+// (core/tools/connectors.py) deliberately resolves the other way (env → KV)
+// so a local override wins on the dev host; each order suits its runtime.
 async function connCred(env: Env, id: string): Promise<string | null> {
   return (await env.EPHEMERAL.get(`conn:${id}`))
     ?? ((env as unknown as Record<string, unknown>)[`CONN_${id.toUpperCase()}`] as string | undefined)
@@ -542,7 +555,7 @@ async function callConnector(
   const text = String(b.text ?? "").slice(0, 10000);
   switch (id) {
     case "x": {
-      if (!text) return { ok: false, error: "text required" };
+      if (!text) return { ok: false, status: 400, error: "text required" };
       return connPost("https://api.twitter.com/2/tweets", {
         method: "POST",
         headers: { authorization: `Bearer ${cred}`, "content-type": "application/json" },
@@ -550,12 +563,16 @@ async function callConnector(
       });
     }
     case "linkedin": {
-      if (!text) return { ok: false, error: "text required" };
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<access_token>" or "<access_token>:<numeric_org_id>" — the
+      // author URN needs the org's numeric id; without it "lazynext" is a
+      // best-effort default that LinkedIn may reject (invalid URN → 4xx).
+      const [token, org = ""] = cred.split(":", 2);
       return connPost("https://api.linkedin.com/v2/ugcPosts", {
         method: "POST",
-        headers: { authorization: `Bearer ${cred}`, "content-type": "application/json" },
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
         body: JSON.stringify({
-          author: "urn:li:organization:lazynext",
+          author: `urn:li:organization:${org || "lazynext"}`,
           lifecycleState: "PUBLISHED",
           specificContent: {
             "com.linkedin.ugc.ShareContent": {
@@ -568,10 +585,10 @@ async function callConnector(
       });
     }
     case "meta": {
-      if (!text) return { ok: false, error: "text required" };
+      if (!text) return { ok: false, status: 400, error: "text required" };
       // cred: "<access_token>:<ad_account_id>"
       const [token, acct = ""] = cred.split(":", 2);
-      if (!acct) return { ok: false, error: "conn:meta must be '<access_token>:<ad_account_id>'" };
+      if (!acct) return { ok: false, status: 500, error: "conn:meta must be '<access_token>:<ad_account_id>'" };
       return connPost(`https://graph.facebook.com/v19.0/act_${acct}/ads`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -582,9 +599,9 @@ async function callConnector(
       // cred: "<account_sid>:<auth_token>:<from_number>"
       const [sid = "", token = "", from = ""] = cred.split(":", 3);
       const to = String(b.to ?? "");
-      if (!to || !text) return { ok: false, error: "to + text required" };
+      if (!to || !text) return { ok: false, status: 400, error: "to + text required" };
       if (!sid || !token || !from)
-        return { ok: false, error: "conn:twilio must be '<account_sid>:<auth_token>:<from_number>'" };
+        return { ok: false, status: 500, error: "conn:twilio must be '<account_sid>:<auth_token>:<from_number>'" };
       return connPost(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
         method: "POST",
         headers: {
@@ -598,8 +615,8 @@ async function callConnector(
       // cred: "<access_token>:<phone_number_id>"
       const [token, pid = ""] = cred.split(":", 2);
       const to = String(b.to ?? "");
-      if (!to || !text) return { ok: false, error: "to + text required" };
-      if (!pid) return { ok: false, error: "conn:whatsapp must be '<access_token>:<phone_number_id>'" };
+      if (!to || !text) return { ok: false, status: 400, error: "to + text required" };
+      if (!pid) return { ok: false, status: 500, error: "conn:whatsapp must be '<access_token>:<phone_number_id>'" };
       return connPost(`https://graph.facebook.com/v19.0/${pid}/messages`, {
         method: "POST",
         headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
@@ -610,11 +627,11 @@ async function callConnector(
     }
     case "brevo": {
       const to = String(b.to ?? "");
-      if (!to) return { ok: false, error: "to required" };
+      if (!to) return { ok: false, status: 400, error: "to required" };
       return brevoSend(env, to, String(b.subject ?? "Lazynext"), String(b.html ?? text));
     }
     case "signwell":
-      return { ok: false, error: "use /api/v1/signwell/send for signing" };
+      return { ok: false, status: 400, error: "use /api/v1/signwell/send for signing" };
     default:
       return { ok: false, error: `unknown connector '${id}'` };
   }

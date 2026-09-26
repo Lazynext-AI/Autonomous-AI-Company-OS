@@ -102,5 +102,12 @@ Return plain text with:
                 )
                 result = await call_connector(cid, post.strip()[:3000])
                 self.logger.info("social_post_attempted", connector=cid, ok=result.get("ok"))
+                # Worker-side calls land in episodic_events via the connector
+                # route; local fleet calls hit the provider directly, so write
+                # the same audit record here to keep one trail.
+                await self.episodic_memory.add_event(
+                    self.agent_id, "social_post_attempted",
+                    f"{cid}: ok={result.get('ok')} status={result.get('status')}",
+                )
         except Exception as e:
             self.logger.warning("social_post_skipped", error=str(e))
