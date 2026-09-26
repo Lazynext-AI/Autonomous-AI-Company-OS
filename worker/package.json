@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
+    "test": "node --test",
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
     "migrate": "wrangler d1 execute ai-company-db --file ../db/migrations/001_initial.sql"

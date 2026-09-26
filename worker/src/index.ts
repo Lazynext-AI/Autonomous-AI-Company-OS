@@ -1221,6 +1221,11 @@ async function bootstrapRepo(env: Env, ctx: ExecutionContext, brain: Brain) {
   const committed: string[] = [];
   for (const f of files) {
     const p = sanitizePath(f.path);
+    // The repo may already exist (422 above) — generated scaffold must never
+    // overwrite a file that's there; that's the same doc-gutting class the
+    // task artifact loop guards against.
+    const exists = await gh(env, "GET", `/repos/${repo}/contents/${p}`);
+    if (exists.ok) continue;
     const r = await ghPutFile(env, repo, p, f.content, `bootstrap: add ${p}`);
     if (r.ok) committed.push(p);
   }

@@ -46,6 +46,7 @@ dashboard:
 
 test:
 	PYTHONPATH=. $(PY) -m pytest tests/ -v
+	cd worker && node --test
 
 seed:
 	PYTHONPATH=. $(PY) scripts/seed_knowledge.py
