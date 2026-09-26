@@ -108,6 +108,17 @@ PROTECTED_FILES = {
 }
 
 
+def _retained_line_fraction(prev: str, nxt: str) -> float:
+    """Fraction of prev's non-empty lines still present in nxt — a rewrite
+    keeping under half is a gutting, not an update (the cloud writer applies
+    the same check at the artifact loop)."""
+    keep = {l.strip() for l in nxt.splitlines() if l.strip()}
+    prev_lines = [l.strip() for l in prev.splitlines() if l.strip()]
+    if not prev_lines:
+        return 1.0
+    return sum(1 for l in prev_lines if l in keep) / len(prev_lines)
+
+
 class CodeWriter:
     """Write code to files and commit to git. One repo per product in company brain."""
 
@@ -175,6 +186,18 @@ class CodeWriter:
                 logger.info("protected_file_skipped", file=filename, task_id=task_id)
                 skipped_protected.append(filename)
                 continue
+
+            # Doc-gutting guard — overwriting an existing file while keeping
+            # under half of its lines is destruction, not an update (verified:
+            # a task replaced the measured perf baseline doc with generic
+            # prose; length-ratio checks miss it because prose is dense).
+            filepath_chk = repo_root / rel
+            if filepath_chk.is_file():
+                prev_text = filepath_chk.read_text(encoding="utf-8", errors="replace")
+                if len(prev_text) >= 800 and _retained_line_fraction(prev_text, code) < 0.5:
+                    logger.warning("doc_gutting_skipped", file=filename, task_id=task_id)
+                    skipped_protected.append(filename)
+                    continue
 
             # Validate code before writing
             is_valid, error_msg, validation_details = self.validator.validate(code, language)

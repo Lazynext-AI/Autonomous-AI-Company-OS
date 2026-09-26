@@ -973,6 +973,24 @@ function b64(s: string): string {
   return btoa(bin);
 }
 
+async function ghGetFileText(env: Env, repo: string, path: string, ref = "main"): Promise<string | null> {
+  const r = await gh(env, "GET", `/repos/${repo}/contents/${path}?ref=${encodeURIComponent(ref)}`);
+  const content = r.data?.content as string | undefined;
+  if (!r.ok || !content || r.data.type !== "file") return null;
+  return atob(content.replace(/\n/g, ""));
+}
+
+// Doc-gutting guard: a rewrite that keeps under half of an existing file's
+// lines is destruction, not an update — a fleet task replaced a measured
+// performance baseline with generic prose while total length stayed similar,
+// so a size-ratio check alone misses the class. Compare retained lines.
+function retainedLineFraction(prev: string, next: string): number {
+  const keep = new Set(next.split("\n").map((l) => l.trim()).filter(Boolean));
+  const prevLines = prev.split("\n").map((l) => l.trim()).filter(Boolean);
+  if (!prevLines.length) return 1;
+  return prevLines.filter((l) => keep.has(l)).length / prevLines.length;
+}
+
 async function ghPutFile(env: Env, repo: string, path: string, content: string, message: string, branch?: string): Promise<{ ok: boolean; url?: string; error?: string }> {
   const existing = await gh(env, "GET", `/repos/${repo}/contents/${path}${branch ? `?ref=${encodeURIComponent(branch)}` : ""}`);
   const body: Record<string, unknown> = { message, content: b64(content) };
@@ -1306,6 +1324,15 @@ async function executeTask(env: Env, ctx: ExecutionContext, brain: Brain, urls: 
     const conflict = pathConflict(path);
     if (conflict) {
       feedback = `${conflict} — choose a different path`;
+      continue;
+    }
+    // Gutting guard — overwriting an existing file while keeping under half
+    // of its lines is destruction, not an update. Verified once live: a task
+    // "optimized Cloudflare Worker config" by replacing the measured perf
+    // baseline doc with generic prose (PR closed unmerged).
+    const prev = await ghGetFileText(env, repo, path).catch(() => null);
+    if (prev && prev.length >= 800 && retainedLineFraction(prev, content) < 0.5) {
+      feedback = `${path} already exists and this rewrite discards most of it — extend or update it in place keeping the existing substance, or deliver as a new file`;
       continue;
     }
     const v = await verifyArtifact(env, brain, task, path, content);
