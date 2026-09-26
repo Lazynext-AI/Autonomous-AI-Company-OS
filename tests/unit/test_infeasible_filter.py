@@ -77,6 +77,19 @@ def test_deliverable_gated_patterns() -> None:
         assert infeasible_task_reason(desc) is not None, desc
 
 
+def test_deeper_coverage_doc_churn_dies() -> None:
+    # docs/research/accessibility_checker_deeper_* tasks generated proposal
+    # docs restating shipped features (PRs #92/#93 closed as churn). The old
+    # \bdeeper\b gate missed underscore-joined filenames — `_` is a word char.
+    for desc in (
+        "create docs/research/accessibility_checker_deeper_wcag_3.0_coverage.md",
+        "create docs/research/accessibility_checker_deeper_ux_coverage_testing.md",
+        "Add deeper wcag coverage analysis",
+        "Create deeper-coverage deliverable doc",
+    ):
+        assert infeasible_task_reason(desc) == "deeper-coverage deliverable", desc
+
+
 def test_audience_and_copy_mentions_survive() -> None:
     # Measured false positives — every one of these was auto-killed by the
     # ungated patterns before 2026-09-25 despite being legit marketing/docs

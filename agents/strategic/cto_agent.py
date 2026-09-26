@@ -64,7 +64,12 @@ _INFEASIBLE_SPECS: list[tuple[str, str]] = [
     ("monitoring system", r"monitoring (system|service|dashboard|platform)|uptime monitor"),
     ("python-stack deliverable", r"\b[\w/.-]*\.py\b|\bpytest\b"),
     ("src/ test file", r"\bsrc/[\w/.-]*tests?\.(?:js|mjs)\b"),
-    ("deeper-coverage deliverable", r"\bdeeper\b[^,.;]{0,30}\b(wcag|ux|accessibility)?[\s-]?coverage\b"),
+    # No \b and periods allowed in the middle: the actual churn vector is
+    # generated docs/research/accessibility_checker_deeper_{wcag,ux}_*_coverage
+    # filenames — underscores are word chars (both boundaries fail inside
+    # checker_deeper_…) and "wcag_3.0" carries a dot. Commas/semicolons still
+    # bound the match to a single clause.
+    ("deeper-coverage deliverable", r"deeper[\s_-][^,;]{0,30}coverage"),
     ("generic wcag-detection", r"\b(detect|identify|report on|check for)\w*\s+[^,.;]{0,40}\bwcag\b[^,;]{0,40}\b(guideline |success )?violations?\b|\bfeature\b[^,.;]{0,50}\bwcag\b[^,;]{0,40}\bviolations?\b"),
     ("section 508", r"\bsection[\s-]?508\b"),
     ("multi-page scan", r"\b(scan|crawl)\w*\s+[^,.;]{0,25}\bmultiple pages?\b|\bmulti[\s-]?page (scan|crawl|report)\b"),

@@ -847,7 +847,12 @@ const INFEASIBLE_TASK_PATTERNS: [string, RegExp][] = [
   ["monitoring system", /monitoring (system|service|dashboard|platform)|uptime monitor/i],
   ["python-stack deliverable", /\b[\w/.-]*\.py\b|\bpytest\b/i],
   ["src/ test file", /\bsrc\/[\w/.-]*tests?\.(?:js|mjs)\b/i],
-  ["deeper-coverage deliverable", /\bdeeper\b[^,.;]{0,30}\b(wcag|ux|accessibility)?[\s-]?coverage\b/i],
+  // No \b and periods allowed in the middle: the actual churn vector is
+  // generated docs/research/accessibility_checker_deeper_{wcag,ux}_*_coverage
+  // filenames — underscores are word chars (both boundaries fail inside
+  // checker_deeper_…) and "wcag_3.0" carries a dot. Commas/semicolons still
+  // bound the match to a single clause.
+  ["deeper-coverage deliverable", /deeper[\s_-][^,;]{0,30}coverage/i],
   ["generic wcag-detection", /\b(detect|identify|report on|check for)\w*\s+[^,.;]{0,40}\bwcag\b[^,;]{0,40}\b(guideline |success )?violations?\b|\bfeature\b[^,.;]{0,50}\bwcag\b[^,;]{0,40}\bviolations?\b/i],
   ["section 508", /\bsection[\s-]?508\b/i],
   ["multi-page scan", /\b(scan|crawl)\w*\s+[^,.;]{0,25}\bmultiple pages?\b|\bmulti[\s-]?page (scan|crawl|report)\b/i],
