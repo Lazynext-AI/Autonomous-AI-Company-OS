@@ -43,6 +43,20 @@ def test_existing_dead_classes_still_caught() -> None:
     assert infeasible_task_reason("scan PDF documents") == "document-file scanning"
 
 
+def test_launchdeck_scaffold_tasks_die() -> None:
+    # products/launchdeck is a scaffold stub (no repo/tests/deploy path) — every
+    # named task phantoms after 3 attempts. Observed live-queue descriptions.
+    # (OAuth/JWT-flavoured LaunchDeck tasks die even earlier on user
+    # accounts/auth; these isolate the launchdeck match.)
+    for desc in (
+        "Create onboarding documentation and support resources for LaunchDeck customers",
+        "Build the Launch-Deck subscription management module",
+        "Design the LaunchDeck admin interface",
+        "Develop a module to display LaunchDeck scan results",
+    ):
+        assert infeasible_task_reason(desc) == "launchdeck scaffold", desc
+
+
 def test_deliverable_gated_patterns() -> None:
     # Dead classes that only kill when the noun IS the deliverable —
     # verb + optional qualifier + noun, not a bare substring.

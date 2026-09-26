@@ -69,6 +69,11 @@ _INFEASIBLE_SPECS: list[tuple[str, str]] = [
     ("section 508", r"\bsection[\s-]?508\b"),
     ("multi-page scan", r"\b(scan|crawl)\w*\s+[^,.;]{0,25}\bmultiple pages?\b|\bmulti[\s-]?page (scan|crawl|report)\b"),
     ("audit-report doc churn", r"\b(conduct|perform|produce|deliver|write up)\w*\s+[^,.;]{0,30}\baudit\b|\baudit (report|documentation)\b"),
+    # products/launchdeck is a scaffold stub — no git repo, no test harness, no
+    # deploy path — so every named task dies as phantom_completion after 3
+    # attempts (24 in 7d). Building the product is a business decision, same
+    # class as the 508 crosswalk deferral; kill at insert to save the cycle.
+    ("launchdeck scaffold", r"\blaunch[\s-]?deck\b"),
 ]
 INFEASIBLE_TASK_PATTERNS: list[tuple[str, "re.Pattern[str]"]] = [
     (label, re.compile(p, re.IGNORECASE)) for label, p in _INFEASIBLE_SPECS
@@ -237,9 +242,10 @@ class CTOAgent(BaseAgent):
                     "SELECT description,status,agent_id,created_at FROM task_log "
                     "WHERE status IN ('failed','escalated') AND (result LIKE ? "
                     "OR result LIKE ? OR result LIKE ? OR error_log LIKE ? "
-                    "OR error_log LIKE ?) ORDER BY created_at DESC LIMIT 500",
+                    "OR error_log LIKE ? OR error_log LIKE ?) "
+                    "ORDER BY created_at DESC LIMIT 500",
                     ["%retired:%", "%obsolete:%", "%infeasible:%",
-                     "%infeasible:%", "%Deliverable %"])
+                     "%infeasible:%", "%Deliverable %", "%phantom_completion:%"])
                 rows = live + dead
                 rows.sort(key=lambda r: r.get("created_at") or "", reverse=True)
                 return rows

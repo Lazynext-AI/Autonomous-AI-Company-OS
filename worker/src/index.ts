@@ -852,6 +852,11 @@ const INFEASIBLE_TASK_PATTERNS: [string, RegExp][] = [
   ["section 508", /\bsection[\s-]?508\b/i],
   ["multi-page scan", /\b(scan|crawl)\w*\s+[^,.;]{0,25}\bmultiple pages?\b|\bmulti[\s-]?page (scan|crawl|report)\b/i],
   ["audit-report doc churn", /\b(conduct|perform|produce|deliver|write up)\w*\s+[^,.;]{0,30}\baudit\b|\baudit (report|documentation)\b/i],
+  // products/launchdeck is a scaffold stub — no git repo, no test harness, no
+  // deploy path — so every named task dies as phantom_completion after 3
+  // attempts (24 in 7d). Building the product is a business decision, same
+  // class as the 508 crosswalk deferral; kill at insert to save the cycle.
+  ["launchdeck scaffold", /\blaunch[\s-]?deck\b/i],
 ];
 function infeasibleTaskReason(desc: string): string | null {
   for (const [label, pat] of INFEASIBLE_TASK_PATTERNS) if (pat.test(desc)) return label;
@@ -864,9 +869,12 @@ function infeasibleTaskReason(desc: string): string | null {
 // guaranteed churn, and an old completed-purpose task should not be rebuilt.
 // Markers: error_log "infeasible:" (auto-kill + classifier), result
 // "retired:"/"obsolete:"/"infeasible:" (sweep annotations + local gate),
-// error_log "Deliverable " (write/test/fitness vetoes that burned attempts).
+// error_log "Deliverable " (write/test/fitness vetoes that burned attempts),
+// error_log "phantom_completion:" (artifact claim with no write evidence —
+// a deterministic veto in _DETERMINISTIC_VETO_MARKERS that retries
+// identically, so a respawn is guaranteed churn not a fresh chance).
 const DEAD_CORPUS_WHERE =
-  "status IN ('failed','escalated') AND (result LIKE '%retired:%' OR result LIKE '%obsolete:%' OR result LIKE '%infeasible:%' OR error_log LIKE '%infeasible:%' OR error_log LIKE '%Deliverable %')";
+  "status IN ('failed','escalated') AND (result LIKE '%retired:%' OR result LIKE '%obsolete:%' OR result LIKE '%infeasible:%' OR error_log LIKE '%infeasible:%' OR error_log LIKE '%Deliverable %' OR error_log LIKE '%phantom_completion:%')";
 
 // Was this task already tried recently — in ANY status? Exact-match dedup on
 // pending only lets the same idea respawn under new wording forever (three
