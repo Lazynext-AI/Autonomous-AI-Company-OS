@@ -124,6 +124,11 @@ export async function reconcileBilling(env: Env): Promise<{ active: number; repa
     const email = k.name.slice(8);
     const v = await env.EPHEMERAL.get(k.name);
     if (v && v !== "free" && !liveEmails.has(email)) {
+      // Operator-issued licenses (dogfooding, internal tooling) carry a
+      // license_keep:<email> marker so reconcile can't demand a Dodo sub
+      // that will never exist — without it the canary would be downgraded
+      // at the next sweep and the monitor would silently pause.
+      if (await env.EPHEMERAL.get(`license_keep:${email}`)) continue;
       await env.EPHEMERAL.put(k.name, "free", { expirationTtl: 31_536_000 });
       await env.EPHEMERAL.delete(`trial:${email}`);
       repaired.push(`downgraded ${email}`);

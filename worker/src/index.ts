@@ -508,13 +508,14 @@ async function advanceLeadSequence(env: Env) {
   const rec = await reconcileBilling(env).catch((e: unknown) => ({ active: -1, repaired: [e instanceof Error ? e.name : "err"] }));
   await env.EPHEMERAL.put("billing:last_reconcile", JSON.stringify({ at: Date.now(), ...rec })).catch(() => {});
 
-  // Retention — bus_messages/episodic_events/webhook_deliveries grow unbounded
-  // (~1.3k rows/day). datetime() normalizes the mixed formats in these columns
+  // Retention — bus_messages/bus_deliveries/episodic_events/webhook_deliveries
+  // grow unbounded (~1.3k rows/day). datetime() normalizes the mixed formats
   // (ISO 'T'/'+00:00' and datetime('now') space-format); a bare string compare
   // misorders them. task_log/briefings/milestones stay — they are the audit
   // trail and the dedup corpus.
   for (const sql of [
     "DELETE FROM bus_messages WHERE datetime(created_at) < datetime('now','-30 days')",
+    "DELETE FROM bus_deliveries WHERE datetime(delivered_at) < datetime('now','-30 days')",
     "DELETE FROM webhook_deliveries WHERE datetime(attempted_at) < datetime('now','-30 days')",
     "DELETE FROM episodic_events WHERE datetime(created_at) < datetime('now','-90 days')",
   ]) {
