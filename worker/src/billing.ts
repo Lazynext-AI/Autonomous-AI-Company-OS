@@ -44,12 +44,35 @@ async function dodoFetch(env: Env, path: string, body?: unknown, method = "POST"
       "content-type": "application/json",
       authorization: `Bearer ${key}`,
     },
-    ...(method === "GET" ? {} : { body: JSON.stringify(body ?? {}) }),
+    ...(method === "GET" || method === "DELETE" ? {} : { body: JSON.stringify(body ?? {}) }),
   });
 }
 
 // POST /api/v1/billing/checkout — create a Dodo checkout for a plan.
 // Admin-token protected (the dashboard proxies with the internal token).
+// `subs:active` maps subscription_id → {p: plan, e: email}. The owner email
+// rides along so license:<email> can reflect "still owns an active sub", not
+// "the last event seen" — a customer cancelling one of two subs keeps access.
+type SubEntry = { p: string; e?: string };
+async function loadSubs(env: Env): Promise<Record<string, SubEntry>> {
+  const raw = await env.EPHEMERAL.get("subs:active");
+  const parsed = (raw ? JSON.parse(raw) : {}) as Record<string, SubEntry | string>;
+  const subs: Record<string, SubEntry> = {};
+  // Legacy values were bare plan strings — upgrade on read.
+  for (const [k, v] of Object.entries(parsed)) subs[k] = typeof v === "string" ? { p: v } : v;
+  return subs;
+}
+async function saveSubs(env: Env, subs: Record<string, SubEntry>): Promise<string> {
+  await env.EPHEMERAL.put("subs:active", JSON.stringify(subs));
+  const actives = Object.values(subs).map((s) => s.p);
+  const name = actives.includes("pro") ? "pro" : (actives[0] ?? "Founder");
+  await env.EPHEMERAL.put("plan", JSON.stringify({ name }));
+  return name;
+}
+function ownedPlans(subs: Record<string, SubEntry>, email: string): string[] {
+  return Object.values(subs).filter((s) => s.e === email).map((s) => s.p);
+}
+
 // Reconcile KV billing state against Dodo's live subscription list. Runs in
 // the daily sweep and repairs drift from delayed or dropped webhooks in both
 // directions: active subs get their license stamped, subs no longer active
@@ -69,14 +92,16 @@ export async function reconcileBilling(env: Env): Promise<{ active: number; repa
   }
   const repaired: string[] = [];
 
-  const rawSubs = await env.EPHEMERAL.get("subs:active");
-  const subs: Record<string, string> = rawSubs ? JSON.parse(rawSubs) : {};
+  const subs = await loadSubs(env);
   for (const key of Object.keys(subs)) {
     if (!live.has(key)) { delete subs[key]; repaired.push(`removed stale ${key}`); }
   }
   const liveEmails = new Set<string>();
   for (const [id, s] of live) {
-    if (subs[id] !== s.plan) { subs[id] = s.plan; repaired.push(`upserted ${id}`); }
+    if (subs[id]?.p !== s.plan || subs[id]?.e !== s.email) {
+      subs[id] = { p: s.plan, e: s.email };
+      repaired.push(`upserted ${id}`);
+    }
     if (s.email) {
       liveEmails.add(s.email);
       const lic = await env.EPHEMERAL.get(`license:${s.email}`);
@@ -91,9 +116,7 @@ export async function reconcileBilling(env: Env): Promise<{ active: number; repa
       await env.EPHEMERAL.delete(`pastdue:${s.email}`);
     }
   }
-  await env.EPHEMERAL.put("subs:active", JSON.stringify(subs));
-  const actives = Object.values(subs);
-  await env.EPHEMERAL.put("plan", JSON.stringify({ name: actives.includes("pro") ? "pro" : (actives[0] ?? "Founder") }));
+  await saveSubs(env, subs);
 
   // Downgrade pro licenses whose subscription is no longer active.
   const licKeys = await listAll(env.EPHEMERAL, "license:");
@@ -177,17 +200,17 @@ export async function handleBilling(
       // another stays active. Track active subs by subscription_id (email
       // fallback for payloads that lack it) and derive the plan from the set.
       const subKey = (evt.data as { subscription_id?: string })?.subscription_id ?? email ?? "unknown";
-      const rawSubs = await env.EPHEMERAL.get("subs:active");
-      const subs: Record<string, string> = rawSubs ? JSON.parse(rawSubs) : {};
-      if (activate) subs[subKey] = plan; else delete subs[subKey];
-      await env.EPHEMERAL.put("subs:active", JSON.stringify(subs));
-      const actives = Object.values(subs);
-      const name = actives.includes("pro") ? "pro" : (actives[0] ?? "Founder");
-      await env.EPHEMERAL.put("plan", JSON.stringify({ name }));
+      const subs = await loadSubs(env);
+      if (activate) subs[subKey] = { p: plan, e: email }; else delete subs[subKey];
+      const name = await saveSubs(env, subs);
       // Product license: the buyer's email becomes their license key for the
-      // product API (validated via license:<email> in KV).
+      // product API (validated via license:<email> in KV). On downgrade the
+      // license follows the email's remaining active subs — cancelling sub A
+      // must not revoke access while the same email still pays for sub B.
       if (email) {
-        await env.EPHEMERAL.put(`license:${email}`, activate ? plan : "free", { expirationTtl: 31_536_000 });
+        const owned = ownedPlans(subs, email);
+        const lic = activate ? plan : owned.includes("pro") ? "pro" : (owned[0] ?? "free");
+        await env.EPHEMERAL.put(`license:${email}`, lic, { expirationTtl: 31_536_000 });
       }
       await env.DB.prepare(
         "INSERT INTO bus_messages (channel, payload, created_at) VALUES ('billing.events', ?, datetime('now'))",
@@ -232,6 +255,24 @@ export async function handleBilling(
     const d = (await r.json()) as Record<string, unknown>;
     if (!r.ok) return json({ error: "webhook list failed", detail: d }, 502);
     return json({ ok: true, ...d });
+  }
+
+  // Delete a registered Dodo webhook — internal token only. Needed at the
+  // live-mode flip (the test-mode endpoint must not keep receiving events)
+  // and for removing duplicate/stale registrations. The KV-stored signing
+  // secret is left alone: verification also accepts DODO_WEBHOOK_SECRET, and
+  // any surviving webhook keeps working against it.
+  if (req.method === "DELETE" && path.startsWith("/api/v1/billing/webhooks/")) {
+    const auth = req.headers.get("authorization") ?? "";
+    if (auth !== `Bearer ${env.API_TOKEN}`) return json({ error: "unauthorized" }, 401);
+    const id = path.slice("/api/v1/billing/webhooks/".length);
+    if (!id || id.includes("/")) return json({ error: "webhook id required" }, 400);
+    const r = await dodoFetch(env, `/webhooks/${encodeURIComponent(id)}`, undefined, "DELETE");
+    if (!r.ok) {
+      const body = (await r.text()).slice(0, 300);
+      return json({ error: "webhook delete failed", detail: body }, r.status === 404 ? 404 : 502);
+    }
+    return json({ ok: true, deleted: id });
   }
 
   // Create a Dodo discount code — internal token only. The 402 funnel
@@ -359,15 +400,15 @@ export async function handleBilling(
     // we wait. When subscription.cancelled does arrive it repeats the same
     // writes (idempotent), so this is safe to do in both places.
     const subEmail = d.customer?.email?.toLowerCase() ?? b.email?.toLowerCase();
-    const rawSubs = await env.EPHEMERAL.get("subs:active");
-    const subs: Record<string, string> = rawSubs ? JSON.parse(rawSubs) : {};
+    const subs = await loadSubs(env);
     delete subs[subId];
-    await env.EPHEMERAL.put("subs:active", JSON.stringify(subs));
-    const actives = Object.values(subs);
-    const planName = actives.includes("pro") ? "pro" : (actives[0] ?? "Founder");
-    await env.EPHEMERAL.put("plan", JSON.stringify({ name: planName }));
+    const planName = await saveSubs(env, subs);
     if (subEmail) {
-      await env.EPHEMERAL.put(`license:${subEmail}`, "free", { expirationTtl: 31_536_000 });
+      // Same multi-sub rule as the webhook: only revoke when the email has
+      // no remaining active subscription.
+      const owned = ownedPlans(subs, subEmail);
+      const lic = owned.includes("pro") ? "pro" : (owned[0] ?? "free");
+      await env.EPHEMERAL.put(`license:${subEmail}`, lic, { expirationTtl: 31_536_000 });
       await env.EPHEMERAL.delete(`trial:${subEmail}`);
     }
     await env.DB.prepare(
