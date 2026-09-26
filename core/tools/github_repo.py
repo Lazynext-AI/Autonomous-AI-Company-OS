@@ -100,7 +100,7 @@ class GitHubRepoManager:
                 "auto_init": False,  # We'll push our own code
             }
 
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
                 # First, verify token and get username
                 user_response = await client.get("https://api.github.com/user", headers=headers)
                 if user_response.status_code != 200:

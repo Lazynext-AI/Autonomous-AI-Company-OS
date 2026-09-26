@@ -139,7 +139,7 @@ export default function ProductsPage() {
           </Card>
 
           <a
-            href="https://github.com/Lazynext-Platform"
+            href="https://github.com/Lazynext-AI"
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-2 text-sm text-accentSoft hover:underline"

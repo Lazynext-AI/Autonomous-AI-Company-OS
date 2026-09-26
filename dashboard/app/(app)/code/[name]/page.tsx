@@ -20,7 +20,7 @@ export default function RepoPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const base = `https://api.github.com/repos/Lazynext-Platform/${name}`;
+    const base = `https://api.github.com/repos/Lazynext-AI/${name}`;
     Promise.all([
       fetch(base).then((r) => r.json()),
       fetch(`${base}/readme`, { headers: { Accept: "application/vnd.github.raw" } }).then((r) =>

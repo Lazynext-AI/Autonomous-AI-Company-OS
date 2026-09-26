@@ -27,7 +27,7 @@ Do NOT scale outbound before live billing. Instead, build owned/earned
 distribution that compounds:
 
 1. **GitHub Marketplace** — `action.yml` is shipped; list
-   `Lazynext-Platform/accessibility-checker@v1` publicly. Marketplace listing
+   `Lazynext-AI/accessibility-checker@v1` publicly. Marketplace listing
    is the cheapest durable acquisition channel for a dev tool.
 2. **npm/PyPI presence** — SDK packages are shipped; ensure listings carry the
    canonical `lazynext.com` + checker links (description keywords: WCAG,

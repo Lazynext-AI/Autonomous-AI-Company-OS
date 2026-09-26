@@ -7,7 +7,7 @@
 | D1 `ai-company-db` (tasks, metrics, ledger, briefings) | `.github/workflows/backup.yml` → `wrangler d1 export` → workflow artifact | Weekly (Sun 03:00 UTC), 30-day retention |
 | KV `EPHEMERAL` | Not exported | Ephemeral by design — leads, trials, licenses, `conn:*` credentials. Loss = re-onboard connectors + licenses resync via `reconcileBilling()` against Dodo. |
 | Vectorize `company-knowledge` | Not exported | Rebuildable — re-ingest `knowledge_base/` + `docs/research/`. |
-| Worker code / dashboard / product site | Git (this repo + `Lazynext-Platform/accessibility-checker`) | Continuous |
+| Worker code / dashboard / product site | Git (this repo + `Lazynext-AI/accessibility-checker`) | Continuous |
 
 ## Manual backup
 

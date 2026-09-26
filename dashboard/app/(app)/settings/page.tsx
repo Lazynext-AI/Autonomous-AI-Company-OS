@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 const INTEGRATIONS = [
-  { name: "GitHub", desc: "Lazynext-Platform org — repos + CI", icon: GitBranch, ok: true },
+  { name: "GitHub", desc: "Lazynext-AI org — repos + CI", icon: GitBranch, ok: true },
   { name: "Brevo", desc: "Transactional + campaign email — briefings, alerts", icon: Mail, ok: true },
   { name: "Workers AI", desc: "LLM brain — Llama-3.3-70b, free", icon: Cpu, ok: true },
   { name: "Cloudflare", desc: "Workers + D1 + KV + Vectorize + Browser + Containers", icon: Globe, ok: true },
@@ -500,7 +500,7 @@ export default function SettingsPage() {
             <a href="https://penpot.lazynext.com" className="block text-sm text-accentSoft hover:underline">
               Design system →
             </a>
-            <a href="https://github.com/Lazynext-Platform" className="block text-sm text-accentSoft hover:underline">
+            <a href="https://github.com/Lazynext-AI" className="block text-sm text-accentSoft hover:underline">
               GitHub org →
             </a>
           </div>

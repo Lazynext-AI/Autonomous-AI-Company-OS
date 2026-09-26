@@ -53,7 +53,7 @@ def test_leading_code_fence_without_evidence_is_phantom(output: str) -> None:
         "```js\n// code\n```\n\n[Committed to git]",
         "#### File: src/bar.ts\n\n[Pushed to remote] agent-abc123",
         "// File: src/x.js\n\ngit_branch: agent-task-1234",
-        "# File: src/y.py\n\nhttps://github.com/Lazynext-Platform/repo/pull/42",
+        "# File: src/y.py\n\nhttps://github.com/Lazynext-AI/repo/pull/42",
         "#### File: src/z.js\n\nSee github.com/org/repo/blob/main/src/z.js",
         "Multi-line claim:\n// File: a.js\n// File: b.js\n\n[Files written: a.js, b.js]",
     ],

@@ -1,3 +1,3 @@
-module github.com/Lazynext-Platform/lazynext-go
+module github.com/Lazynext-AI/lazynext-go
 
 go 1.21

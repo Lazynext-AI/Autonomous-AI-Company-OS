@@ -97,7 +97,7 @@ document.querySelectorAll('[data-check]').forEach(async el=>{
  }
 });
 // status history — real recent platform changes from the public repo
-fetch("https://api.github.com/repos/Lazynext-Platform/Autonomous-AI-Company-Operating-System/commits?per_page=5")
+fetch("https://api.github.com/repos/Lazynext-AI/Autonomous-AI-Company-Operating-System/commits?per_page=5")
  .then(r=>r.json()).then(cs=>{
   const h=document.getElementById('history');
   (Array.isArray(cs)?cs:[]).forEach(c=>{

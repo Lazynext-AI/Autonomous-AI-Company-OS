@@ -26,7 +26,7 @@ export default function CodePage() {
   const [err, setErr] = useState(false);
 
   useEffect(() => {
-    fetch("https://api.github.com/users/Lazynext-Platform/repos?sort=updated&per_page=30")
+    fetch("https://api.github.com/users/Lazynext-AI/repos?sort=updated&per_page=30")
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((d) => { setRepos(d); setLoading(false); })
       .catch(() => { setErr(true); setLoading(false); });

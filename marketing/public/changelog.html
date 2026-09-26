@@ -70,7 +70,7 @@ footer{border-top:1px solid var(--border);padding:28px 0;color:var(--muted);font
 <script>
 // Live commits from the public repo — newest first, deduped against the
 // static milestones below.
-fetch("https://api.github.com/repos/Lazynext-Platform/Autonomous-AI-Company-Operating-System/commits?per_page=15")
+fetch("https://api.github.com/repos/Lazynext-AI/Autonomous-AI-Company-Operating-System/commits?per_page=15")
   .then(r => r.json())
   .then(commits => {
     if (!Array.isArray(commits)) return;

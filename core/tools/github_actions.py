@@ -78,7 +78,7 @@ class GitHubActionsManager:
                 "page": 1,
             }
 
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
                 response = await client.get(url, headers=headers, params=params)
                 
                 if response.status_code == 200:
@@ -123,7 +123,7 @@ class GitHubActionsManager:
 
             # Get run details
             run_url = f"https://api.github.com/repos/{owner}/{repo}/actions/runs/{run_id}"
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
                 run_response = await client.get(run_url, headers=headers)
                 if run_response.status_code != 200:
                     logger.error("failed_to_get_run_details", status=run_response.status_code)
@@ -213,7 +213,7 @@ class GitHubActionsManager:
                 "page": 1,
             }
 
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
                 response = await client.get(url, headers=headers, params=params)
                 
                 if response.status_code == 200:
@@ -263,7 +263,7 @@ class GitHubActionsManager:
             if labels:
                 payload["labels"] = labels
 
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
                 response = await client.post(url, headers=headers, json=payload)
                 
                 if response.status_code == 201:
@@ -300,7 +300,7 @@ class GitHubActionsManager:
             url = f"https://api.github.com/repos/{owner}/{repo}/branches"
             params = {"per_page": 100}
 
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
                 response = await client.get(url, headers=headers, params=params)
                 
                 if response.status_code == 200:

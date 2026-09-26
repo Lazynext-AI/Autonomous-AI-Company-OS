@@ -222,7 +222,7 @@ class GitManager:
                 "Authorization": f"Bearer {settings.github_token.strip()}",
                 "Accept": "application/vnd.github.v3+json",
             }
-            async with httpx.AsyncClient(timeout=20.0) as client:
+            async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
                 existing = await client.get(
                     f"https://api.github.com/repos/{repo}/pulls",
                     params={"head": f"{repo.split('/')[0]}:{branch_name}", "state": "open"},
