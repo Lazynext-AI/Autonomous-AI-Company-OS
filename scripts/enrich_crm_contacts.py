@@ -7,6 +7,10 @@ Pipeline per lead (qualified, no email):
      static HTML yields nothing — catches JS-rendered contact blocks.
   3. Serper site-search for an explicit contact/about page when the
      guesses miss.
+Deep mode (--deep) retries the dead ends with a wider path list (team,
+press, careers, legal pages), mailbox-snippet Serper queries, and a
+Wayback CDX fallback for bot-protected pages (stale-address risk: the
+evidence is tagged `wayback:` so the CRM reviewer can judge freshness).
 First plausible business address wins; junk (noreply, sentry, example,
 cdn/image hosts, unrelated third parties) is filtered. Writes only
 public, company-published contacts — the same rule the original
@@ -14,7 +18,7 @@ serper-prospecting seed used.
 
 Usage:
   set -a; source .env; set +a
-  .venv/bin/python scripts/enrich_crm_contacts.py [--dry-run] [--limit N]
+  .venv/bin/python scripts/enrich_crm_contacts.py [--dry-run] [--limit N] [--deep]
 """
 
 import argparse
@@ -40,6 +44,19 @@ UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML,
 CONTACT_PATHS = [
     "/contact", "/contact-us", "/contactus", "/pages/contact", "/about",
     "/about-us", "/company/contact", "/support", "/get-in-touch",
+]
+
+# Second-pass-only paths (--deep): team, press, careers and legal pages
+# often carry real mailboxes; privacy@/careers@ land in JUNK/DEPRIORITIZED
+# anyway so they can only help, never poison.
+DEEP_PATHS = [
+    "/team", "/our-team", "/about/team", "/about-us/team", "/leadership",
+    "/people", "/staff", "/who-we-are", "/meet-the-team",
+    "/careers", "/jobs", "/work-with-us", "/join-us",
+    "/press", "/media", "/news", "/newsroom",
+    "/company", "/agency", "/studio", "/work", "/services", "/expertise",
+    "/privacy", "/privacy-policy", "/terms", "/legal", "/impressum",
+    "/locations", "/offices", "/en/contact", "/en/about",
 ]
 
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+'-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
@@ -71,7 +88,11 @@ GENERIC_LOCAL = re.compile(
     re.I,
 )
 # Published but not buyer-facing — kept only as last resort.
-DEPRIORITIZED_LOCAL = re.compile(r"^(careers|jobs|press|media|hr|recruiting)@", re.I)
+DEPRIORITIZED_LOCAL = re.compile(
+    r"^(careers|jobs|press|media|hr|recruiting|security|dataprivacy|"
+    r"dpo|gdpr|compliance)@",
+    re.I,
+)
 
 
 def fetch(url: str, timeout: int = 15) -> tuple[int, str, str]:
@@ -190,6 +211,68 @@ def serper_own_domain_email(domain: str) -> str | None:
     return None
 
 
+def serper_mailbox_email(domain: str) -> str | None:
+    """Deep mode: search snippets quoting common own-domain mailboxes —
+    catches addresses listed in directories/profile pages even when the
+    site's own pages are form-only or bot-protected."""
+    for hit in serper(
+        f'"{domain}" "contact@{domain}" OR "info@{domain}" OR "hello@{domain}"'
+    ):
+        text = f"{hit.get('title','')} {hit.get('snippet','')}"
+        for e in extract_emails(text, domain):
+            return e
+    return None
+
+
+def wayback_fetch(domain: str, pattern: str) -> str:
+    """Deep mode: raw HTML of the latest archived snapshots matching a
+    path pattern (contact*/about*/team*), or "". Reaches pages whose live
+    version is bot-protected or form-only."""
+    cdx = (
+        "https://web.archive.org/cdx/search/cdx?"
+        f"url={domain}/{pattern}&fl=timestamp,original"
+        "&filter=statuscode:200&collapse=digest&limit=-3&output=json"
+    )
+    req = urllib.request.Request(cdx, headers={"User-Agent": UA})
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            rows = json.loads(r.read().decode())
+    except Exception:
+        return ""
+    for ts, orig in rows[1:] if len(rows) > 1 else []:
+        # `id_` serves the archived page without Wayback's injected chrome.
+        _, _, html = fetch(f"https://web.archive.org/web/{ts}id_/{orig}", timeout=25)
+        if html:
+            return html
+    return ""
+
+
+def find_contact_deep(company: str) -> tuple[str | None, str]:
+    """Deep-mode fallbacks for leads the standard pipeline missed."""
+    domain = company.strip().lower().replace("www.", "")
+    base = f"https://{domain}"
+
+    for path in DEEP_PATHS:
+        status, final, html = fetch(urljoin(base, path))
+        if status >= 400 or not html:
+            continue
+        emails = extract_emails(html, domain)
+        if emails:
+            return emails[0], final
+
+    email = serper_mailbox_email(domain)
+    if email:
+        return email, f"serper-mailbox:{domain}"
+
+    for pattern in ("contact*", "about*", "team*"):
+        html = wayback_fetch(domain, pattern)
+        if html:
+            emails = extract_emails(html, domain)
+            if emails:
+                return emails[0], f"wayback:{domain}/{pattern.rstrip('*')}"
+    return None, ""
+
+
 def scrape_rendered(url: str) -> str:
     """Rendered main-text via the platform /scrape endpoint."""
     res = worker_post("/scrape", {"url": url, "max_chars": 20000}, timeout=90)
@@ -233,6 +316,8 @@ def main() -> None:
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--workers", type=int, default=6)
+    ap.add_argument("--deep", action="store_true",
+                    help="retry dead ends with DEEP_PATHS + mailbox snippets + Wayback")
     args = ap.parse_args()
 
     res = worker_post("/query", {
@@ -247,6 +332,8 @@ def main() -> None:
 
     def work(lead):
         email, ev = find_contact(lead["company"])
+        if not email and args.deep:
+            email, ev = find_contact_deep(lead["company"])
         return lead, email, ev
 
     updated, failed = 0, []
