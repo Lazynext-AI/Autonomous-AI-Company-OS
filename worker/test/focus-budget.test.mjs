@@ -47,3 +47,16 @@ test("budget never exceeds the ceiling and never drops below the floor", () => {
     if (f > 0) assert.ok(maxTab(f) >= maxTab(f - 1), `non-monotonic at ${f}`);
   }
 });
+
+test("occlusion probe prefers the first client rect over the union rect", () => {
+  // getBoundingClientRect() returns the union of a wrapped inline element's
+  // fragments — its centre can land on a sibling between lines, producing
+  // wcag-2.4.11 false positives (verified live on focusable-clean.html). The
+  // merged probe must derive `r` from getClientRects()[0] — the first real
+  // fragment — keeping the union rect only as a zero-fragment fallback.
+  assert.match(
+    src,
+    /const r = \([^\n]*getClientRects\(\)\[0\]\s*\?\?/,
+    "occlusion probe must sample getClientRects()[0] before the union rect",
+  );
+});

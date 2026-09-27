@@ -345,7 +345,7 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
         // Early exits — each press costs a remote round-trip. The rules only
         // need the signature: a ≥4-press stall proves a trap; seeing every
         // focusable proves coverage. Subset cycles never reach full coverage,
-        // so they keep the full 24-press window for detection.
+        // so they keep the full budget window for detection.
         stall = entry === prev ? stall + 1 : 1;
         prev = entry;
         if (entry !== "body") seen.add(entry);
