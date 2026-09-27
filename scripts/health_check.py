@@ -29,7 +29,7 @@ CHECKS = {
 # The product deploys the same bundle to two scripts (accessibility-checker +
 # accessibility-checker-api). deploy.mjs keeps them in sync, but nothing
 # detects a manual single-script deploy — compare a deterministic surface
-# (/rules, the 74-rule manifest) on both workers.dev origins and alert on
+# (/rules, the 75-rule manifest) on both workers.dev origins and alert on
 # any byte difference. Also covers script liveness: a fetch failure fails
 # the pair.
 DRIFT_PAIRS = {
