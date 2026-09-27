@@ -289,7 +289,11 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
           };
           const idx = deepQSA(doc, sel).indexOf(el);
           const desc = `${String(el.tagName).toLowerCase()}${el.id ? "#" + el.id : ""}${String((el as any).innerText ?? "").trim() ? ":" + String((el as any).innerText).trim().slice(0, 25) : ""}`;
-          const r = (el as any).getBoundingClientRect();
+          // getBoundingClientRect() returns the union of all fragments for a
+          // wrapped inline element — its centre can land between the pieces
+          // on a neighbour, reporting "covered" with nothing overlapping.
+          // The first client rect is the real fragment geometry instead.
+          const r = (el as any).getClientRects()[0] ?? (el as any).getBoundingClientRect();
           let hidden = false;
           let partial = false;
           if (r.width > 0 && r.height > 0) {
@@ -323,11 +327,13 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
       const seen = new Set<string>();
       let stall = 0;
       let prev = "";
-      // Adaptive depth: coverage needs a trace of `focusable` presses, so a
-      // census in the 25–40 band gets a matching window (+2 slack presses for
-      // body/chrome hops). Beyond 40 coverage is unprovable anyway — keep the
-      // 24-press cycle-detection window rather than paying extra round-trips.
-      const maxTab = focusable > 24 && focusable <= 40 ? focusable + 2 : 24;
+      // Adaptive depth: the coverage guard needs a trace of `focusable`
+      // presses, so the budget tracks the census (+2 slack for body/chrome
+      // hops) up to a 64-press ceiling — roughly 30s of round-trips. Every
+      // census ≤64 gets a provable coverage verdict; larger pages still run
+      // the full window, which can't prove coverage but nearly triples the
+      // tab-order depth where stalls/cycles are detectable versus 24.
+      const maxTab = Math.min(Math.max(focusable + 2, 24), 64);
       for (let i = 0; i < maxTab; i++) {
         await page.keyboard.press("Tab");
         const probe = (await readFocusProbe()) as { entry: string; hidden: boolean; partial: boolean; noInd: boolean };
