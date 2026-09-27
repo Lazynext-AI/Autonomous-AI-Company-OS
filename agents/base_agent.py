@@ -40,20 +40,23 @@ _DETERMINISTIC_VETO_MARKERS = (
 )
 
 # A result claims a file deliverable when it carries a File: path marker in
-# comment/header form (``// File:``, ``# File:``, ``<!-- File:``, ``#### File:``)
-# or opens straight with a code fence. Real code completions always carry
-# write evidence appended by post_task_hook ([Files written:], [Committed to
-# git], git branch, or a PR URL). Claim without evidence = phantom completion:
-# the blob was produced but write_code placed/committed nothing (protected
-# path, veto, parse failure) — historically these were marked `completed`
-# anyway, and 200+ such rows had to be corrected by hand.
+# comment/header form (``// File:``, ``# File:``, ``<!-- File:``, ``#### File:``),
+# opens straight with a code fence, or cites a GitHub /pull/ URL. Real code
+# completions always carry write evidence appended by post_task_hook ([Files
+# written:], [Committed to git], [Pushed to remote], git_branch) — a PR URL
+# alone is a CLAIM, not evidence: hallucinated and real links are text-
+# identical, and every real PR is preceded by a commit our hooks mark. Claim
+# without evidence = phantom completion: the blob was produced but write_code
+# placed/committed nothing (protected path, veto, parse failure) — historically
+# these were marked `completed` anyway, and 200+ such rows had to be corrected
+# by hand (bare-URL phantoms 661808ac/5ff7cd78/4723feb3 corrected 2026-09-27).
 _ARTIFACT_CLAIM_RE = re.compile(
     r"(?m)^\s*(?:#{1,4}|/{2}|<!--|\*{1,2})?\s*File:\s*[\w./-]+\.[a-z0-9]+",
     re.IGNORECASE,
 )
+_PR_CLAIM_RE = re.compile(r"/pull/\d+")
 _ARTIFACT_EVIDENCE_RE = re.compile(
-    r"\[Files written:|\[Committed to git\]|\[Pushed to remote\]|"
-    r"git_branch|/pull/\d|github\.com/[\w.-]+/[\w.-]+/(?:blob|tree|commit|pull)"
+    r"\[Files written:|\[Committed to git\]|\[Pushed to remote\]|git_branch"
 )
 
 
@@ -325,8 +328,8 @@ class BaseAgent(ABC):
                     result.success = False
                     result.error = (
                         "phantom_completion: result claims file artifacts "
-                        "(File: markers / code blob) but write_code produced "
-                        "no files_written or git evidence"
+                        "(File: markers / code blob / PR link) but write_code "
+                        "produced no files_written or git evidence"
                     )
                 if result.success:
                     self._injected_context = ""
@@ -442,7 +445,11 @@ class BaseAgent(ABC):
         out = result.output or ""
         if not out or _ARTIFACT_EVIDENCE_RE.search(out):
             return False
-        return bool(out.lstrip().startswith("```") or _ARTIFACT_CLAIM_RE.search(out))
+        return bool(
+            out.lstrip().startswith("```")
+            or _ARTIFACT_CLAIM_RE.search(out)
+            or _PR_CLAIM_RE.search(out)
+        )
 
     async def on_success(self, task: TaskMessage, result: TaskResult) -> None:
         """Handle successful task completion."""
