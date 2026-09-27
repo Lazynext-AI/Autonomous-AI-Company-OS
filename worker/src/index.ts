@@ -390,6 +390,7 @@ export default {
     ctx.waitUntil(env.EPHEMERAL.put("cron:last_tick", String(Date.now())).catch(() => {}));
     ctx.waitUntil(agentTick(env, ctx).then(() => undefined).catch(() => {}));
     ctx.waitUntil(advanceLeadSequence(env).then(() => undefined).catch(() => {}));
+    ctx.waitUntil(runDailyMaintenance(env).then(() => undefined).catch(() => {}));
   },
 };
 
@@ -416,6 +417,16 @@ async function advanceLeadSequence(env: Env) {
       if (s?.ok) await env.EPHEMERAL.put(`lead:${email}:stage`, String(stage + 1), { expirationTtl: 31_536_000 });
     }
   }
+}
+
+// Daily maintenance — own ~20h gate so a lead-sequence failure can't take
+// down monitor sweeps, billing reconcile, retention and the features sync
+// with it (previously these rode inside advanceLeadSequence behind
+// seq:last_run).
+async function runDailyMaintenance(env: Env) {
+  const last = await env.EPHEMERAL.get("maint:last_run");
+  if (last && Date.now() - parseInt(last, 10) < 20 * 3_600_000) return; // ~daily
+  await env.EPHEMERAL.put("maint:last_run", String(Date.now()));
   // Trial-expiry reminders — stamped at subscription.active for trialing
   // checkouts (see billing.ts). At day 11 of the 14-day trial, warn once.
   const trials = await listAll(env.EPHEMERAL, "trial:");
