@@ -1034,14 +1034,16 @@ async function ghCreateBranch(env: Env, repo: string, name: string): Promise<{ o
   return { ok: false, error: JSON.stringify(r.data).slice(0, 300) };
 }
 
-async function ghOpenPr(env: Env, repo: string, branch: string, title: string): Promise<string | null> {
+async function ghOpenPr(env: Env, repo: string, branch: string, title: string): Promise<{ url?: string; error?: string }> {
   const owner = repo.split("/")[0];
   const existing = await gh(env, "GET", `/repos/${repo}/pulls?head=${encodeURIComponent(`${owner}:${branch}`)}&state=open`);
   if (existing.ok && Array.isArray(existing.data) && existing.data[0])
-    return (existing.data[0] as { html_url?: string }).html_url ?? null;
+    return { url: (existing.data[0] as { html_url?: string }).html_url ?? undefined };
   const r = await gh(env, "POST", `/repos/${repo}/pulls`, { title: title.slice(0, 100), head: branch, base: "main" });
-  if (r.ok) return (r.data.html_url as string | undefined) ?? null;
-  return null;
+  if (r.ok) return { url: (r.data.html_url as string | undefined) };
+  const errs = Array.isArray(r.data.errors) ? r.data.errors : [];
+  const msg = ((errs[0] as { message?: string } | undefined)?.message ?? r.data.message ?? "github api error") as string;
+  return { error: `${r.status} ${msg}`.slice(0, 160) };
 }
 
 // Repo file listing + content fetch — gives generation and verification the
@@ -1377,12 +1379,14 @@ async function executeTask(env: Env, ctx: ExecutionContext, brain: Brain, urls: 
           .bind(put.error ?? "github commit failed", task.id).run();
         return { task: task.task_id, error: put.error };
       }
-      const prUrl = await ghOpenPr(env, repo, branch, `${task.agent_id}: ${(meta?.summary ?? task.description).slice(0, 60)}`);
+      const pr = await ghOpenPr(env, repo, branch, `${task.agent_id}: ${(meta?.summary ?? task.description).slice(0, 60)}`);
+      const resultUrl = pr.url ?? put.url ?? `https://github.com/${repo}/blob/${branch}/${path}`;
+      const prNote = pr.error ? ` [PR open failed: ${pr.error}]` : "";
       await env.DB.prepare("UPDATE task_log SET status='completed', result=?, completed_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?")
-        .bind(prUrl ?? put.url ?? `https://github.com/${repo}/blob/${branch}/${path}`, task.id).run();
-      const text = `Done: ${task.description.slice(0, 80)} → ${prUrl ?? put.url ?? path}`;
+        .bind(resultUrl + prNote, task.id).run();
+      const text = `Done: ${task.description.slice(0, 80)} → ${resultUrl}${prNote}`;
       await publishToBus(env, ctx, "conversations", JSON.stringify({ from: task.agent_id, agent: task.agent_id, text, model: "workers-ai/llama-3.3-70b", event: "task_completed", task: task.task_id }));
-      return { task: task.task_id, agent: task.agent_id, path, url: prUrl ?? put.url, verified: v.how, attempts: attempt + 1 };
+      return { task: task.task_id, agent: task.agent_id, path, url: pr.url ?? put.url, pr_error: pr.error, verified: v.how, attempts: attempt + 1 };
     }
     feedback = v.issue ?? "verification failed";
   }

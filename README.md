@@ -36,7 +36,7 @@ The Autonomous AI Company OS is an enterprise-grade multi-agent system that simu
 
 ### Core Principles
 
-- **Separation of Concerns**: Product code is built in a separate repository (`./product/`) isolated from the agent system
+- **Separation of Concerns**: Product code lives in a separate repository (`./products/<slug>/`, e.g. `products/accessibility-checker`) isolated from the agent system
 - **Event-Driven Architecture**: D1-backed message streams ensure reliable, exactly-once message delivery
 - **Tiered Model Selection**: Cost-optimized LLM usage based on task importance
 - **Fail-Safe Operations**: Automatic retries, rollbacks, and escalation protocols
