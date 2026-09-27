@@ -105,8 +105,17 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
     const data = await page.evaluate(() => {
       const doc = (globalThis as any).document;
       const win = (globalThis as any).window;
+      // querySelectorAll can't pierce shadow roots — walk open roots so the
+      // style census and serialized markup see encapsulated content too.
+      // Closed roots stay opaque by design; that's a documented gap.
+      const deepQSA = (root: any, sel: string, out: any[] = []): any[] => {
+        for (const el of Array.from(root.querySelectorAll(sel) as any)) out.push(el);
+        for (const el of Array.from(root.querySelectorAll("*") as any))
+          if ((el as any).shadowRoot) deepQSA((el as any).shadowRoot, sel, out);
+        return out;
+      };
       const styles: unknown[] = [];
-      const els = doc.querySelectorAll("h1,h2,h3,h4,h5,h6,p,a,span,li,td,th,label,button");
+      const els = deepQSA(doc, "h1,h2,h3,h4,h5,h6,p,a,span,li,td,th,label,button");
       for (const el of Array.from(els).slice(0, 250) as any[]) {
         const cs = win.getComputedStyle(el);
         const text = String((el as any).innerText ?? "").trim().slice(0, 60);
@@ -148,6 +157,29 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
         tablesNoHeaders: Array.from(doc.querySelectorAll('table') as any).filter((t: any) => !t.querySelector('th')).length,
         skipLink: !!doc.querySelector('a[href^="#main"], a[href^="#content"]'),
       };
+      // Expand open shadow roots into inert <template shadowrootmode> nodes
+      // before serializing — plain outerHTML drops shadow content entirely,
+      // leaving every markup rule blind to it (and DSD pages lose it too,
+      // since the parser consumes authored templates). Template contents
+      // don't render, don't match querySelectorAll, and can't take focus, so
+      // the probes below see an unchanged page. Post-order collection puts
+      // nested hosts' templates inside their parents' serialization.
+      const hosts: any[] = [];
+      const collectHosts = (node: any) => {
+        for (const k of Array.from(node.children ?? [])) collectHosts(k);
+        if (node.shadowRoot) {
+          for (const k of Array.from(node.shadowRoot.children ?? [])) collectHosts(k);
+          hosts.push(node);
+        }
+      };
+      collectHosts(doc.documentElement);
+      for (const h of hosts) {
+        if (h.querySelector(":scope > template[shadowrootmode]")) continue;
+        const t = doc.createElement("template");
+        t.setAttribute("shadowrootmode", "open");
+        t.innerHTML = h.shadowRoot.innerHTML;
+        h.insertBefore(t, h.firstChild);
+      }
       return {
         title: doc.title as string,
         html: String(doc.documentElement.outerHTML),
@@ -180,9 +212,18 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
     const readFocus = () =>
       page.evaluate((sel) => {
         const doc = (globalThis as any).document;
-        const el = doc.activeElement;
+        // activeElement stops at the shadow host — pierce open roots to read
+        // the element actually holding focus (matches how Tab traverses).
+        let el = doc.activeElement;
+        while (el && el.shadowRoot && el.shadowRoot.activeElement) el = el.shadowRoot.activeElement;
         if (!el || el === doc.body) return "body";
-        const idx = Array.from(doc.querySelectorAll(sel) as any).indexOf(el);
+        const deepQSA = (root: any, s: string, out: any[] = []): any[] => {
+          for (const x of Array.from(root.querySelectorAll(s) as any)) out.push(x);
+          for (const x of Array.from(root.querySelectorAll("*") as any))
+            if ((x as any).shadowRoot) deepQSA((x as any).shadowRoot, s, out);
+          return out;
+        };
+        const idx = deepQSA(doc, sel).indexOf(el);
         const desc = `${String(el.tagName).toLowerCase()}${el.id ? "#" + el.id : ""}${String((el as any).innerText ?? "").trim() ? ":" + String((el as any).innerText).trim().slice(0, 25) : ""}`;
         return `${idx}:${desc}`;
       }, FOCUSABLE_SEL);
@@ -190,10 +231,16 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
       const census = await page.evaluate((sel) => {
         const doc = (globalThis as any).document;
         const win = (globalThis as any).window;
+        const deepQSA = (root: any, s: string, out: any[] = []): any[] => {
+          for (const x of Array.from(root.querySelectorAll(s) as any)) out.push(x);
+          for (const x of Array.from(root.querySelectorAll("*") as any))
+            if ((x as any).shadowRoot) deepQSA((x as any).shadowRoot, s, out);
+          return out;
+        };
         let n = 0;
         const under: { d: string; w: number; h: number }[] = [];
         const underAAA: { d: string; w: number; h: number }[] = [];
-        Array.from(doc.querySelectorAll(sel) as any).forEach((el: any, idx: number) => {
+        deepQSA(doc, sel).forEach((el: any, idx: number) => {
           const r = el.getBoundingClientRect();
           const cs = win.getComputedStyle(el);
           if (!(r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && !el.disabled)) return;
@@ -230,10 +277,17 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
         page.evaluate((sel) => {
           const doc = (globalThis as any).document;
           const win = (globalThis as any).window;
-          const el = doc.activeElement;
+          let el = doc.activeElement;
+          while (el && el.shadowRoot && el.shadowRoot.activeElement) el = el.shadowRoot.activeElement;
           if (!el || el === doc.body || !(el as any).getBoundingClientRect)
             return { entry: "body", hidden: false, partial: false, noInd: false };
-          const idx = Array.from(doc.querySelectorAll(sel) as any).indexOf(el);
+          const deepQSA = (root: any, s: string, out: any[] = []): any[] => {
+            for (const x of Array.from(root.querySelectorAll(s) as any)) out.push(x);
+            for (const x of Array.from(root.querySelectorAll("*") as any))
+              if ((x as any).shadowRoot) deepQSA((x as any).shadowRoot, s, out);
+            return out;
+          };
+          const idx = deepQSA(doc, sel).indexOf(el);
           const desc = `${String(el.tagName).toLowerCase()}${el.id ? "#" + el.id : ""}${String((el as any).innerText ?? "").trim() ? ":" + String((el as any).innerText).trim().slice(0, 25) : ""}`;
           const r = (el as any).getBoundingClientRect();
           let hidden = false;
@@ -242,7 +296,16 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
             const inset = Math.min(4, r.width / 4, r.height / 4);
             const covered = (x: number, y: number) => {
               const top = doc.elementFromPoint(x, y);
-              return !!top && top !== el && !(el as any).contains(top);
+              if (!top || top === el || (el as any).contains(top)) return false;
+              // elementFromPoint retargets to the shadow host for hits inside
+              // an open shadow tree — the host is el's own container, not
+              // covering content. Walk el's root chain; a host ancestor = not covered.
+              let root = (el as any).getRootNode?.();
+              while (root && (root as any).host) {
+                if ((root as any).host === top) return false;
+                root = (root as any).host.getRootNode?.();
+              }
+              return true;
             };
             const centre = covered(r.left + r.width / 2, r.top + r.height / 2);
             const corner =
@@ -295,10 +358,17 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
         // downstream check simply doesn't fire).
         const preEsc = (await page.evaluate((sel) => {
           const doc = (globalThis as any).document;
-          const el = doc.activeElement;
+          let el = doc.activeElement;
+          while (el && el.shadowRoot && el.shadowRoot.activeElement) el = el.shadowRoot.activeElement;
           const inside = !!(el && (el as any).closest && (el as any).closest('dialog,[role="dialog"]'));
           if (!el || el === doc.body) return { entry: "body", inDialog: inside };
-          const idx = Array.from(doc.querySelectorAll(sel) as any).indexOf(el);
+          const deepQSA = (root: any, s: string, out: any[] = []): any[] => {
+            for (const x of Array.from(root.querySelectorAll(s) as any)) out.push(x);
+            for (const x of Array.from(root.querySelectorAll("*") as any))
+              if ((x as any).shadowRoot) deepQSA((x as any).shadowRoot, s, out);
+            return out;
+          };
+          const idx = deepQSA(doc, sel).indexOf(el);
           const desc = `${String(el.tagName).toLowerCase()}${el.id ? "#" + el.id : ""}${String((el as any).innerText ?? "").trim() ? ":" + String((el as any).innerText).trim().slice(0, 25) : ""}`;
           return { entry: `${idx}:${desc}`, inDialog: inside };
         }, FOCUSABLE_SEL)) as { entry: string; inDialog: boolean };
@@ -381,7 +451,13 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
           const desc = await page.evaluate((el: any) => {
             const doc = (globalThis as any).document;
             const sel = 'a[href],button,input,select,textarea,summary,area[href],video[controls],audio[controls],[tabindex]:not([tabindex="-1"])';
-            const idx = Array.from(doc.querySelectorAll(sel)).indexOf(el);
+            const deepQSA = (root: any, s: string, out: any[] = []): any[] => {
+              for (const x of Array.from(root.querySelectorAll(s) as any)) out.push(x);
+              for (const x of Array.from(root.querySelectorAll("*") as any))
+                if ((x as any).shadowRoot) deepQSA((x as any).shadowRoot, s, out);
+              return out;
+            };
+            const idx = deepQSA(doc, sel).indexOf(el);
             const r = el.getBoundingClientRect();
             if (!(r.width > 0 && r.height > 0)) return null;
             // A button inside a form with no/unknown type submits on click —
