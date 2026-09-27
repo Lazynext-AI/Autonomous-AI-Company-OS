@@ -885,12 +885,17 @@ function infeasibleTaskReason(desc: string): string | null {
 // guaranteed churn, and an old completed-purpose task should not be rebuilt.
 // Markers: error_log "infeasible:" (auto-kill + classifier), result
 // "retired:"/"obsolete:"/"infeasible:" (sweep annotations + local gate),
+// result "closed:"/"resolved:" (operator annotation: work shipped —
+// the class is dead even though the row predates the corpus markers),
 // error_log "Deliverable " (write/test/fitness vetoes that burned attempts),
 // error_log "phantom_completion:" (artifact claim with no write evidence —
 // a deterministic veto in _DETERMINISTIC_VETO_MARKERS that retries
 // identically, so a respawn is guaranteed churn not a fresh chance).
+// "deferred:" is deliberately NOT corpus-visible: a business decision still
+// pending should resurface for the operator, and suppressing it would also
+// block the legitimate re-proposal once the decision lands.
 const DEAD_CORPUS_WHERE =
-  "status IN ('failed','escalated') AND (result LIKE '%retired:%' OR result LIKE '%obsolete:%' OR result LIKE '%infeasible:%' OR error_log LIKE '%infeasible:%' OR error_log LIKE '%Deliverable %' OR error_log LIKE '%phantom_completion:%')";
+  "status IN ('failed','escalated') AND (result LIKE '%retired:%' OR result LIKE '%obsolete:%' OR result LIKE '%infeasible:%' OR result LIKE '%closed:%' OR result LIKE '%resolved:%' OR error_log LIKE '%infeasible:%' OR error_log LIKE '%Deliverable %' OR error_log LIKE '%phantom_completion:%')";
 
 // Was this task already tried recently — in ANY status? Exact-match dedup on
 // pending only lets the same idea respawn under new wording forever (three

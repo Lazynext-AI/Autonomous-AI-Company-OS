@@ -253,10 +253,12 @@ class CTOAgent(BaseAgent):
                 dead = client.query(
                     "SELECT description,status,agent_id,created_at FROM task_log "
                     "WHERE status IN ('failed','escalated') AND (result LIKE ? "
-                    "OR result LIKE ? OR result LIKE ? OR error_log LIKE ? "
+                    "OR result LIKE ? OR result LIKE ? OR result LIKE ? "
+                    "OR result LIKE ? OR error_log LIKE ? "
                     "OR error_log LIKE ? OR error_log LIKE ?) "
                     "ORDER BY created_at DESC LIMIT 2000",
                     ["%retired:%", "%obsolete:%", "%infeasible:%",
+                     "%closed:%", "%resolved:%",
                      "%infeasible:%", "%Deliverable %", "%phantom_completion:%"])
                 rows = live + dead
                 rows.sort(key=lambda r: r.get("created_at") or "", reverse=True)
