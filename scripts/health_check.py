@@ -45,6 +45,7 @@ DRIFT_PAIRS = {
 # Budgets: cron runs */10 → 25 min; daily sweeps → 26 h.
 KV_WATCH = {
     "cron-tick": ("cron:last_tick", 25 * 60_000),
+    "maint-gate": ("maint:last_run", 26 * 3_600_000),
     "mon-sweep": ("mon:last_sweep", 26 * 3_600_000),
     "seq-sweep": ("seq:last_run", 26 * 3_600_000),
     "billing-reconcile": ("billing:last_reconcile", 26 * 3_600_000),
