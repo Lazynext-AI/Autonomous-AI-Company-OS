@@ -9,8 +9,8 @@ async function kvGet(key: string) {
   const d = await r.json();
   return d.value as string | null;
 }
-async function kvPut(key: string, value: string) {
-  await workerFetch("/kv/put", { key, value });
+async function kvPut(key: string, value: string, ttl?: number) {
+  await workerFetch("/kv/put", { key, value, ...(ttl === undefined ? {} : { ttl }) });
 }
 async function kvDel(key: string) {
   await workerFetch("/kv/delete", { key }).catch(() => {});
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   // Generate a fresh pending secret — NOT enabled until a code confirms.
   if (action === "setup") {
     const secret = new OTPAuth.Secret({ size: 20 });
-    await kvPut("2fa:pending", secret.base32);
+    await kvPut("2fa:pending", secret.base32, 300);
     const uri = totp(secret.base32).toString();
     return NextResponse.json({ secret: secret.base32, uri });
   }
@@ -49,8 +49,8 @@ export async function POST(req: NextRequest) {
     if (!pending) return NextResponse.json({ error: "no pending setup" }, { status: 400 });
     const valid = totp(pending).validate({ token: String(code ?? ""), window: 1 }) !== null;
     if (!valid) return NextResponse.json({ error: "invalid code" }, { status: 401 });
-    await kvPut("2fa:secret", pending);
-    await kvPut("flag:two_factor", "true");
+    await kvPut("2fa:secret", pending, 0);
+    await kvPut("flag:two_factor", "true", 0);
     await kvDel("2fa:pending");
     return NextResponse.json({ ok: true });
   }
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
       const valid = totp(secret).validate({ token: String(code ?? ""), window: 1 }) !== null;
       if (!valid) return NextResponse.json({ error: "invalid code" }, { status: 401 });
     }
-    await kvPut("flag:two_factor", "false");
+    await kvPut("flag:two_factor", "false", 0);
     await kvDel("2fa:secret");
     return NextResponse.json({ ok: true });
   }
