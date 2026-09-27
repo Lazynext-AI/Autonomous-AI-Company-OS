@@ -197,7 +197,7 @@ class GitManager:
             pushed = await self.push_branch(branch_name)
             result["pushed"] = pushed
             if pushed:
-                result["pr_url"] = await self._open_pr(branch_name, description)
+                result["pr_url"], result["pr_error"] = await self._open_pr(branch_name, description)
 
         # Leave the repo on the base branch so the next task forks cleanly.
         rc, _, _ = await self._run_git("checkout", "main")
@@ -206,15 +206,20 @@ class GitManager:
 
         return result
 
-    async def _open_pr(self, branch_name: str, title: str) -> str | None:
-        """Open a PR for the branch against the default branch, if none exists."""
+    async def _open_pr(self, branch_name: str, title: str) -> tuple[str | None, str | None]:
+        """Open a PR for the branch against the default branch, if none exists.
+
+        Returns (pr_url, error): url on success, otherwise None plus a short
+        reason. Push success used to mask a failed PR open (e.g. a rotated
+        token) — the caller now carries the reason into the task result.
+        """
         from core.config import get_settings
         settings = get_settings()
         if not settings.github_token:
-            return None
+            return None, "no github_token configured"
         returncode, remote_url, _ = await self._run_git("remote", "get-url", "origin")
         if returncode != 0 or "github.com" not in remote_url:
-            return None
+            return None, "origin remote is not github.com"
         repo = remote_url.strip().split("github.com/")[-1].removesuffix(".git")
         try:
             import httpx
@@ -229,7 +234,7 @@ class GitManager:
                     headers=headers,
                 )
                 if existing.status_code == 200 and existing.json():
-                    return existing.json()[0].get("html_url")
+                    return existing.json()[0].get("html_url"), None
                 r = await client.post(
                     f"https://api.github.com/repos/{repo}/pulls",
                     json={"title": title[:100], "head": branch_name, "base": "main"},
@@ -237,8 +242,9 @@ class GitManager:
                 )
                 if r.status_code == 201:
                     logger.info("pr_opened", branch=branch_name, url=r.json().get("html_url"))
-                    return r.json().get("html_url")
+                    return r.json().get("html_url"), None
                 logger.warning("pr_open_failed", status=r.status_code, error=r.text[:200])
+                return None, f"github api {r.status_code}: {r.text[:120]}"
         except Exception as e:
             logger.warning("pr_open_error", error=str(e))
-        return None
+            return None, str(e)[:160]

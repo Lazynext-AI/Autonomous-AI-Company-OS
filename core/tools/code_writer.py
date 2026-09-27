@@ -293,6 +293,12 @@ class CodeWriter:
             "repo_root": str(repo_root),
         }
 
+        # A pushed branch with no PR means the open call failed (e.g. a
+        # rotated token) — surface the reason instead of letting "pushed"
+        # imply the PR exists.
+        if git_info.get("pr_error"):
+            result["pr_error"] = git_info["pr_error"]
+
         if reverted:
             result["reverted"] = reverted
 

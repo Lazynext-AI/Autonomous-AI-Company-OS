@@ -3,6 +3,7 @@
 // a checkout link and update the plan on payment success.
 // Host: test.dodopayments.com (test mode) or live.dodopayments.com.
 import { Env, json, listAll } from "./gateway";
+import { signwellSendFromTemplate } from "./services";
 
 const DODO_API_DEFAULT = "https://test.dodopayments.com"; // set env.DODO_API_BASE to https://live.dodopayments.com when the account leaves test mode
 
@@ -216,6 +217,27 @@ export async function handleBilling(
         const owned = ownedPlans(subs, email);
         const lic = activate ? plan : owned.includes("pro") ? "pro" : (owned[0] ?? "free");
         await env.EPHEMERAL.put(`license:${email}`, lic, { expirationTtl: 31_536_000 });
+      }
+      // Optional e-sign on activation — config:signwell_template names a
+      // SignWell document template; when set, each new activation is emailed a
+      // signature request. Renewals don't resend — signsent:<sub> dedups.
+      if (email && activate && type !== "subscription.renewed") {
+        const tpl = await env.EPHEMERAL.get("config:signwell_template");
+        if (tpl && !(await env.EPHEMERAL.get(`signsent:${subKey}`))) {
+          ctx.waitUntil((async () => {
+            const r = await signwellSendFromTemplate(env, {
+              template_id: tpl, signer_email: email,
+              subject: "Lazynext service agreement",
+            });
+            if (r.ok) {
+              await env.EPHEMERAL.put(`signsent:${subKey}`, "1", { expirationTtl: 31_536_000 });
+            } else {
+              await env.DB.prepare(
+                "INSERT INTO bus_messages (channel, payload, created_at) VALUES ('signwell.errors', ?, datetime('now'))",
+              ).bind(JSON.stringify({ email, tpl, status: r.status, connected: r.connected })).run();
+            }
+          })().catch(() => {}));
+        }
       }
       await env.DB.prepare(
         "INSERT INTO bus_messages (channel, payload, created_at) VALUES ('billing.events', ?, datetime('now'))",

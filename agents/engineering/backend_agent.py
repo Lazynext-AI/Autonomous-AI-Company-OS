@@ -172,6 +172,8 @@ class BackendAgent(BaseAgent):
                             files_info += f" (branch: {write_result['git_branch']})"
                         if write_result.get("git_pushed"):
                             files_info += " [Pushed to remote]"
+                            if write_result.get("pr_error"):
+                                files_info += f" [PR open failed: {write_result['pr_error']}]"
                     
                     logger.info(
                         "code_written",

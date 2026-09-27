@@ -38,6 +38,16 @@ DRIFT_PAIRS = {
         "https://accessibility-checker-api.dry-hall-6a50.workers.dev/rules",
     ),
 }
+# Internal liveness via platform KV — the surfaces above prove the worker is
+# reachable, but a stopped cron or wedged sweep leaves them green. Values are
+# ms epochs; mon:/billing: store JSON {"at": ms}, the others bare epochs.
+# Budgets: cron runs */10 → 25 min; daily sweeps → 26 h.
+KV_WATCH = {
+    "cron-tick": ("cron:last_tick", 25 * 60_000),
+    "mon-sweep": ("mon:last_sweep", 26 * 3_600_000),
+    "seq-sweep": ("seq:last_run", 26 * 3_600_000),
+    "billing-reconcile": ("billing:last_reconcile", 26 * 3_600_000),
+}
 STATE_FILE = Path(".health_state.json")
 
 
@@ -63,11 +73,44 @@ def fetch_body(url: str) -> bytes | None:
         return None
 
 
+def kv_age_ms(key: str) -> float | None:
+    """Read a KV timestamp via the platform worker; None when unreadable."""
+    try:
+        url = os.environ.get("CLOUDFLARE_API_URL", "")
+        token = os.environ.get("CLOUDFLARE_API_TOKEN", "")
+        req = urllib.request.Request(
+            f"{url}/kv/get",
+            data=json.dumps({"key": key}).encode(),
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+                "User-Agent": "healthcheck/1.0",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=15) as r:
+            v = json.loads(r.read()).get("value")
+        if not v:
+            return None
+        try:
+            ts = float(json.loads(v).get("at"))
+        except (json.JSONDecodeError, AttributeError, TypeError):
+            ts = float(v)
+        import time
+
+        return time.time() * 1000 - ts
+    except Exception:
+        return None
+
+
 async def main() -> int:
     now = {name: check(url) for name, url in CHECKS.items()}
     for name, (a, b) in DRIFT_PAIRS.items():
         body_a, body_b = fetch_body(a), fetch_body(b)
         now[name] = body_a is not None and body_a == body_b
+    for name, (key, budget) in KV_WATCH.items():
+        age = kv_age_ms(key)
+        now[name] = age is not None and age < budget
     prev = json.loads(STATE_FILE.read_text()) if STATE_FILE.exists() else {}
     failed = [k for k, ok in now.items() if not ok]
     recovered = [k for k in prev if not prev.get(k) and now.get(k)]

@@ -175,6 +175,10 @@ class DevOpsAgent(BaseAgent):
                     result.output = f"{result.output}\n\n[Files written: {', '.join(write_result['files_written'])}]"
                     if write_result.get("git_committed"):
                         result.output += "\n[Committed to git]"
+                        if write_result.get("git_pushed"):
+                            result.output += " [Pushed to remote]"
+                            if write_result.get("pr_error"):
+                                result.output += f" [PR open failed: {write_result['pr_error']}]"
                 elif write_result.get("skipped_protected") or write_result.get("reverted"):
                     result.success = False
                     if write_result.get("skipped_protected"):

@@ -204,23 +204,16 @@ export async function handleServices(
   if (path === "/api/v1/signwell/send" && req.method === "POST") {
     if (!b.template_id || !b.signer_email)
       return json({ error: "template_id and signer_email required" }, 400);
-    // SignWell requires each recipient's placeholder_name to match a named
-    // placeholder on the template — fetch the template and map the signer to
-    // the first placeholder (or an explicit placeholder_name if provided).
-    const t = await signwellFetch(env, "GET", `/document_templates/${b.template_id}/`);
-    if (!t.connected) return json(t, 503);
-    if (!t.ok) return json({ connected: true, ...t.data }, t.status);
-    const phs = ((t.data.placeholders ?? []) as { name?: string }[]);
-    return signwell(env, "POST", "/document_templates/documents/", {
+    const r = await signwellSendFromTemplate(env, {
       template_id: String(b.template_id),
+      signer_email: String(b.signer_email),
+      signer_name: b.signer_name ? String(b.signer_name) : undefined,
       subject: b.subject ? String(b.subject) : undefined,
-      recipients: [{
-        id: String(b.recipient_id ?? "1"),
-        placeholder_name: String(b.placeholder_name ?? phs[0]?.name ?? "signer"),
-        email: String(b.signer_email),
-        name: String(b.signer_name ?? b.signer_email),
-      }],
+      recipient_id: b.recipient_id ? String(b.recipient_id) : undefined,
+      placeholder_name: b.placeholder_name ? String(b.placeholder_name) : undefined,
     });
+    if (!r.connected) return json({ connected: false, ...r.data }, 503);
+    return json({ connected: true, ok: r.ok, status: r.status, ...r.data }, r.ok ? 200 : r.status);
   }
   if (path === "/api/v1/signwell/events" && req.method === "GET") {
     const sec = await env.EPHEMERAL.get("signwell:whsec");
@@ -520,6 +513,33 @@ async function signwell(
   const r = await signwellFetch(env, method, endpoint, body);
   if (!r.connected) return json({ connected: false, ...r.data }, 503);
   return json({ connected: true, ok: r.ok, status: r.status, ...r.data }, r.ok ? 200 : r.status);
+}
+
+// Send a template document for signature — shared by /api/v1/signwell/send and
+// the billing activation hook (config:signwell_template). SignWell requires
+// each recipient's placeholder_name to match a named placeholder on the
+// template, so the template is fetched and the signer maps to the first
+// placeholder unless an explicit placeholder_name is given.
+export async function signwellSendFromTemplate(
+  env: Env,
+  opts: {
+    template_id: string; signer_email: string; signer_name?: string;
+    subject?: string; recipient_id?: string; placeholder_name?: string;
+  },
+): Promise<{ connected: boolean; ok: boolean; status: number; data: Record<string, unknown> }> {
+  const t = await signwellFetch(env, "GET", `/document_templates/${opts.template_id}/`);
+  if (!t.connected || !t.ok) return t;
+  const phs = ((t.data.placeholders ?? []) as { name?: string }[]);
+  return signwellFetch(env, "POST", "/document_templates/documents/", {
+    template_id: String(opts.template_id),
+    subject: opts.subject,
+    recipients: [{
+      id: String(opts.recipient_id ?? "1"),
+      placeholder_name: String(opts.placeholder_name ?? phs[0]?.name ?? "signer"),
+      email: String(opts.signer_email),
+      name: String(opts.signer_name ?? opts.signer_email),
+    }],
+  });
 }
 
 // --- Connector dispatch -------------------------------------------------------
