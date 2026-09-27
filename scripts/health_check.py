@@ -8,6 +8,7 @@ import asyncio
 import json
 import os
 import sys
+import time
 import urllib.request
 from pathlib import Path
 
@@ -96,8 +97,6 @@ def kv_age_ms(key: str) -> float | None:
             ts = float(json.loads(v).get("at"))
         except (json.JSONDecodeError, AttributeError, TypeError):
             ts = float(v)
-        import time
-
         return time.time() * 1000 - ts
     except Exception:
         return None
