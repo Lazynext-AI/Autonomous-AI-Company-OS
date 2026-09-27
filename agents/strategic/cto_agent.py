@@ -171,12 +171,25 @@ class CTOAgent(BaseAgent):
             
             # Check for duplicate tasks before publishing
             seen_descriptions = set()
+            # One corpus fetch per batch — dedup runs before the kill-list,
+            # so every candidate is checked, not just filter survivors.
+            recent_tasks = await self._get_recent_tasks()
             for t in tasks:
                 assign = (t.context or {}).get("assign_to", "backend")
                 channel = role_channel.get(assign, Channels.CTO_TASKS_BACKEND)
-                
+
                 # Normalize description for duplicate detection
                 desc_normalized = t.description.lower().strip()[:100]
+
+                # Dedup BEFORE the kill-list: a respawn of an already-dead
+                # class writes no new row — the original tombstone already
+                # anchors it in the corpus. Filter-first wrote a fresh
+                # tombstone per paraphrase, flooding the corpus past its read
+                # window (measured 2026-09-27: 327/328 kills in a day matched
+                # rows older than the visible 500).
+                if self._description_is_duplicate(desc_normalized, recent_tasks):
+                    self.logger.info("skipping_duplicate_task", description=t.description[:50], assign_to=assign)
+                    continue
 
                 # Deterministic kill for impossible/already-shipped classes —
                 # prompt bounds are advisory; this gate is not. Recorded as a
@@ -193,12 +206,6 @@ class CTOAgent(BaseAgent):
                     )
                     continue
 
-                # Check if similar task already exists or was recently completed
-                is_duplicate = await self._is_duplicate_task(desc_normalized, assign)
-                if is_duplicate:
-                    self.logger.info("skipping_duplicate_task", description=t.description[:50], assign_to=assign)
-                    continue
-                
                 # Track descriptions in this batch to avoid duplicates
                 if desc_normalized in seen_descriptions:
                     self.logger.info("skipping_duplicate_in_batch", description=t.description[:50])
@@ -248,7 +255,7 @@ class CTOAgent(BaseAgent):
                     "WHERE status IN ('failed','escalated') AND (result LIKE ? "
                     "OR result LIKE ? OR result LIKE ? OR error_log LIKE ? "
                     "OR error_log LIKE ? OR error_log LIKE ?) "
-                    "ORDER BY created_at DESC LIMIT 500",
+                    "ORDER BY created_at DESC LIMIT 2000",
                     ["%retired:%", "%obsolete:%", "%infeasible:%",
                      "%infeasible:%", "%Deliverable %", "%phantom_completion:%"])
                 rows = live + dead
@@ -260,59 +267,61 @@ class CTOAgent(BaseAgent):
             self.logger.warning("recent_tasks_fetch_failed", error=str(e))
             return []
 
+    def _description_is_duplicate(self, description: str, recent_tasks: list[dict]) -> bool:
+        """Substring + stemmed content-word overlap against fetched rows."""
+        desc_lower = description.lower().strip()
+
+        stop = {"task", "the", "and", "for", "with", "that", "this", "into",
+                "from", "conduct", "implement", "setup", "set", "add",
+                "create", "build", "review"}
+        def content_words(desc: str) -> set:
+            return {w.strip(".,:;()") for w in desc.split()
+                    if len(w) > 3 and w not in stop}
+
+        def words_related(a: str, b: str) -> bool:
+            # Exact matches miss inflected paraphrases ("track"/"tracking",
+            # "analyze"/"analyzing") — count a shared stem: the shorter
+            # word's first min(len,5) chars as common prefix. Distinct
+            # roots like "report"/"repository" stay apart.
+            if a == b:
+                return True
+            n = min(len(a), len(b), 5)
+            return n >= 4 and a[:n] == b[:n]
+
+        for task in recent_tasks:
+            task_desc = (task.get("description") or "").lower().strip()
+
+            if not task_desc or len(desc_lower) < 15:
+                continue
+
+            # Substring match, then stemmed content-word overlap for
+            # paraphrases ("security scan" vs "security audit" vs
+            # "vulnerability assessment" — the same task reworded).
+            similar = desc_lower in task_desc or task_desc in desc_lower
+            if not similar:
+                a, b = content_words(desc_lower), content_words(task_desc)
+                if a and b:
+                    smaller, larger = (a, b) if len(a) <= len(b) else (b, a)
+                    inter = sum(
+                        1 for w in smaller
+                        if any(words_related(w, x) for x in larger)
+                    )
+                    similar = inter >= max(2, (len(smaller) + 1) // 2)
+            if not similar:
+                continue
+
+            # Every status counts: a failed/escalated task is a signal the
+            # approach needs changing, not that it should regenerate under
+            # new wording on the next planning cycle.
+            return True
+
+        return False
+
     async def _is_duplicate_task(self, description: str, assign_to: str) -> bool:
         """Check if a similar task already exists or was recently completed."""
         try:
             recent_tasks = await self._get_recent_tasks()
-            desc_lower = description.lower().strip()
-            
-            # Check for similar tasks
-            stop = {"task", "the", "and", "for", "with", "that", "this", "into",
-                    "from", "conduct", "implement", "setup", "set", "add",
-                    "create", "build", "review"}
-            def content_words(desc: str) -> set:
-                return {w.strip(".,:;()") for w in desc.split()
-                        if len(w) > 3 and w not in stop}
-
-            def words_related(a: str, b: str) -> bool:
-                # Exact matches miss inflected paraphrases ("track"/"tracking",
-                # "analyze"/"analyzing") — count a shared stem: the shorter
-                # word's first min(len,5) chars as common prefix. Distinct
-                # roots like "report"/"repository" stay apart.
-                if a == b:
-                    return True
-                n = min(len(a), len(b), 5)
-                return n >= 4 and a[:n] == b[:n]
-
-            for task in recent_tasks:
-                task_desc = (task.get("description") or "").lower().strip()
-                status = task.get("status", "")
-
-                if not task_desc or len(desc_lower) < 15:
-                    continue
-
-                # Substring match, then stemmed content-word overlap for
-                # paraphrases ("security scan" vs "security audit" vs
-                # "vulnerability assessment" — the same task reworded).
-                similar = desc_lower in task_desc or task_desc in desc_lower
-                if not similar:
-                    a, b = content_words(desc_lower), content_words(task_desc)
-                    if a and b:
-                        smaller, larger = (a, b) if len(a) <= len(b) else (b, a)
-                        inter = sum(
-                            1 for w in smaller
-                            if any(words_related(w, x) for x in larger)
-                        )
-                        similar = inter >= max(2, (len(smaller) + 1) // 2)
-                if not similar:
-                    continue
-
-                # Every status counts: a failed/escalated task is a signal the
-                # approach needs changing, not that it should regenerate under
-                # new wording on the next planning cycle.
-                return True
-
-            return False
+            return self._description_is_duplicate(description, recent_tasks)
         except Exception as e:
             self.logger.warning("duplicate_check_failed", error=str(e))
             return False

@@ -794,24 +794,33 @@ async function operate(env: Env, ctx: ExecutionContext, brain: Brain, urls: Reco
 
   let taskDropped: string | undefined;
   if (task && (pending?.c ?? 0) < 25) {
-    const infeasible = infeasibleTaskReason(task);
-    if (infeasible) {
-      // Terminal failed row — attempts=3 keeps agentTick from requeuing, and
-      // the infeasible: marker lands it in the dead corpus so paraphrases
-      // stay dead permanently (not just for the 24h live window).
-      await env.DB.prepare(
-        "INSERT INTO task_log (task_id, agent_id, description, status, attempts, error_log, created_at) VALUES (lower(hex(randomblob(4))), ?, ?, 'failed', 3, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
-      )
-        .bind(a.id, task, `infeasible: ${infeasible} (auto-killed at insert)`)
-        .run();
-      taskDropped = infeasible;
-    } else if (!(await taskAlreadyTried(env, task))) {
-      // Dedupe: skip if the same task is already queued or running.
-      await env.DB.prepare(
-        "INSERT INTO task_log (task_id, agent_id, description, status, created_at) SELECT lower(hex(randomblob(4))), ?, ?, 'pending', strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE NOT EXISTS (SELECT 1 FROM task_log WHERE description=? AND status IN ('pending','in_progress'))",
-      )
-        .bind(a.id, task, task)
-        .run();
+    // Dedup BEFORE the kill-list: a paraphrase of an already-dead class costs
+    // zero rows — the original tombstone already anchors it in the corpus.
+    // Filter-first wrote a fresh tombstone per respawn, which is what flooded
+    // the corpus past its read window (measured 2026-09-27: 327/328 kills in
+    // a day matched rows older than the visible 500).
+    if (await taskAlreadyTried(env, task)) {
+      taskDropped = "duplicate";
+    } else {
+      const infeasible = infeasibleTaskReason(task);
+      if (infeasible) {
+        // Terminal failed row — attempts=3 keeps agentTick from requeuing, and
+        // the infeasible: marker lands it in the dead corpus so paraphrases
+        // stay dead permanently (not just for the 24h live window).
+        await env.DB.prepare(
+          "INSERT INTO task_log (task_id, agent_id, description, status, attempts, error_log, created_at) VALUES (lower(hex(randomblob(4))), ?, ?, 'failed', 3, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
+        )
+          .bind(a.id, task, `infeasible: ${infeasible} (auto-killed at insert)`)
+          .run();
+        taskDropped = infeasible;
+      } else {
+        // Dedupe: skip if the same task is already queued or running.
+        await env.DB.prepare(
+          "INSERT INTO task_log (task_id, agent_id, description, status, created_at) SELECT lower(hex(randomblob(4))), ?, ?, 'pending', strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE NOT EXISTS (SELECT 1 FROM task_log WHERE description=? AND status IN ('pending','in_progress'))",
+        )
+          .bind(a.id, task, task)
+          .run();
+      }
     }
   }
   const payload = JSON.stringify({ from: a.id, agent: a.id, text: status, model: "workers-ai/llama-3.3-70b", ...(task ? { task } : {}) });
@@ -920,9 +929,13 @@ async function taskAlreadyTried(env: Env, desc: string): Promise<boolean> {
     .all<{ description: string }>()
     .catch(() => ({ results: [] as { description: string }[] }));
   // Dead corpus has no time bound — impossible/retired classes must never
-  // regenerate, however old the terminal row is.
+  // regenerate, however old the terminal row is. The cap must cover the whole
+  // corpus or the oldest dead classes silently evict and respawn (measured
+  // 2026-09-27: corpus 1296, cap 500 → 327/328 kills that day were evicted-
+  // class respawns). Dedup-before-filter in operate() + cto_agent stops the
+  // tombstone flood, so growth is now bounded by new dead classes only.
   const dead = await env.DB.prepare(
-    `SELECT description FROM task_log WHERE ${DEAD_CORPUS_WHERE} ORDER BY created_at DESC LIMIT 500`,
+    `SELECT description FROM task_log WHERE ${DEAD_CORPUS_WHERE} ORDER BY created_at DESC LIMIT 2000`,
   )
     .all<{ description: string }>()
     .catch(() => ({ results: [] as { description: string }[] }));
