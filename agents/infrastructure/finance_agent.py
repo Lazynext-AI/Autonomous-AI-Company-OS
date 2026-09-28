@@ -87,7 +87,8 @@ Output concise, professional reports. Use actual data provided. Never use placeh
             self.logger.warning("funnel_fetch_failed", error=str(e))
         funnel_line = (
             f"\nFunnel (live): scans_30d={funnel['scans_30d']}, leads={funnel['leads']}, "
-            f"crm_leads={funnel['crm_leads']}, trials={funnel['trials_active']}, "
+            f"crm_leads={funnel['crm_leads']}, engaged={funnel['crm_engaged']}, "
+            f"trials={funnel['trials_active']}, "
             f"pro={funnel['licenses_pro']}, subs={funnel['subscriptions_active']}, "
             f"monitors={funnel['monitors']}"
         ) if funnel else ""

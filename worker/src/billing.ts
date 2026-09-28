@@ -495,6 +495,9 @@ export async function handleBilling(
       waitlist: await count("waitlist"),
       email_contacts: await count("email_contacts"),
       crm_leads: await count("crm_leads"),
+      crm_engaged: await env.DB.prepare(
+        "SELECT COUNT(*) c FROM crm_leads WHERE status='engaged'",
+      ).first<{ c: number }>().then((r) => r?.c ?? 0).catch(() => null),
       trials_active: trialCount,
       licenses_pro: proLicenses,
       licenses_free: licVals.length - proLicenses,

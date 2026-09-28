@@ -511,6 +511,21 @@ const BREVO_SUPPRESS_EVENTS = new Set([
   "blocked", "unsubscribed",
 ]);
 
+// Lead promotion from raw Brevo events — click is the only high-intent
+// signal worth acting on (opens are Apple-MPP inflated). Returns the
+// crm_leads notes stamp or null. The stamp mirrors the format ops used when
+// this ran manually ("clicked-trial:<date>"), so old and new rows read the
+// same; non-trial links get plain "clicked:<date>".
+export function leadEngagement(
+  ev: { event?: string; link?: string | null }, date?: string,
+): string | null {
+  const name = (ev.event ?? "").toLowerCase().replace(/[_-]/g, "");
+  if (name !== "click") return null;
+  const day = (date ?? new Date().toISOString()).slice(0, 10);
+  return /trial|checkout/i.test(ev.link ?? "")
+    ? `clicked-trial:${day}` : `clicked:${day}`;
+}
+
 export async function handleBrevoWebhook(
   req: Request, env: Env, path: string,
 ): Promise<Response> {
@@ -551,6 +566,27 @@ export async function handleBrevoWebhook(
     ).bind(ev.event ?? "unknown", email || null, tag,
       typeof ev.ts_epoch === "number" ? ev.ts_epoch : null,
       ev.link ?? null).run().catch(() => {});
+    // Clickers are hot leads — promote them in crm_leads so the funnel +
+    // briefings see engagement without a manual stamp. Guarded so a late
+    // click can't demote a converted/customer/unsubscribed row and a second
+    // click on the same lead doesn't double-stamp the notes.
+    const stamp = email ? leadEngagement(ev) : null;
+    if (stamp) {
+      const promoted = await env.DB.prepare(
+        "UPDATE crm_leads SET status='engaged', "
+        + "notes = COALESCE(notes,'') || ? WHERE email = ? "
+        + "AND status NOT IN ('engaged','customer','converted',"
+        + "'disqualified','unsubscribed')",
+      ).bind(` | ${stamp}`, email).run().catch(() => null);
+      if (promoted?.meta?.changes) {
+        await env.DB.prepare(
+          "INSERT INTO bus_messages (channel, payload, created_at) VALUES ('leads.events', ?, datetime('now'))",
+        ).bind(JSON.stringify({
+          type: "lead_engaged", email, stamp, tag,
+          link: ev.link ?? null,
+        })).run().catch(() => {});
+      }
+    }
     list.unshift({ event: ev.event, email, tag, suppressed: suppress,
       received_at: new Date().toISOString() });
   }

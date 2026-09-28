@@ -321,6 +321,7 @@ Return ONLY the JSON object."""
                     funnel_line = (
                         f"\n- Funnel (live): scans_30d={funnel.get('scans_30d')}, "
                         f"leads={funnel.get('leads')}, crm_leads={funnel.get('crm_leads')}, "
+                        f"engaged={funnel.get('crm_engaged')}, "
                         f"email_contacts={funnel.get('email_contacts')}, "
                         f"trials={funnel.get('trials_active')}, pro={funnel.get('licenses_pro')}, "
                         f"subs={funnel.get('subscriptions_active')}, monitors={funnel.get('monitors')}"
