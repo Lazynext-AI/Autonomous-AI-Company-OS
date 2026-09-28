@@ -138,8 +138,10 @@ export async function handleConnect(
   const [, id, phase] = m;
   const p = OAUTH_CONNECTORS[id];
   if (!p) return json({ error: `connector '${id}' has no OAuth flow — paste its credential in Settings` }, 404);
-  const origin = `${url.protocol}//${url.host}`;
-  const redirectUri = `${origin}/api/v1/connect/${id}/callback`;
+  // Pin the canonical domain: providers register exact redirect_uris, and the
+  // callback only ever runs on this worker's public domain — internal callers
+  // (dashboard svc proxy) reach us via the workers.dev hostname instead.
+  const redirectUri = `https://ai-company.lazynext.com/api/v1/connect/${id}/callback`;
 
   if (phase === "start") {
     const authedHeader = req.headers.get("authorization") ?? "";
