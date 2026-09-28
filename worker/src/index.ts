@@ -950,8 +950,10 @@ async function taskAlreadyTried(env: Env, desc: string): Promise<boolean> {
   // 2026-09-27: corpus 1296, cap 500 → 327/328 kills that day were evicted-
   // class respawns). Dedup-before-filter in operate() + cto_agent stops the
   // tombstone flood, so growth is now bounded by new dead classes only.
+  // Headroom check: corpus ~1388 on 2026-09-28, ~250 tombstones/day → 10k
+  // covers ~a month; re-check `SELECT count(*) ... DEAD_CORPUS_WHERE` on audit.
   const dead = await env.DB.prepare(
-    `SELECT description FROM task_log WHERE ${DEAD_CORPUS_WHERE} ORDER BY created_at DESC LIMIT 2000`,
+    `SELECT description FROM task_log WHERE ${DEAD_CORPUS_WHERE} ORDER BY created_at DESC LIMIT 10000`,
   )
     .all<{ description: string }>()
     .catch(() => ({ results: [] as { description: string }[] }));

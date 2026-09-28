@@ -256,7 +256,7 @@ class CTOAgent(BaseAgent):
                     "OR result LIKE ? OR result LIKE ? OR result LIKE ? "
                     "OR result LIKE ? OR error_log LIKE ? "
                     "OR error_log LIKE ? OR error_log LIKE ?) "
-                    "ORDER BY created_at DESC LIMIT 2000",
+                    "ORDER BY created_at DESC LIMIT 10000",
                     ["%retired:%", "%obsolete:%", "%infeasible:%",
                      "%closed:%", "%resolved:%",
                      "%infeasible:%", "%Deliverable %", "%phantom_completion:%"])
