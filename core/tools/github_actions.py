@@ -22,6 +22,7 @@ class GitHubActionsManager:
         self.token = self.settings.github_token.strip() if self.settings.github_token else ""
         self._repo_owner = None
         self._repo_name = None
+        self._default_branch = None
 
     async def _get_repo_info(self) -> tuple[Optional[str], Optional[str]]:
         """Get repository owner and name from git remote."""
@@ -53,8 +54,38 @@ class GitHubActionsManager:
         
         return None, None
 
+    async def _get_default_branch(self) -> Optional[str]:
+        """Repo's default branch, cached — failed-run queries scope to it."""
+        if self._default_branch:
+            return self._default_branch
+        owner, repo = await self._get_repo_info()
+        if not owner or not repo or not self.token:
+            return None
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.token}",
+                "Accept": "application/vnd.github.v3+json",
+                "X-GitHub-Api-Version": "2022-11-28",
+            }
+            url = f"https://api.github.com/repos/{owner}/{repo}"
+            async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+                response = await client.get(url, headers=headers)
+                if response.status_code == 200:
+                    self._default_branch = response.json().get("default_branch")
+                else:
+                    logger.warning("default_branch_fetch_failed", status=response.status_code)
+        except Exception as e:
+            logger.warning("default_branch_fetch_exception", error=str(e))
+        return self._default_branch
+
     async def get_failed_workflows(self, limit: int = 10) -> List[Dict[str, Any]]:
-        """Get recent failed workflow runs."""
+        """Get recent failed workflow runs on the default branch.
+
+        PR-branch failures belong to the branch author — scoping the query
+        (API `branch` param + a head_branch post-filter fallback) keeps them
+        from ever reaching the monitor's failure list and from being picked
+        up by the fix-fallback path.
+        """
         owner, repo = await self._get_repo_info()
         if not owner or not repo:
             logger.warning("repo_info_not_available")
@@ -63,6 +94,9 @@ class GitHubActionsManager:
         if not self.token:
             logger.warning("github_token_not_set")
             return []
+
+        default_branch = await self._get_default_branch()
+        allowed_branches = {default_branch} if default_branch else {"main", "master"}
 
         try:
             headers = {
@@ -77,6 +111,8 @@ class GitHubActionsManager:
                 "per_page": limit,
                 "page": 1,
             }
+            if default_branch:
+                params["branch"] = default_branch
 
             async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
                 response = await client.get(url, headers=headers, params=params)
@@ -85,6 +121,8 @@ class GitHubActionsManager:
                     data = response.json()
                     workflows = []
                     for run in data.get("workflow_runs", []):
+                        if run.get("head_branch") not in allowed_branches:
+                            continue
                         workflows.append({
                             "id": run.get("id"),
                             "name": run.get("name"),
