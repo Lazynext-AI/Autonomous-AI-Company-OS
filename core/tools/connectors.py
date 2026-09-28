@@ -490,16 +490,57 @@ async def _github(payload: dict, cred: str) -> dict:
     if isinstance(payload, str):
         payload = {"text": payload}
     # cred: "<pat>" — posts a public gist; the same PAT powers repo ops.
-    text = payload.get("text") or ""
-    return await _post(
+    gh = {"authorization": f"Bearer {cred}", "accept": "application/vnd.github+json"}
+    r = await _post(
         "https://api.github.com/gists",
-        headers={"authorization": f"Bearer {cred}", "accept": "application/vnd.github+json"},
+        headers=gh,
         json_body={
             "public": True,
             "description": payload.get("title") or "Lazynext",
-            "files": {"post.md": {"content": text}},
+            "files": {"post.md": {"content": payload.get("text") or ""}},
         },
     )
+    # PATs without the `gist` scope (repo-scoped tokens) fall back to
+    # committing markdown to a public `lazynext-posts` repo on the token
+    # owner's account — auto-created lazily on first publish.
+    if r["ok"] or r["status"] not in (403, 404):
+        return r
+    return await _github_repo_post(payload, gh)
+
+
+async def _github_repo_post(payload: dict, gh: dict) -> dict:
+    import base64
+    import time
+
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        me = await client.get("https://api.github.com/user", headers=gh)
+        if me.status_code != 200:
+            return {"ok": False, "status": me.status_code,
+                    "error": "no gist scope and /user lookup failed"}
+        owner = me.json().get("login")
+        repo = "lazynext-posts"
+        path = f"posts/{int(time.time())}.md"
+        url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
+        body = {
+            "message": payload.get("title") or "Lazynext post",
+            "content": base64.b64encode((payload.get("text") or "").encode()).decode(),
+        }
+        r = await client.put(url, headers=gh, json=body)
+        if r.status_code == 404:
+            c = await client.post(
+                "https://api.github.com/user/repos",
+                headers=gh,
+                json={"name": repo, "private": False, "auto_init": True,
+                      "description": "Posts published by the Lazynext platform"},
+            )
+            if c.status_code in (201, 422):
+                r = await client.put(url, headers=gh, json=body)
+        try:
+            b = r.json()
+        except Exception:
+            b = {"raw": r.text[:500]}
+        return {"status": r.status_code, "ok": r.status_code < 400, "body": b,
+                "fallback": "repo", "url": (b.get("content") or {}).get("html_url")}
 
 
 async def _gitlab(payload: dict, cred: str) -> dict:
