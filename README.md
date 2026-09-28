@@ -1,27 +1,51 @@
-# Lazynext - The Autonomous AI Company OS
+# Lazynext — The Autonomous AI Company OS
 
-A production-grade, self-running organization of AI agents that autonomously builds, deploys, markets, and grows software products with zero human intervention after initial setup. The system operates as a complete virtual company with strategic leadership, engineering teams, growth functions, and infrastructure agents, all coordinated through an event-driven message bus architecture.
+A production, self-running organization of AI agents that builds, deploys, markets, sells, and supports a real software product with zero human intervention after setup. The fleet currently operates the **Accessibility Checker** — a live WCAG scanning product at [checker.lazynext.com](https://checker.lazynext.com) — handling the full lifecycle from free scans through reports, upgrade checkout, billing, email sequences, and support.
 
-The entire backend runs on Cloudflare's serverless platform (D1, Workers KV, Vectorize, Workers) and Cloudflare Workers AI for LLM inference — no local services required.
+The entire backend runs on Cloudflare's serverless platform (Workers, D1, Workers KV, Vectorize, Pages, Containers, Cron) and Cloudflare Workers AI for LLM inference — no local services required beyond the agent runner.
+
+## Live platform
+
+| Surface | URL | What it is |
+|---------|-----|------------|
+| Marketing site | [lazynext.com](https://lazynext.com) | Company site + status page |
+| Product app | [checker.lazynext.com](https://checker.lazynext.com) | Accessibility Checker — scan UI, reports, checkout (installable PWA) |
+| Product API | [api.lazynext.com](https://api.lazynext.com) | Scan/report/badge/checkout API + `/mcp` + `/a2a` + `widget.js` |
+| Founder dashboard | [dashboard.lazynext.com](https://dashboard.lazynext.com) | Next.js ops console (passphrase + optional TOTP; installable PWA) |
+| Platform worker | `ai-company-os.dry-hall-6a50.workers.dev` | Internal state API — token-gated (returns 401 unauthenticated) |
+| Status | [status.lazynext.com](https://status.lazynext.com) | Redirects to lazynext.com/status |
+
+## The product — Accessibility Checker
+
+The company's first product is a WCAG accessibility scanner (`products/accessibility-checker/`, mirrored at [github.com/Lazynext-AI/accessibility-checker](https://github.com/Lazynext-AI/accessibility-checker)):
+
+- **Scan → report → upgrade loop**: free tier 3 scans/day per site; full reports with per-rule findings; report pages carry the upgrade CTA into checkout
+- **75-rule manifest** (`GET /rules`): WCAG 2.x criteria + best-practice checks, including *interactive* rendered-scan checks — real Tab/Shift+Tab keyboard-trap traces, Escape probes, click-opened dialog traps, target-size, focus-obscured, and non-text-contrast detection
+- **Billing**: Dodo Payments (test mode pending incorporation) — Pro subscription, 14-day trial (extendable via `config:trial_offer`), `WELCOME20` discount, webhook-verified entitlement, SignWell legal signing on activation
+- **Agent surfaces**: `POST /mcp` (JSON-RPC tools `scan_url`/`scan_html`/`get_report`/`list_rules`), `POST /a2a` (`tasks/send`/`tasks/get`), `GET /.well-known/agent.json`, `GET /widget.js` (Shadow-DOM embed) — all sharing the same quota-enforced scan pipeline
+- **SDKs**: `sdk/js` (`@lazynext/accessibility-checker`), `sdk/go`, `sdk/python` (with `python -m` CLI: scan/site/report/csv/rules/badge/card)
+- **Email**: Brevo sequences + waitlist confirms (HMAC-verified unsubscribe) + engagement tracking feeding CRM campaigns
 
 ## Table of Contents
 
-1. [Overview](#overview)
-2. [System Architecture](#system-architecture)
-3. [Agent Types and Roles](#agent-types-and-roles)
-4. [Workflow and Message Flow](#workflow-and-message-flow)
-5. [Reward and Performance System](#reward-and-performance-system)
-6. [Technical Stack](#technical-stack)
-7. [Installation](#installation)
-8. [Configuration](#configuration)
-9. [Running the System](#running-the-system)
-10. [Project Structure](#project-structure)
-11. [Performance and Scaling](#performance-and-scaling)
-12. [Production Deployment](#production-deployment)
+1. [Live platform](#live-platform)
+2. [The product — Accessibility Checker](#the-product--accessibility-checker)
+3. [Overview](#overview)
+4. [System Architecture](#system-architecture)
+5. [Agent Types and Roles](#agent-types-and-roles)
+6. [Workflow and Message Flow](#workflow-and-message-flow)
+7. [Reward and Performance System](#reward-and-performance-system)
+8. [Technical Stack](#technical-stack)
+9. [Installation](#installation)
+10. [Configuration](#configuration)
+11. [Running the System](#running-the-system)
+12. [Project Structure](#project-structure)
+13. [Performance and Scaling](#performance-and-scaling)
+14. [Production Deployment](#production-deployment)
 
 ## Overview
 
-The Autonomous AI Company OS is an enterprise-grade multi-agent system that simulates a complete startup organization. The system consists of specialized AI agents that collaborate to build software products autonomously. Each agent has a specific role, capabilities, and responsibilities, working together through a sophisticated event-driven architecture.
+Lazynext is a multi-agent system that runs a complete startup organization. Specialized AI agents — CEO, CTO, engineering, growth, and infrastructure roles — collaborate through a D1-backed event bus to operate the company's product end to end: shipping code, deploying to Cloudflare, drafting and sending campaigns, handling support, reconciling billing, and monitoring production. The fleet runs under launchd on a Mac runner with hard safety gates (protected files, test gate, fitness review, revert-on-failure, dead-corpus dedup) documented in `AGENTS.md`.
 
 ### Key Capabilities
 
@@ -382,7 +406,10 @@ When significant milestones are achieved (e.g., first deployment, 100 users, rev
 | Cloudflare Workers AI | LLM provider | Built-in |
 | Cloudflare (Worker + D1 + KV + Vectorize + Pages + Containers) | All persistent state and deployments | Yes |
 | GitHub | Remote repos, push triggers, Actions CI monitoring | Optional |
-| Brevo | Transactional + campaign email — briefings, alerts (also on dashboard) | Optional |
+| Brevo | Transactional + campaign email, product sequences, engagement tracking | Optional |
+| Dodo Payments | Product subscriptions, trials, discounts, billing webhooks | Optional (test mode) |
+| SignWell | Legal-grade document signing on subscription activation | Optional |
+| Serper | Google search for CEO market research | Optional |
 | Cloudflare Container | Code execution sandbox | Built-in |
 
 Frontends deploy to Cloudflare Pages, backends to Workers (JS/TS) or Containers
@@ -411,13 +438,13 @@ Frontends deploy to Cloudflare Pages, backends to Workers (JS/TS) or Containers
 
 ```bash
 # Clone repository
-git clone https://github.com/ujjwalredd/Autonomous-AI-Company-Operating-System.git
-cd autonomous-ai-company
+git clone https://github.com/Lazynext-AI/Autonomous-AI-Company-Operating-System.git
+cd Autonomous-AI-Company-Operating-System
 
 # Copy environment template
 cp .env.example .env
 
-# Edit .env: CF_ACCOUNT_ID, CF_API_TOKEN
+# Edit .env: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_DEPLOY_TOKEN
 
 # Install dependencies (uses uv)
 make setup
@@ -448,10 +475,24 @@ make validate-env
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `CLOUDFLARE_API_URL` | Deployed Worker URL | `https://ai-company-os.you.workers.dev` |
-| `CLOUDFLARE_API_TOKEN` | Shared Worker secret | any long random string |
+| `CLOUDFLARE_API_TOKEN` | **Worker bearer token** — the secret agents/scripts send to the Worker | any long random string |
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID | `abc123...` |
-| `CLOUDFLARE_API_KEY` | Cloudflare Global API Key (wrangler + deploys) | `cfk_...` |
-| `CLOUDFLARE_EMAIL` | Cloudflare account email (global-key auth) | `you@example.com` |
+| `CLOUDFLARE_DEPLOY_TOKEN` | Real Cloudflare REST token — wrangler/deploys only; **not** the same value as `CLOUDFLARE_API_TOKEN` | `cfut_...` |
+
+> `CLOUDFLARE_API_TOKEN` is the bearer for *your* Worker; wrangler rejects it. `CLOUDFLARE_DEPLOY_TOKEN` authenticates to *Cloudflare*. Deploy commands map it in, e.g. `CLOUDFLARE_API_TOKEN="$CLOUDFLARE_DEPLOY_TOKEN" npx wrangler deploy`.
+
+### Optional Environment Variables (services)
+
+| Variable | Description |
+|----------|-------------|
+| `BREVO_API_KEY` | Email sequences, campaigns, engagement tracking |
+| `DODO_API_KEY` / `DODO_API_BASE` / `DODO_PRODUCT_*` / `DODO_WEBHOOK_SECRET` | Billing — test-mode keys until the live flip |
+| `SIGNWELL_API_KEY` | Subscription signing documents |
+| `GITHUB_TOKEN` | Repo/PR access for agents |
+| `SERPER_API_KEY` | Market research search |
+| `DASHBOARD_PASSPHRASE` / `DASHBOARD_SESSION_TOKEN` | Founder dashboard login |
+| `FOUNDER_EMAIL` | Alert/briefing recipient |
+| `LAZYNEXT_API_KEY` | Enables authed public-API tests (`lzk_*` key) |
 
 ### Optional Environment Variables
 
@@ -462,7 +503,6 @@ make validate-env
 | `KNOWLEDGE_BASE_DIR` | Knowledge base PDF directory | `./knowledge_base` |
 | `CEO_LOOP_INTERVAL` | CEO strategic loop interval (seconds) | `300` |
 | `CTO_LOOP_INTERVAL` | CTO orchestration loop interval (seconds) | `120` |
-No optional service keys needed - everything runs on Cloudflare + local git.
 
 ### Database Schema
 
@@ -484,14 +524,14 @@ Apply `db/migrations/001_initial.sql` to D1 (`make worker-migrate`). Creates:
 ```bash
 # Start all agents (talks to the deployed Worker)
 make dev
-# or: PYTHONPATH=. python3 scripts/run_agents.py
+# or: set -a; source .env; set +a; .venv/bin/python scripts/run_agents.py
 
 # In separate terminal, start dashboard
 make dashboard
 # or: cd dashboard && npm run dev
 ```
 
-The system runs in foreground. Press `Ctrl+C` to stop.
+The system runs in foreground. Press `Ctrl+C` to stop. In production the fleet is launchd-supervised (`com.lazynext.fleet`, KeepAlive) — `pkill -f run_agents.py` is the *restart* (KeepAlive respawns exactly one; never run a manual instance alongside it). Health checks run via `com.lazynext.healthcheck` every 15 min.
 
 ### Initialization
 
@@ -503,7 +543,7 @@ The system runs in foreground. Press `Ctrl+C` to stop.
        mission = 'Your mission statement';
    ```
 3. **Agents Begin**: CEO agent picks up mission and starts strategic loop
-4. **Monitor**: Check dashboard at http://localhost:3000 or the D1 console
+4. **Monitor**: dashboard at http://localhost:3000 (dev) or https://dashboard.lazynext.com (prod)
 
 ### Project Repository
 
@@ -530,19 +570,27 @@ autonomous-ai-company/
 │   ├── knowledge/            RAG engine (Vectorize), document ingestion
 │   ├── operations/           Task tracker, task log persistence
 │   ├── evaluation/           Performance scorer, reward engine
-│   ├── tools/                Code writer, validator, file manager, git manager, deployment
+│   ├── tools/                Code writer, validator, file manager, git manager,
+│   │                         connectors.py (44-connector dispatch matrix)
 │   └── watchdog/             Deadlock detector, health monitoring
 ├── worker/                    Cloudflare Worker API layer (D1 + KV + Vectorize)
+│   └── src/billing.ts         Dodo subscriptions, trials, discounts, webhooks
 ├── db/                        D1 migrations
-├── dashboard/                 Next.js Founder control panel
+├── dashboard/                 Next.js Founder control panel (dashboard.lazynext.com)
+├── extension/                 Browser extension (manifest v3)
+├── marketing/                 Marketing site source (lazynext.com)
+├── ops/                       Ops workers (status-redirect, launchdeck-redirect)
 ├── scripts/                   run_agents, validate_env, seed_knowledge
+├── sdk/                       Platform SDKs — js/ (npm lazynext), go/
 ├── tests/                     Unit and integration tests
-└── products/                  Product repos (one per product_name, gitignored)
-    └── <slug>/                e.g. my-cool-app/
-        ├── .git/              Separate git repository per product
-        ├── app/               Generated application code
-        ├── migrations/        Database migrations
-        └── ...
+└── products/                  Product repos (one per product_name)
+    └── accessibility-checker/ Live product — mirrored to
+                               github.com/Lazynext-AI/accessibility-checker
+        ├── worker.js          Product API routes
+        ├── src/rules/         75-rule WCAG manifest + interactive checks
+        ├── src/agent_surfaces.js  MCP / A2A / agent card / widget.js
+        ├── sdk/{js,go,python} Product SDKs (+ python CLI)
+        └── index.html         Scan UI (PWA)
 ```
 
 ## Performance and Scaling
