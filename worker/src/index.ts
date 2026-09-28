@@ -18,7 +18,7 @@ import { getContainer } from "@cloudflare/containers";
 export { CodeExecContainer } from "./exec_container";
 import { handleWidget } from "./widget";
 import { fanOut, handleWebhooks, publishToBus } from "./webhooks";
-import { handleServices, handleSignwellWebhook, handleBrevoWebhook, handleBrevoInbound, brevoSend, marketingFooter, unsubHeaders, unsubscribeEmail, enrollLead, SEQUENCE, SEQ_DAYS } from "./services";
+import { handleServices, handleSignwellWebhook, handleBrevoWebhook, handleBrevoInbound, brevoSend, marketingFooter, unsubHeaders, unsubscribeEmail, enrollLead, dispatchScheduledPosts, CONNECTOR_IDS, SEQUENCE, SEQ_DAYS } from "./services";
 import { handleConnect, refreshConnectorTokens } from "./connect_oauth";
 
 export { Env };
@@ -231,6 +231,22 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
       return json({ ok: true });
     }
 
+    case "/social/schedule": {
+      // Fleet-facing enqueue — the local run_agents.py dispatch path holds the
+      // internal bearer, not an lzk_* admin key, so it needs its own door into
+      // the same D1 queue the cron sweep publishes from.
+      const b = await readBody<{ connector: string; payload?: Record<string, unknown>; text?: string; run_at?: number }>(req);
+      const id = (b.connector ?? "").toLowerCase();
+      const payload = b.payload ?? (b.text ? { text: b.text } : null);
+      if (!CONNECTOR_IDS.includes(id)) return json({ error: `unknown connector '${id}'` }, 400);
+      if (!payload) return json({ error: "payload or text required" }, 400);
+      const runAt = b.run_at && Number.isFinite(b.run_at) ? b.run_at : Date.now();
+      const r = await env.DB.prepare(
+        "INSERT INTO social_posts (connector, payload, run_at, status, attempts, created_at) VALUES (?, ?, ?, 'queued', 0, ?)",
+      ).bind(id, JSON.stringify(payload), runAt, Date.now()).run();
+      return json({ id: r.meta.last_row_id, status: "queued" }, 201);
+    }
+
     case "/bus/ack": {
       const b = await readBody<{ channel: string; group: string; ids: (string | number)[] }>(req);
       if (!b.ids?.length) return json({ ok: true });
@@ -372,7 +388,7 @@ export default {
       if (path.startsWith("/api/v1/crm") || path.startsWith("/api/v1/support") ||
           path.startsWith("/api/v1/booking") || path.startsWith("/api/v1/store") ||
           path.startsWith("/api/v1/marketing") || path.startsWith("/api/v1/signwell") ||
-          path.startsWith("/api/v1/connectors"))
+          path.startsWith("/api/v1/social") || path.startsWith("/api/v1/connectors"))
         return cors(req, await handleServices(req, env, ctx, path));
       if (path.startsWith("/api/")) return cors(req, await handlePublicApi(req, env, ctx, path));
 
@@ -397,6 +413,7 @@ export default {
     ctx.waitUntil(advanceLeadSequence(env).then(() => undefined).catch(() => {}));
     ctx.waitUntil(runDailyMaintenance(env).then(() => undefined).catch(() => {}));
     ctx.waitUntil(refreshConnectorTokens(env).then(() => undefined).catch(() => {}));
+    ctx.waitUntil(dispatchScheduledPosts(env).then(() => undefined).catch(() => {}));
   },
 };
 

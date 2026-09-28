@@ -256,6 +256,46 @@ export async function handleServices(
     return json(out, out.ok ? 200 : out.status ?? 502);
   }
 
+  // --- Social scheduler (Postiz replacement) --------------------------------
+  // Postiz's core job — queue a post, publish it at time T — runs natively
+  // here: D1 `social_posts` + cron dispatch through callConnector, no 20Gi
+  // self-host. Postiz's other value (OAuth UX, media library, analytics UI)
+  // is already covered by the conn:* credential library + agent pipeline.
+  // Scheduling IS acting-as-the-company → same admin rule as direct dispatch.
+  if (path === "/api/v1/social/posts" && req.method === "POST") {
+    if (!(key!.scopes ?? "").split(",").map((s) => s.trim()).includes("admin"))
+      return json({ error: "scope 'admin' required — scheduled posts publish as the company" }, 403);
+    const id = String(b.connector ?? "").toLowerCase();
+    if (!CONNECTOR_IDS.includes(id)) return json({ error: `unknown connector '${id}'` }, 400);
+    const payload: Record<string, unknown> = { text: String(b.text ?? "").slice(0, 10000) };
+    for (const k of ["image_url", "to", "subject", "title", "body", "visibility", "share_now"])
+      if (b[k] !== undefined) payload[k] = b[k];
+    if (!payload.text && !b.to) return json({ error: "text (or a to/subject pair) required" }, 400);
+    const runAt = b.at ? Date.parse(String(b.at)) : Date.now();
+    if (!Number.isFinite(runAt)) return json({ error: "at must be an ISO-8601 timestamp" }, 400);
+    const r = await env.DB.prepare(
+      "INSERT INTO social_posts (connector, payload, run_at, status, attempts, created_at) VALUES (?, ?, ?, 'queued', 0, ?)",
+    ).bind(id, JSON.stringify(payload), runAt, Date.now()).run();
+    return json({ id: r.meta.last_row_id, connector: id, run_at: runAt, status: "queued" }, 201);
+  }
+  if (path === "/api/v1/social/posts" && req.method === "GET") {
+    const { results } = await env.DB.prepare(
+      "SELECT id, connector, payload, run_at, status, attempts, last_error, created_at, posted_at FROM social_posts ORDER BY id DESC LIMIT 100",
+    ).all();
+    return json({ posts: results });
+  }
+  const postDel = path.match(/^\/api\/v1\/social\/posts\/(\d+)$/);
+  if (postDel && req.method === "DELETE") {
+    if (!(key!.scopes ?? "").split(",").map((s) => s.trim()).includes("admin"))
+      return json({ error: "scope 'admin' required" }, 403);
+    const r = await env.DB.prepare(
+      "UPDATE social_posts SET status = 'cancelled' WHERE id = ? AND status = 'queued'",
+    ).bind(Number(postDel[1])).run();
+    return r.meta.changes
+      ? json({ cancelled: true, id: Number(postDel[1]) })
+      : json({ error: "post not queued or already dispatched" }, 404);
+  }
+
   // --- SignWell e-sign ------------------------------------------------------
   // The only signing path — credential lives in KV as conn:signwell (bare API
   // key from signwell.com/app → API; prefix "test:" for unlimited free
@@ -802,7 +842,7 @@ export async function signwellSendFromTemplate(
 // The ids the dashboard Connector library offers. brevo/signwell have their own
 // dedicated routes but still report status here; POST dispatch covers the
 // connectors that have no other invocation path.
-const CONNECTOR_IDS = [
+export const CONNECTOR_IDS = [
   "x", "linkedin", "meta", "facebook", "instagram", "threads",
   "bluesky", "mastodon", "reddit", "pinterest", "vk",
   "youtube", "tiktok", "gmb", "snapchat",
@@ -1592,4 +1632,70 @@ async function callConnector(
     default:
       return { ok: false, error: `unknown connector '${id}'` };
   }
+}
+
+// --- Scheduled-post dispatch ------------------------------------------------
+// Cron-driven publisher for /api/v1/social/posts. Claim-then-send: the UPDATE
+// … WHERE status='queued' claim is atomic in D1, so a double-firing cron can
+// never double-post (the second claimant's `changes` is 0).
+const SOCIAL_MAX_ATTEMPTS = 6; // ~1h of retries at the */10 cron cadence
+
+export async function dispatchScheduledPosts(env: Env): Promise<{ posted: number; failed: number }> {
+  // Self-heal the table — a fresh D1 or a dropped schema gets one cheap DDL
+  // per sweep, which no-ops once the table exists.
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS social_posts (
+       id INTEGER PRIMARY KEY AUTOINCREMENT,
+       connector TEXT NOT NULL,
+       payload TEXT NOT NULL,
+       run_at INTEGER NOT NULL,
+       status TEXT NOT NULL DEFAULT 'queued',
+       attempts INTEGER NOT NULL DEFAULT 0,
+       last_error TEXT,
+       created_at INTEGER NOT NULL,
+       posted_at INTEGER
+     )`,
+  ).run();
+  const { results: due } = await env.DB.prepare(
+    "SELECT id, connector, payload, attempts FROM social_posts WHERE status = 'queued' AND run_at <= ? ORDER BY run_at LIMIT 20",
+  ).bind(Date.now()).all<{ id: number; connector: string; payload: string; attempts: number }>();
+
+  let posted = 0, failed = 0;
+  for (const row of due ?? []) {
+    const claim = await env.DB.prepare(
+      "UPDATE social_posts SET status = 'posting', attempts = attempts + 1 WHERE id = ? AND status = 'queued'",
+    ).bind(row.id).run();
+    if (!claim.meta.changes) continue; // another tick claimed it
+    try {
+      // callConnector's brevo case ignores `cred` (brevoSend re-resolves
+      // conn:brevo→BREVO_API_KEY itself) — gate on brevoCred presence instead.
+      const cred = row.connector === "brevo"
+        ? ((await brevoCred(env)) ? "brevo" : null)
+        : await connCred(env, row.connector);
+      if (!cred) {
+        // Not connected isn't a dispatch error — park the row visibly instead
+        // of burning retries on a credential nobody can mint from here.
+        await env.DB.prepare(
+          "UPDATE social_posts SET status = 'failed', last_error = ? WHERE id = ?",
+        ).bind(`'${row.connector}' not connected — set it in Settings → Connector library`, row.id).run();
+        failed++;
+        continue;
+      }
+      const out = await callConnector(env, row.connector, cred, JSON.parse(row.payload) as Record<string, unknown>);
+      await env.DB.prepare(
+        "UPDATE social_posts SET status = ?, last_error = ?, posted_at = ? WHERE id = ?",
+      ).bind(out.ok ? "posted" : "failed", out.ok ? null : String(out.error ?? out.status ?? "dispatch failed"),
+        out.ok ? Date.now() : null, row.id).run();
+      out.ok ? posted++ : failed++;
+      if (!out.ok && row.attempts + 1 < SOCIAL_MAX_ATTEMPTS)
+        await env.DB.prepare("UPDATE social_posts SET status = 'queued' WHERE id = ?").bind(row.id).run();
+    } catch (e) {
+      failed++;
+      await env.DB.prepare(
+        "UPDATE social_posts SET status = ?, last_error = ? WHERE id = ?",
+      ).bind(row.attempts + 1 < SOCIAL_MAX_ATTEMPTS ? "queued" : "failed",
+        e instanceof Error ? e.message : String(e), row.id).run();
+    }
+  }
+  return { posted, failed };
 }

@@ -6,6 +6,7 @@ KV (falling back to a matching env var) and performs its canonical action.
 Nothing is active until a credential is connected.
 """
 
+import datetime
 from typing import Any
 
 import httpx
@@ -1002,3 +1003,53 @@ async def connector_status() -> dict[str, bool]:
     for cid in _DISPATCH:
         out[cid] = bool(await _credential(cid))
     return out
+
+
+async def schedule_connector_post(
+    connector_id: str,
+    payload: dict[str, Any] | str,
+    run_at: float | int | str | None = None,
+) -> dict[str, Any]:
+    """Enqueue a post on the worker-side social scheduler (the Cloudflare-native
+    Postiz replacement): D1 `social_posts` + the */10 cron publishes through the
+    same dispatch as call_connector. `run_at` accepts unix seconds/ms or an
+    ISO-8601 string; None means next tick. Requires the platform bearer.
+    """
+    if connector_id not in _DISPATCH:
+        return {"ok": False, "error": f"unknown connector '{connector_id}'"}
+    s = get_settings()
+    if not s.cloudflare_api_url or not s.cloudflare_api_token:
+        return {"ok": False, "error": "CLOUDFLARE_API_URL/TOKEN not configured"}
+    if isinstance(run_at, str):
+        try:
+            run_at = int(
+                datetime.datetime.fromisoformat(run_at.replace("Z", "+00:00")).timestamp() * 1000
+            )
+        except ValueError:
+            return {"ok": False, "error": f"unparseable run_at '{run_at}'"}
+    elif isinstance(run_at, (int, float)) and run_at < 10_000_000_000:
+        run_at = int(run_at * 1000)  # caller passed seconds — queue stores ms
+    body: dict[str, Any] = {"connector": connector_id}
+    if isinstance(payload, str):
+        body["text"] = payload
+    else:
+        body["payload"] = payload
+    if run_at:
+        body["run_at"] = int(run_at)
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post(
+                f"{s.cloudflare_api_url.rstrip('/')}/social/schedule",
+                headers={
+                    "authorization": f"Bearer {s.cloudflare_api_token}",
+                    "content-type": "application/json",
+                },
+                json=body,
+            )
+        data = r.json()
+        if r.status_code >= 400:
+            return {"ok": False, "error": data.get("error", f"HTTP {r.status_code}")}
+        return {"ok": True, "id": data.get("id"), "run_at": run_at, "queued": True}
+    except Exception as e:
+        logger.error("social_schedule_failed", id=connector_id, error=str(e))
+        return {"ok": False, "error": str(e)}
