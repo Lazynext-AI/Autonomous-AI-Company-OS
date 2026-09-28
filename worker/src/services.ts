@@ -33,6 +33,20 @@ async function update(env: Env, table: string, id: number, fields: Record<string
 
 const str = (v: unknown) => (v == null ? null : String(v));
 
+// Campaign audience routing. 'subscribed' broadcasts to opted-in
+// email_contacts (the default, and the only pre-existing behavior);
+// 'engaged' targets crm_leads the Brevo click→engaged promotion pipeline
+// flagged, so a warm follow-up can go to clickers only instead of the
+// whole cold list. Unsub suppression still applies on top of either.
+export function campaignSegment(segment: unknown): { seg: string; sql?: string; error?: string } {
+  const seg = (typeof segment === "string" && segment.trim()) || "subscribed";
+  if (seg === "subscribed")
+    return { seg, sql: "SELECT email FROM email_contacts WHERE subscribed = 1" };
+  if (seg === "engaged")
+    return { seg, sql: "SELECT email FROM crm_leads WHERE status = 'engaged'" };
+  return { seg, error: `unknown segment '${seg}' (subscribed|engaged)` };
+}
+
 export async function handleServices(
   req: Request, env: Env, ctx: ExecutionContext, path: string,
 ): Promise<Response> {
@@ -156,18 +170,24 @@ export async function handleServices(
     return list(env, "email_campaigns");
   if (path === "/api/v1/marketing/campaigns" && req.method === "POST") {
     if (!b.name || !b.subject || !b.html) return json({ error: "name + subject + html required" }, 400);
+    const s = campaignSegment(b.segment);
+    if (s.error) return json({ error: s.error }, 400);
     return insert(env, "email_campaigns",
-      ["name", "subject", "html"],
-      [b.name, b.subject, b.html]);
+      ["name", "subject", "html", "segment"],
+      [b.name, b.subject, b.html, s.seg]);
   }
   if (path.match(/^\/api\/v1\/marketing\/campaigns\/\d+\/send$/) && req.method === "POST" && id) {
     if (!(await brevoCred(env))) return json({ error: "brevo not connected — set it in Settings → Connector library" }, 503);
     const camp = await env.DB.prepare(
       "SELECT * FROM email_campaigns WHERE id = ?").bind(id).first<Record<string, unknown>>();
     if (!camp) return json({ error: "campaign not found" }, 404);
-    const { results: contacts } = await env.DB.prepare(
-      "SELECT email FROM email_contacts WHERE subscribed = 1").all();
-    if (!contacts?.length) return json({ error: "no subscribed contacts" }, 400);
+    // Send-time body segment overrides the stored one; the stored default
+    // is 'subscribed'. A draft created for a warm audience can't drift into
+    // a cold blast unless the operator says so explicitly.
+    const s = campaignSegment(b.segment ?? camp.segment);
+    if (s.error) return json({ error: s.error }, 400);
+    const { results: contacts } = await env.DB.prepare(s.sql!).all();
+    if (!contacts?.length) return json({ error: `no recipients in segment '${s.seg}'` }, 400);
     await update(env, "email_campaigns", id, { status: "sending" });
     let sent = 0;
     for (const c of contacts as { email: string }[]) {
@@ -183,7 +203,7 @@ export async function handleServices(
     await env.DB.prepare(
       "UPDATE email_campaigns SET status='sent', sent_count=?, sent_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?",
     ).bind(sent, id).run();
-    return json({ ok: true, id, sent, total: contacts.length });
+    return json({ ok: true, id, sent, total: contacts.length, segment: s.seg });
   }
   // Engagement roll-up over email_events — every Brevo transactional webhook
   // callback lands there, tagged by the send path (campaign:<id>, seq:<stage>,
