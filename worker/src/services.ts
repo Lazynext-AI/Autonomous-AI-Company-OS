@@ -787,7 +787,7 @@ async function callConnector(
   switch (id) {
     case "x": {
       if (!text) return { ok: false, status: 400, error: "text required" };
-      return connPost("https://api.twitter.com/2/tweets", {
+      return connPost("https://api.x.com/2/tweets", {
         method: "POST",
         headers: { authorization: `Bearer ${cred}`, "content-type": "application/json" },
         body: JSON.stringify({ text }),
@@ -802,19 +802,25 @@ async function callConnector(
       const token = i === -1 ? cred : cred.slice(0, i);
       const suffix = i === -1 ? "" : cred.slice(i + 1);
       const author = suffix.startsWith("urn:") ? suffix : `urn:li:organization:${suffix || "lazynext"}`;
-      return connPost("https://api.linkedin.com/v2/ugcPosts", {
+      // Posts API (the ugcPosts replacement) — versioned, requires the
+      // Linkedin-Version pin + Rest.li protocol header.
+      return connPost("https://api.linkedin.com/rest/posts", {
         method: "POST",
-        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        headers: {
+          authorization: `Bearer ${token}`, "content-type": "application/json",
+          "x-restli-protocol-version": "2.0.0", "linkedin-version": "202609",
+        },
         body: JSON.stringify({
           author,
+          commentary: text,
+          visibility: "PUBLIC",
           lifecycleState: "PUBLISHED",
-          specificContent: {
-            "com.linkedin.ugc.ShareContent": {
-              shareCommentary: { text },
-              shareMediaCategory: "NONE",
-            },
+          isReshareDisabledByAuthor: false,
+          distribution: {
+            feedDistribution: "MAIN_FEED",
+            targetEntities: [],
+            thirdPartyDistributionChannels: [],
           },
-          visibility: { "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC" },
         }),
       });
     }
@@ -823,7 +829,7 @@ async function callConnector(
       // cred: "<access_token>:<ad_account_id>"
       const [token, acct = ""] = cred.split(":", 2);
       if (!acct) return { ok: false, status: 500, error: "conn:meta must be '<access_token>:<ad_account_id>'" };
-      return connPost(`https://graph.facebook.com/v19.0/act_${acct}/ads`, {
+      return connPost(`https://graph.facebook.com/v25.0/act_${acct}/ads`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ name: text.slice(0, 120), access_token: token }),
@@ -851,7 +857,7 @@ async function callConnector(
       const to = String(b.to ?? "");
       if (!to || !text) return { ok: false, status: 400, error: "to + text required" };
       if (!pid) return { ok: false, status: 500, error: "conn:whatsapp must be '<access_token>:<phone_number_id>'" };
-      return connPost(`https://graph.facebook.com/v19.0/${pid}/messages`, {
+      return connPost(`https://graph.facebook.com/v25.0/${pid}/messages`, {
         method: "POST",
         headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
         body: JSON.stringify({
@@ -865,7 +871,7 @@ async function callConnector(
       // unlike conn:meta which is the paid Ads API).
       const [token, page = ""] = cred.split(":", 2);
       if (!page) return { ok: false, status: 500, error: "conn:facebook must be '<page_access_token>:<page_id>'" };
-      return connPost(`https://graph.facebook.com/v19.0/${page}/feed`, {
+      return connPost(`https://graph.facebook.com/v25.0/${page}/feed`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ message: text, access_token: token }),
@@ -878,14 +884,14 @@ async function callConnector(
       const image = String(b.image_url ?? "");
       if (!uid || !image)
         return { ok: false, status: 400, error: "instagram requires image_url in payload — IG has no text-only posts" };
-      const c = await connPost(`https://graph.facebook.com/v19.0/${uid}/media`, {
+      const c = await connPost(`https://graph.facebook.com/v25.0/${uid}/media`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ image_url: image, caption: text, access_token: token }),
       });
       if (!c.ok) return c;
       const cid = (c.body as { id?: string }).id;
-      return connPost(`https://graph.facebook.com/v19.0/${uid}/media_publish`, {
+      return connPost(`https://graph.facebook.com/v25.0/${uid}/media_publish`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ creation_id: cid, access_token: token }),
@@ -976,18 +982,19 @@ async function callConnector(
     }
     case "pinterest": {
       if (!text) return { ok: false, status: 400, error: "text required" };
-      // cred: "<access_token>:<board_id>" — link pin; attach {image_url} for an
-      // image pin (pins display richer with media).
+      // cred: "<access_token>:<board_id>" — every pin requires media, so
+      // image_url is mandatory (a bare link pin 400s at Pinterest).
       const [token, board = ""] = cred.split(":", 2);
-      if (!board) return { ok: false, status: 500, error: "conn:pinterest must be '<access_token>:<board_id>'" };
-      const link = String(b.link ?? "https://checker.lazynext.com");
       const image = String(b.image_url ?? "");
+      if (!board) return { ok: false, status: 500, error: "conn:pinterest must be '<access_token>:<board_id>'" };
+      if (!image) return { ok: false, status: 400, error: "pinterest requires image_url — every pin needs media_source" };
+      const link = String(b.link ?? "https://checker.lazynext.com");
       return connPost("https://api.pinterest.com/v5/pins", {
         method: "POST",
         headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
         body: JSON.stringify({
           board_id: board, title: text.slice(0, 100), description: text, link,
-          ...(image ? { media_source: { source_type: "image_url", url: image } } : {}),
+          media_source: { source_type: "image_url", url: image },
         }),
       });
     }
@@ -1054,14 +1061,27 @@ async function callConnector(
     }
     case "teams": {
       if (!text) return { ok: false, status: 400, error: "text required" };
-      // cred: full incoming-webhook URL — Teams channel → ⋯ → Connectors →
-      // Incoming Webhook. Accepts the MessageCard-compatible {text} body.
+      // cred: Power Automate Workflows webhook URL — Teams channel → ⋯ →
+      // Workflows → "Post to a channel when a webhook request is received".
+      // Office 365 connector webhooks (*.webhook.office.com) were retired
+      // May-2026; the workflow trigger accepts the Adaptive Card envelope.
       if (!cred.startsWith("https://"))
-        return { ok: false, status: 500, error: "conn:teams must be an https:// incoming-webhook URL" };
+        return { ok: false, status: 500, error: "conn:teams must be a Power Automate webhook URL (*.api.powerplatform.com)" };
       return connPost(cred, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({
+          type: "message",
+          attachments: [{
+            contentType: "application/vnd.microsoft.card.adaptive",
+            contentUrl: null,
+            content: {
+              $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
+              type: "AdaptiveCard", version: "1.2",
+              body: [{ type: "TextBlock", text, wrap: true }],
+            },
+          }],
+        }),
       });
     }
     case "mattermost": {
@@ -1171,7 +1191,9 @@ async function callConnector(
     }
     case "medium": {
       if (!text) return { ok: false, status: 400, error: "text required" };
-      // cred: "<integration_token>" — medium.com → Settings → Integration tokens.
+      // cred: "<integration_token>" — medium.com → Settings → Integration
+      // tokens. Medium's API is officially unsupported (no new integrations)
+      // but integration tokens still work — treat as best-effort.
       // /v1/me resolves the user id at call time so the cred stays one value.
       const me = await connPost("https://api.medium.com/v1/me", {
         method: "GET",
@@ -1325,12 +1347,15 @@ async function callConnector(
       if (!text) return { ok: false, status: 400, error: "text required" };
       // cred: "<api_key>" — ayrshare.com dashboard → API Key. One call fans
       // out to every linked network — incl. TikTok, YouTube, Snapchat and
-      // GMB, which have no sane direct posting API. Payload 'platforms'
-      // overrides the default all-linked list.
+      // GMB, which have no sane direct posting API. Omit 'platforms' to post
+      // to all linked networks ("all" is not a documented platform value).
       return connPost("https://api.ayrshare.com/api/post", {
         method: "POST",
         headers: { authorization: `Bearer ${cred}`, "content-type": "application/json" },
-        body: JSON.stringify({ post: text, platforms: (b.platforms as string[]) ?? ["all"] }),
+        body: JSON.stringify({
+          post: text,
+          ...(b.platforms ? { platforms: b.platforms as string[] } : {}),
+        }),
       });
     }
     case "postiz": {
@@ -1423,14 +1448,19 @@ async function callConnector(
     }
     case "tiktok": {
       // cred: "<access_token>" — PULL_FROM_URL lets TikTok fetch the video
-      // itself; no binary upload needed. Title doubles as the post caption.
+      // itself; the video_url domain/prefix must be verified in the dev app
+      // (else url_ownership_unverified). privacy_level is required for
+      // direct post — unaudited apps may only post SELF_ONLY.
       const media = String(b.media_url ?? "");
       if (!media) return { ok: false, status: 400, error: "tiktok requires media_url (video) — no text posts via API" };
       return connPost("https://open.tiktokapis.com/v2/post/publish/video/init/", {
         method: "POST",
         headers: { authorization: `Bearer ${cred.split(":")[0]}`, "content-type": "application/json" },
         body: JSON.stringify({
-          post_info: { title: (text || "Lazynext").slice(0, 150) },
+          post_info: {
+            title: (text || "Lazynext").slice(0, 150),
+            privacy_level: String(b.privacy ?? "SELF_ONLY"),
+          },
           source_info: { source: "PULL_FROM_URL", video_url: media },
         }),
       });

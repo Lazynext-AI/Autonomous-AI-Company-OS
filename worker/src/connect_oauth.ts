@@ -29,7 +29,9 @@ export const OAUTH_CONNECTORS: Record<string, Provider> = {
   x: {
     authUrl: "https://x.com/i/oauth2/authorize", tokenUrl: "https://api.x.com/2/oauth2/token",
     scope: "tweet.read tweet.write users.read offline.access", pkce: true,
-    refreshGrant: "refresh_token",
+    // confidential apps must auth the token request via Basic(client:secret);
+    // public clients (id only, no secret) stay body+PKCE.
+    basic: true, refreshGrant: "refresh_token",
   },
   linkedin: {
     authUrl: "https://www.linkedin.com/oauth/v2/authorization",
@@ -38,14 +40,14 @@ export const OAUTH_CONNECTORS: Record<string, Provider> = {
     refreshGrant: "refresh_token",
   },
   facebook: {
-    authUrl: "https://www.facebook.com/v19.0/dialog/oauth",
-    tokenUrl: "https://graph.facebook.com/v19.0/oauth/access_token",
+    authUrl: "https://www.facebook.com/v25.0/dialog/oauth",
+    tokenUrl: "https://graph.facebook.com/v25.0/oauth/access_token",
     scope: "pages_manage_posts pages_show_list pages_read_engagement business_management",
     refreshGrant: "fb_exchange_token", appFallback: "meta_app",
   },
   instagram: {
-    authUrl: "https://www.facebook.com/v19.0/dialog/oauth",
-    tokenUrl: "https://graph.facebook.com/v19.0/oauth/access_token",
+    authUrl: "https://www.facebook.com/v25.0/dialog/oauth",
+    tokenUrl: "https://graph.facebook.com/v25.0/oauth/access_token",
     scope: "instagram_content_publish pages_show_list business_management",
     refreshGrant: "fb_exchange_token", appFallback: "meta_app",
   },
@@ -56,14 +58,14 @@ export const OAUTH_CONNECTORS: Record<string, Provider> = {
     refreshGrant: "refresh_access_token", appFallback: "meta_app",
   },
   meta: {
-    authUrl: "https://www.facebook.com/v19.0/dialog/oauth",
-    tokenUrl: "https://graph.facebook.com/v19.0/oauth/access_token",
+    authUrl: "https://www.facebook.com/v25.0/dialog/oauth",
+    tokenUrl: "https://graph.facebook.com/v25.0/oauth/access_token",
     scope: "ads_management business_management",
     refreshGrant: "fb_exchange_token", appFallback: "meta_app",
   },
   whatsapp: {
-    authUrl: "https://www.facebook.com/v19.0/dialog/oauth",
-    tokenUrl: "https://graph.facebook.com/v19.0/oauth/access_token",
+    authUrl: "https://www.facebook.com/v25.0/dialog/oauth",
+    tokenUrl: "https://graph.facebook.com/v25.0/oauth/access_token",
     scope: "whatsapp_business_messaging whatsapp_business_management business_management",
     refreshGrant: "fb_exchange_token", appFallback: "meta_app",
   },
@@ -184,11 +186,12 @@ export async function handleConnect(
   const body = new URLSearchParams({
     grant_type: "authorization_code", code, redirect_uri: redirectUri,
   });
+  const useBasic = !!(p.basic && app.secret);
   if (id === "tiktok") { body.set("client_key", app.id); body.set("client_secret", app.secret); }
-  else { body.set("client_id", app.id); if (app.secret) body.set("client_secret", app.secret); }
+  else { body.set("client_id", app.id); if (app.secret && !useBasic) body.set("client_secret", app.secret); }
   if (p.pkce && stored.verifier) body.set("code_verifier", stored.verifier);
   const headers: Record<string, string> = { "content-type": "application/x-www-form-urlencoded" };
-  if (p.basic) headers.authorization = `Basic ${btoa(`${app.id}:${app.secret}`)}`;
+  if (useBasic) headers.authorization = `Basic ${btoa(`${app.id}:${app.secret}`)}`;
   const tr = await fetch(p.tokenUrl, { method: "POST", headers, body });
   const tok = (await tr.json().catch(() => ({}))) as Record<string, unknown>;
   if (!tr.ok || !tok.access_token)
@@ -217,14 +220,14 @@ async function resolveCred(env: Env, id: string, token: string): Promise<{ cred:
   switch (id) {
     case "facebook": {
       // exchange to a long-lived user token, then pick the first managed page.
-      const pages = (await get("https://graph.facebook.com/v19.0/me/accounts?fields=id,access_token")).data as
+      const pages = (await get("https://graph.facebook.com/v25.0/me/accounts?fields=id,access_token")).data as
         { id: string; access_token: string }[] | undefined;
       const page = pages?.[0];
       return page ? { cred: `${page.access_token}:${page.id}`, suffix: `:${page.id}` }
                   : { cred: token, suffix: "" };
     }
     case "instagram": {
-      const pages = (await get("https://graph.facebook.com/v19.0/me/accounts?fields=id,access_token,instagram_business_account")).data as
+      const pages = (await get("https://graph.facebook.com/v25.0/me/accounts?fields=id,access_token,instagram_business_account")).data as
         { id: string; access_token: string; instagram_business_account?: { id: string } }[] | undefined;
       for (const pg of pages ?? []) {
         if (pg.instagram_business_account?.id)
@@ -237,18 +240,18 @@ async function resolveCred(env: Env, id: string, token: string): Promise<{ cred:
       return me.id ? { cred: `${token}:${me.id}`, suffix: `:${me.id}` } : { cred: token, suffix: "" };
     }
     case "meta": {
-      const accts = (await get("https://graph.facebook.com/v19.0/me/adaccounts?fields=id")).data as { id: string }[] | undefined;
+      const accts = (await get("https://graph.facebook.com/v25.0/me/adaccounts?fields=id")).data as { id: string }[] | undefined;
       const act = accts?.[0]?.id?.replace(/^act_/, "") ?? "";
       return act ? { cred: `${token}:${act}`, suffix: `:${act}` } : { cred: token, suffix: "" };
     }
     case "whatsapp": {
       // WABA → phone_number_id resolution chain; falls back to bare token (the
       // adapter then tells the user to append ":<phone_number_id>").
-      const biz = (await get("https://graph.facebook.com/v19.0/me/businesses?fields=id")).data as { id: string }[] | undefined;
+      const biz = (await get("https://graph.facebook.com/v25.0/me/businesses?fields=id")).data as { id: string }[] | undefined;
       for (const b of biz ?? []) {
-        const wabas = (await get(`https://graph.facebook.com/v19.0/${b.id}/owned_whatsapp_business_accounts?fields=id`)).data as { id: string }[] | undefined;
+        const wabas = (await get(`https://graph.facebook.com/v25.0/${b.id}/owned_whatsapp_business_accounts?fields=id`)).data as { id: string }[] | undefined;
         for (const w of wabas ?? []) {
-          const nums = (await get(`https://graph.facebook.com/v19.0/${w.id}/phone_numbers?fields=id`)).data as { id: string }[] | undefined;
+          const nums = (await get(`https://graph.facebook.com/v25.0/${w.id}/phone_numbers?fields=id`)).data as { id: string }[] | undefined;
           if (nums?.[0]?.id) return { cred: `${token}:${nums[0].id}`, suffix: `:${nums[0].id}` };
         }
       }
@@ -296,23 +299,28 @@ export async function refreshConnectorTokens(env: Env): Promise<{ refreshed: str
     try {
       const app = await appCred(env, id);
       if (!app) continue;
-      const grant = p.refreshGrant === "fb_exchange_token" ? "fb_exchange_token"
-        : p.refreshGrant === "refresh_access_token" ? "refresh_access_token" : "refresh_token";
-      const body = new URLSearchParams({ grant_type: grant });
-      if (grant === "fb_exchange_token") {
-        body.set("fb_exchange_token", String(raw.access_token));
-        body.set("client_id", app.id); body.set("client_secret", app.secret);
-      } else if (grant === "refresh_access_token") {
-        body.set("access_token", String(raw.access_token));
-        body.set("client_secret", app.secret);
+      let r: Response;
+      if (id === "threads") {
+        // Threads long-lived tokens refresh via GET on a dedicated endpoint
+        // with grant th_refresh_token — not a POST to /oauth/access_token.
+        r = await fetch(
+          `https://graph.threads.net/refresh_access_token?grant_type=th_refresh_token&access_token=${encodeURIComponent(String(raw.access_token))}`,
+        );
       } else {
-        body.set("refresh_token", String(raw.refresh_token));
-        if (id === "tiktok") { body.set("client_key", app.id); body.set("client_secret", app.secret); }
-        else { body.set("client_id", app.id); if (app.secret) body.set("client_secret", app.secret); }
+        const grant = p.refreshGrant === "fb_exchange_token" ? "fb_exchange_token" : "refresh_token";
+        const body = new URLSearchParams({ grant_type: grant });
+        if (grant === "fb_exchange_token") {
+          body.set("fb_exchange_token", String(raw.access_token));
+          body.set("client_id", app.id); body.set("client_secret", app.secret);
+        } else {
+          body.set("refresh_token", String(raw.refresh_token));
+          if (id === "tiktok") { body.set("client_key", app.id); body.set("client_secret", app.secret); }
+          else { body.set("client_id", app.id); if (app.secret) body.set("client_secret", app.secret); }
+        }
+        const headers: Record<string, string> = { "content-type": "application/x-www-form-urlencoded" };
+        if (p.basic && app.secret) headers.authorization = `Basic ${btoa(`${app.id}:${app.secret}`)}`;
+        r = await fetch(p.tokenUrl, { method: "POST", headers, body });
       }
-      const headers: Record<string, string> = { "content-type": "application/x-www-form-urlencoded" };
-      if (p.basic) headers.authorization = `Basic ${btoa(`${app.id}:${app.secret}`)}`;
-      const r = await fetch(p.tokenUrl, { method: "POST", headers, body });
       const tok = (await r.json().catch(() => ({}))) as Record<string, unknown>;
       if (!r.ok || !tok.access_token) { out.failed.push(id); continue; }
       const suffix = String(raw.cred_suffix ?? "");

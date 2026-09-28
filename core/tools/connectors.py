@@ -61,7 +61,7 @@ async def _post(url: str, *, headers: dict | None = None, json_body: Any = None,
 
 async def _x(text: str, cred: str) -> dict:
     return await _post(
-        "https://api.twitter.com/2/tweets",
+        "https://api.x.com/2/tweets",
         headers={"authorization": f"Bearer {cred}"},
         json_body={"text": text},
     )
@@ -73,19 +73,25 @@ async def _linkedin(text: str, cred: str) -> dict:
     # or a bare numeric org id.
     token, _, suffix = cred.partition(":")
     author = suffix if suffix.startswith("urn:") else f"urn:li:organization:{suffix or 'lazynext'}"
+    # Posts API (the ugcPosts replacement) — versioned, requires the
+    # Linkedin-Version pin + Rest.li protocol header.
     return await _post(
-        "https://api.linkedin.com/v2/ugcPosts",
-        headers={"authorization": f"Bearer {token}"},
+        "https://api.linkedin.com/rest/posts",
+        headers={
+            "authorization": f"Bearer {token}",
+            "x-restli-protocol-version": "2.0.0", "linkedin-version": "202609",
+        },
         json_body={
             "author": author,
+            "commentary": text,
+            "visibility": "PUBLIC",
             "lifecycleState": "PUBLISHED",
-            "specificContent": {
-                "com.linkedin.ugc.ShareContent": {
-                    "shareCommentary": {"text": text},
-                    "shareMediaCategory": "NONE",
-                }
+            "isReshareDisabledByAuthor": False,
+            "distribution": {
+                "feedDistribution": "MAIN_FEED",
+                "targetEntities": [],
+                "thirdPartyDistributionChannels": [],
             },
-            "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"},
         },
     )
 
@@ -94,7 +100,7 @@ async def _meta(text: str, cred: str) -> dict:
     # cred format: "<access_token>:<ad_account_id>"
     token, _, acct = cred.partition(":")
     return await _post(
-        f"https://graph.facebook.com/v19.0/act_{acct}/ads",
+        f"https://graph.facebook.com/v25.0/act_{acct}/ads",
         json_body={"name": text[:120], "access_token": token},
     )
 
@@ -106,7 +112,7 @@ async def _facebook(text: str, cred: str) -> dict:
     if not page:
         return {"ok": False, "error": "conn:facebook must be '<page_access_token>:<page_id>'"}
     return await _post(
-        f"https://graph.facebook.com/v19.0/{page}/feed",
+        f"https://graph.facebook.com/v25.0/{page}/feed",
         json_body={"message": text, "access_token": token},
     )
 
@@ -119,13 +125,13 @@ async def _instagram(payload: dict, cred: str) -> dict:
     if not uid or not image:
         return {"ok": False, "error": "instagram requires image_url in payload — IG has no text-only posts"}
     c = await _post(
-        f"https://graph.facebook.com/v19.0/{uid}/media",
+        f"https://graph.facebook.com/v25.0/{uid}/media",
         json_body={"image_url": image, "caption": payload.get("text", ""), "access_token": token},
     )
     if not c.get("ok"):
         return c
     return await _post(
-        f"https://graph.facebook.com/v19.0/{uid}/media_publish",
+        f"https://graph.facebook.com/v25.0/{uid}/media_publish",
         json_body={"creation_id": (c.get("body") or {}).get("id"), "access_token": token},
     )
 
@@ -210,23 +216,23 @@ async def _reddit(payload: dict, cred: str) -> dict:
 
 
 async def _pinterest(payload: dict, cred: str) -> dict:
-    # cred: "<access_token>:<board_id>" — link pin; attach {image_url} for an
-    # image pin (pins display richer with media).
+    # cred: "<access_token>:<board_id>" — every pin requires media, so
+    # image_url is mandatory (a bare link pin 400s at Pinterest).
     token, _, board = cred.partition(":")
     if not board:
         return {"ok": False, "error": "conn:pinterest must be '<access_token>:<board_id>'"}
-    body: dict[str, Any] = {
-        "board_id": board,
-        "title": (payload.get("text") or "")[:100],
-        "description": payload.get("text") or "",
-        "link": payload.get("link") or "https://checker.lazynext.com",
-    }
-    if payload.get("image_url"):
-        body["media_source"] = {"source_type": "image_url", "url": payload["image_url"]}
+    if not payload.get("image_url"):
+        return {"ok": False, "error": "pinterest requires image_url — every pin needs media_source"}
     return await _post(
         "https://api.pinterest.com/v5/pins",
         headers={"authorization": f"Bearer {token}"},
-        json_body=body,
+        json_body={
+            "board_id": board,
+            "title": (payload.get("text") or "")[:100],
+            "description": payload.get("text") or "",
+            "link": payload.get("link") or "https://checker.lazynext.com",
+            "media_source": {"source_type": "image_url", "url": payload["image_url"]},
+        },
     )
 
 
@@ -291,11 +297,24 @@ async def _matrix(text: str, cred: str) -> dict:
 async def _teams(payload: dict, cred: str) -> dict:
     if isinstance(payload, str):
         payload = {"text": payload}
-    # cred: full incoming-webhook URL — Teams channel → ⋯ → Connectors →
-    # Incoming Webhook. Accepts the MessageCard-compatible {text} body.
+    # cred: Power Automate Workflows webhook URL — Teams channel → ⋯ →
+    # Workflows → "Post to a channel when a webhook request is received".
+    # Office 365 connector webhooks (*.webhook.office.com) were retired
+    # May-2026; the workflow trigger accepts the Adaptive Card envelope.
     if not cred.startswith("https://"):
-        return {"ok": False, "error": "conn:teams must be an https:// incoming-webhook URL"}
-    return await _post(cred, json_body={"text": payload.get("text") or ""})
+        return {"ok": False, "error": "conn:teams must be a Power Automate webhook URL (*.api.powerplatform.com)"}
+    return await _post(cred, json_body={
+        "type": "message",
+        "attachments": [{
+            "contentType": "application/vnd.microsoft.card.adaptive",
+            "contentUrl": None,
+            "content": {
+                "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                "type": "AdaptiveCard", "version": "1.2",
+                "body": [{"type": "TextBlock", "text": payload.get("text") or "", "wrap": True}],
+            },
+        }],
+    })
 
 
 async def _mattermost(payload: dict, cred: str) -> dict:
@@ -422,7 +441,9 @@ async def _hashnode(payload: dict, cred: str) -> dict:
 async def _medium(payload: dict, cred: str) -> dict:
     if isinstance(payload, str):
         payload = {"text": payload}
-    # cred: "<integration_token>" — medium.com → Settings → Integration tokens.
+    # cred: "<integration_token>" — medium.com → Settings → Integration
+    # tokens. Medium's API is officially unsupported (no new integrations)
+    # but integration tokens still work — treat as best-effort.
     # /v1/me resolves the user id at call time so the cred stays one value.
     text = payload.get("text") or ""
     async with httpx.AsyncClient(timeout=15.0) as client:
@@ -600,15 +621,15 @@ async def _ayrshare(payload: dict, cred: str) -> dict:
         payload = {"text": payload}
     # cred: "<api_key>" — ayrshare.com dashboard → API Key. One call fans out
     # to every linked network — incl. TikTok, YouTube, Snapchat and GMB, which
-    # have no sane direct posting API. Payload 'platforms' overrides the
-    # default all-linked list.
+    # have no sane direct posting API. Omit 'platforms' to post to all linked
+    # networks ("all" is not a documented platform value).
+    body: dict[str, Any] = {"post": payload.get("text") or ""}
+    if payload.get("platforms"):
+        body["platforms"] = payload["platforms"]
     return await _post(
         "https://api.ayrshare.com/api/post",
         headers={"authorization": f"Bearer {cred}"},
-        json_body={
-            "post": payload.get("text") or "",
-            "platforms": payload.get("platforms") or ["all"],
-        },
+        json_body=body,
     )
 
 
@@ -700,7 +721,7 @@ async def _whatsapp(payload: dict, cred: str) -> dict:
     # cred format: "<access_token>:<phone_number_id>"
     token, _, pid = cred.partition(":")
     return await _post(
-        f"https://graph.facebook.com/v19.0/{pid}/messages",
+        f"https://graph.facebook.com/v25.0/{pid}/messages",
         headers={"authorization": f"Bearer {token}"},
         json_body={
             "messaging_product": "whatsapp",
@@ -745,7 +766,10 @@ async def _youtube(payload: dict, cred: str) -> dict:
 
 
 async def _tiktok(payload: dict, cred: str) -> dict:
-    # cred: "<access_token>" — PULL_FROM_URL: TikTok fetches the video itself.
+    # cred: "<access_token>" — PULL_FROM_URL: TikTok fetches the video itself;
+    # the video_url domain/prefix must be verified in the dev app (else
+    # url_ownership_unverified). privacy_level is required for direct post —
+    # unaudited apps may only post SELF_ONLY.
     media = str(payload.get("media_url") or "")
     if not media:
         return {"ok": False, "error": "tiktok requires media_url (video) — no text posts via API"}
@@ -753,7 +777,10 @@ async def _tiktok(payload: dict, cred: str) -> dict:
         "https://open.tiktokapis.com/v2/post/publish/video/init/",
         headers={"authorization": f"Bearer {cred.split(':', 1)[0]}"},
         json_body={
-            "post_info": {"title": str(payload.get("text") or "Lazynext")[:150]},
+            "post_info": {
+                "title": str(payload.get("text") or "Lazynext")[:150],
+                "privacy_level": str(payload.get("privacy") or "SELF_ONLY"),
+            },
             "source_info": {"source": "PULL_FROM_URL", "video_url": media},
         },
     )

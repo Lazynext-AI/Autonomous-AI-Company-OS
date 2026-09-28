@@ -1,9 +1,10 @@
 # Connector coverage audit
 
-Audited 2026-09-28 against the "every social media platform" requirement.
-The Connector library (Settings → Connector library, `CONNECTOR_IDS` in
-`worker/src/services.ts`) carries 44 entries, each with a real per-platform
-dispatch (`callConnector` → `connPost`), not just credential storage.
+Audited 2026-09-28 against the "every social media platform" requirement;
+provider-API drift audit 2026-10-07 (see bottom). The Connector library
+(Settings → Connector library, `CONNECTOR_IDS` in `worker/src/services.ts`)
+carries 44 entries, each with a real per-platform dispatch
+(`callConnector` → `connPost`), not just credential storage.
 
 ## Self-hosted OAuth connect (replaces hosted aggregators)
 
@@ -24,7 +25,10 @@ Worker — no third-party aggregation service required:
 - `conn:{id}:oauth` — raw token JSON (`access_token`, `refresh_token`,
   `expires_at`, `cred_suffix`). The cron `refreshConnectorTokens` sweep renews
   inside the expiry window (Meta via `fb_exchange_token`, Threads via
-  `refresh_access_token`, everyone else via `refresh_token`).
+  `th_refresh_token` on `GET graph.threads.net/refresh_access_token`,
+  everyone else via `refresh_token`). X auths the exchange via HTTP Basic
+  when a client secret is configured (confidential app) and stays
+  body+PKCE for public clients.
 
 OAuth-capable connectors: `x`, `linkedin`, `facebook`, `instagram`,
 `threads`, `meta`, `whatsapp`, `pinterest`, `youtube`, `gmb`, `tiktok`.
@@ -46,18 +50,18 @@ approval. Hosted aggregators remain as fallback connectors
 | Instagram | `<token>:<ig_user_id>` |
 | Threads | `<token>:<threads_user_id>` |
 | YouTube | `<token>` — resumable **video upload** (`media_url`); no text posts exist |
-| TikTok | `<token>` — video post via `PULL_FROM_URL` (`media_url`); no text posts |
+| TikTok | `<token>` — video post via `PULL_FROM_URL` (`media_url`); no text posts. `privacy_level` required — unaudited apps post `SELF_ONLY` only; the video domain must be verified in the dev app |
 | Google Business | `<token>:<accounts/{a}/locations/{l}>` — localPosts |
 | Bluesky | `<handle>:<app_password>` |
 | Mastodon | `<instance_host>:<token>` |
 | Reddit | `<client_id>:<secret>:<user>:<pass>:<sub>` |
-| Pinterest | `<token>:<board_id>` |
+| Pinterest | `<token>:<board_id>` — `image_url` required (every pin needs media) |
 | VK | `<token>:<owner_id>` |
 | Discord | webhook URL |
 | Slack | webhook URL |
 | Telegram | `<bot_token>:<chat_id>` |
 | Matrix | `<homeserver>\|<room_id>\|<token>` |
-| MS Teams | webhook URL |
+| MS Teams | Power Automate webhook URL — O365 connectors retired May-2026; Adaptive Card envelope |
 | Mattermost | webhook URL |
 | Zulip | `<site>\|<email>\|<api_key>` |
 | Viber | `<token>[:<receiver>]` |
@@ -66,7 +70,7 @@ approval. Hosted aggregators remain as fallback connectors
 | Twilio SMS | `<sid>:<token>:<from>` |
 | dev.to | api key |
 | Hashnode | `<token>:<publication_id>` |
-| Medium | integration token |
+| Medium | integration token — API officially unsupported; still works (best-effort) |
 | WordPress | `<site_base>\|<user>\|<app_password>` |
 | GitHub | PAT (connected) |
 | GitLab | `<pat>` or `<host>:<pat>` |
@@ -87,7 +91,8 @@ approval. Hosted aggregators remain as fallback connectors
   This is the path for TikTok/YouTube/Shorts-era platforms.
 - **Postiz** (`conn:postiz` = `<api_key>|<integration_id>[|<base_url>]`) —
   open-source social scheduler; supports its full integration set.
-- **Buffer** (`conn:buffer` = `<token>:<profile_id>`) — classic scheduler.
+- **Buffer** (`conn:buffer` = `<api_key>:<channel_id>`) — GraphQL `createPost`
+  scheduler; queues by default, `share_now` publishes immediately.
 
 ## No programmatic write API exists (cannot be honestly connected)
 
@@ -105,6 +110,39 @@ publishes over relay websockets, not REST. The rest have no API at all:
   reachable via Ayrshare for clip announcements.
 - **YouTube community posts / TikTok text** — don't exist; the `youtube` and
   `tiktok` connectors cover their only write surfaces (video).
+
+## Provider-API drift audit (2026-10-07)
+
+Every adapter's request shape checked against current provider docs:
+
+- **MS Teams** — Office 365 connectors (incoming webhooks, `*.webhook.office.com`)
+  permanently disabled May 18–22 2026. Adapter now sends the Adaptive Card
+  envelope to a Power Automate Workflows webhook URL.
+- **Meta Graph** — `v19.0` expired 2026-05-21; all Graph endpoints (dispatch +
+  OAuth auth/token/post-resolution) pinned to `v25.0` (expires 2028-07).
+- **LinkedIn** — `POST /v2/ugcPosts` deprecated → migrated to `POST /rest/posts`
+  (`Linkedin-Version: 202609`, `X-Restli-Protocol-Version: 2.0.0`, Posts schema).
+- **X** — post endpoint moved to canonical `api.x.com`; confidential OAuth
+  clients now exchange via HTTP Basic (public clients stay body+PKCE).
+- **Threads** — cron refresh was POSTing `refresh_access_token` to
+  `/oauth/access_token`; corrected to `GET /refresh_access_token` with
+  `grant_type=th_refresh_token`.
+- **Pinterest** — `media_source` is mandatory on pin create; `image_url` now
+  required in the payload instead of 400ing at the provider.
+- **TikTok** — `post_info.privacy_level` is required for direct post; default
+  `SELF_ONLY` (unaudited apps can't post publicly). `PULL_FROM_URL` needs the
+  media URL's domain/prefix verified in the dev app.
+- **Ayrshare** — `platforms` omitted unless specified (posts to all linked
+  networks); `["all"]` isn't a documented platform value.
+- **Medium** — API officially unsupported (archived docs, no new integrations)
+  but integration tokens still function — flagged best-effort.
+- Verified current (no change): Bluesky, Mastodon, Reddit, VK `5.199`,
+  Discord/Slack/Mattermost webhooks, Telegram, Matrix `client/v3`, Zulip,
+  Viber, LINE broadcast, dev.to, Hashnode `publishPost`, WordPress REST,
+  GitHub gists, GitLab snippets, Tumblr NPF, Ghost admin JWT (`?source=html`),
+  beehiiv v2, Lemmy (sends both header auth + body `auth` — the documented
+  0.18/0.19 bridge), Listmonk `send_later`, Twilio, YouTube resumable upload,
+  GMB `localPosts`, Postiz public v1, Buffer `createPost`.
 
 ## Status
 
