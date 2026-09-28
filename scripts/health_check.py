@@ -50,6 +50,14 @@ KV_WATCH = {
     "seq-sweep": ("seq:last_run", 26 * 3_600_000),
     "billing-reconcile": ("billing:last_reconcile", 26 * 3_600_000),
 }
+# ~80% of the LIMIT-10000 dead-corpus reads (worker/src/index.ts +
+# cto_agent.py, parity pinned by test_dead_corpus_limit_matches_across_
+# mirrors). The corpus evicting its oldest anchors is the silent precursor
+# to a respawn flood — seen twice (500-row window 2026-09-27, near-miss at
+# 2000). Counting ALL terminal rows is a deliberate superset of
+# DEAD_CORPUS_WHERE: marker drift can't mute the alert, and ordinary
+# failures grow too slowly to false-positive at this level.
+CORPUS_WARN = 8_000
 STATE_FILE = Path(".health_state.json")
 
 
@@ -103,6 +111,29 @@ def kv_age_ms(key: str) -> float | None:
         return None
 
 
+def corpus_size() -> int | None:
+    """Terminal-row count via the platform worker; None when unreadable."""
+    try:
+        url = os.environ.get("CLOUDFLARE_API_URL", "")
+        token = os.environ.get("CLOUDFLARE_API_TOKEN", "")
+        req = urllib.request.Request(
+            f"{url}/query",
+            data=json.dumps({
+                "sql": "SELECT COUNT(*) n FROM task_log WHERE status IN ('failed','escalated')"
+            }).encode(),
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+                "User-Agent": "healthcheck/1.0",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return int(json.loads(r.read())["results"][0]["n"])
+    except Exception:
+        return None
+
+
 async def main() -> int:
     now = {name: check(url) for name, url in CHECKS.items()}
     for name, (a, b) in DRIFT_PAIRS.items():
@@ -111,6 +142,8 @@ async def main() -> int:
     for name, (key, budget) in KV_WATCH.items():
         age = kv_age_ms(key)
         now[name] = age is not None and age < budget
+    size = corpus_size()
+    now["dead-corpus"] = size is not None and size < CORPUS_WARN
     prev = json.loads(STATE_FILE.read_text()) if STATE_FILE.exists() else {}
     failed = [k for k, ok in now.items() if not ok]
     recovered = [k for k in prev if not prev.get(k) and now.get(k)]

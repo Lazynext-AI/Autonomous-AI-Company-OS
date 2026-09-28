@@ -96,3 +96,31 @@ def test_dead_corpus_markers_match_across_mirrors() -> None:
     # "deferred:" stays out deliberately — a pending business decision must
     # resurface, and suppressing it would block the post-decision proposal.
     assert "deferred:" not in worker_result
+
+
+def test_dead_corpus_limit_matches_across_mirrors() -> None:
+    # The cap is what stops corpus eviction — the 500→respawn-flood history is
+    # in this file's docstring. A desynced cap (one mirror lowered, the other
+    # not) silently re-opens the same failure on whichever side reads less.
+    # Pin parity plus a floor at the current 10000; raising passes, lowering
+    # must be a deliberate change to this test and the healthcheck warn level.
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2]
+    worker = (root / "worker/src/index.ts").read_text()
+    # index.ts reads the corpus twice: a small prompt-side sample and the
+    # dedup corpus proper. The corpus read is the largest LIMIT — take max.
+    w_limit = max(
+        int(m)
+        for m in re.findall(
+            r"DEAD_CORPUS_WHERE\} ORDER BY created_at DESC LIMIT (\d+)", worker
+        )
+    )
+
+    cto = (root / "agents/strategic/cto_agent.py").read_text()
+    dead_block = re.search(r"dead = client\.query\((.*?)\]\)", cto, re.S).group(1)
+    c_limit = int(re.search(r"ORDER BY created_at DESC LIMIT (\d+)", dead_block).group(1))
+
+    assert w_limit == c_limit
+    assert w_limit >= 10000
