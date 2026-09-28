@@ -749,10 +749,11 @@ export async function signwellSendFromTemplate(
 const CONNECTOR_IDS = [
   "x", "linkedin", "meta", "facebook", "instagram", "threads",
   "bluesky", "mastodon", "reddit", "pinterest", "vk",
+  "youtube", "tiktok", "gmb", "snapchat",
   "discord", "slack", "telegram", "matrix",
   "teams", "mattermost", "zulip", "viber", "line",
   "devto", "hashnode", "medium", "wordpress", "github", "gitlab",
-  "tumblr", "ghost", "beehiiv",
+  "tumblr", "ghost", "beehiiv", "lemmy", "listmonk", "nostr",
   "webhook", "ayrshare", "postiz", "buffer",
   "twilio", "whatsapp",
   "brevo", "signwell",
@@ -794,15 +795,18 @@ async function callConnector(
     }
     case "linkedin": {
       if (!text) return { ok: false, status: 400, error: "text required" };
-      // cred: "<access_token>" or "<access_token>:<numeric_org_id>" — the
-      // author URN needs the org's numeric id; without it "lazynext" is a
-      // best-effort default that LinkedIn may reject (invalid URN → 4xx).
-      const [token, org = ""] = cred.split(":", 2);
+      // cred: "<access_token>" or "<access_token>:<author>" where author is a
+      // full urn ("urn:li:person:x" from the OAuth flow, "urn:li:organization:x")
+      // or a bare numeric org id. Urns contain colons, so split on the FIRST.
+      const i = cred.indexOf(":");
+      const token = i === -1 ? cred : cred.slice(0, i);
+      const suffix = i === -1 ? "" : cred.slice(i + 1);
+      const author = suffix.startsWith("urn:") ? suffix : `urn:li:organization:${suffix || "lazynext"}`;
       return connPost("https://api.linkedin.com/v2/ugcPosts", {
         method: "POST",
         headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
         body: JSON.stringify({
-          author: `urn:li:organization:${org || "lazynext"}`,
+          author,
           lifecycleState: "PUBLISHED",
           specificContent: {
             "com.linkedin.ugc.ShareContent": {
@@ -1388,6 +1392,109 @@ async function callConnector(
         }),
       });
     }
+    case "youtube": {
+      // cred: "<access_token>" — video upload only; YouTube has no text-post
+      // API. Resumable upload: init returns the upload URL in `location`.
+      const media = String(b.media_url ?? "");
+      if (!media) return { ok: false, status: 400, error: "youtube requires media_url — no text/community posts via API" };
+      const init = await fetch("https://upload.youtube.com/upload/youtube/v3/videos?part=snippet,status&uploadType=resumable", {
+        method: "POST",
+        headers: { authorization: `Bearer ${cred.split(":")[0]}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          snippet: { title: (text || "Lazynext").slice(0, 100), description: String(b.body ?? text) },
+          status: { privacyStatus: String(b.privacy ?? "public") },
+        }),
+      });
+      const loc = init.headers.get("location");
+      if (!init.ok || !loc) {
+        const errBody = await init.text().catch(() => "");
+        return { ok: false, status: init.status, error: `upload init failed: ${errBody.slice(0, 200)}` };
+      }
+      const vid = await fetch(media);
+      if (!vid.ok || !vid.body) return { ok: false, status: 400, error: `media_url not fetchable (${vid.status})` };
+      const up = await fetch(loc, {
+        method: "PUT",
+        headers: { "content-type": vid.headers.get("content-type") ?? "video/mp4" },
+        body: vid.body,
+      });
+      const ud = (await up.json().catch(() => ({}))) as Record<string, unknown>;
+      return { ok: up.ok, status: up.status, body: ud,
+        error: up.ok ? undefined : String(((ud as { error?: { message?: string } }).error?.message) ?? up.status) };
+    }
+    case "tiktok": {
+      // cred: "<access_token>" — PULL_FROM_URL lets TikTok fetch the video
+      // itself; no binary upload needed. Title doubles as the post caption.
+      const media = String(b.media_url ?? "");
+      if (!media) return { ok: false, status: 400, error: "tiktok requires media_url (video) — no text posts via API" };
+      return connPost("https://open.tiktokapis.com/v2/post/publish/video/init/", {
+        method: "POST",
+        headers: { authorization: `Bearer ${cred.split(":")[0]}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          post_info: { title: (text || "Lazynext").slice(0, 150) },
+          source_info: { source: "PULL_FROM_URL", video_url: media },
+        }),
+      });
+    }
+    case "gmb": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<access_token>:<accounts/{a}/locations/{l}>" — Google Business
+      // Profile local post (the "update" card on the listing).
+      const [token, loc = ""] = cred.split(":", 2);
+      if (!loc) return { ok: false, status: 500, error: "conn:gmb must be '<access_token>:<accounts/{a}/locations/{l}>'" };
+      return connPost(`https://mybusiness.googleapis.com/v4/${loc}/localPosts`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          languageCode: "en", summary: text, topicType: "STANDARD",
+          callToAction: { actionType: "LEARN_MORE", url: String(b.link ?? "https://lazynext.com") },
+        }),
+      });
+    }
+    case "lemmy": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<instance_base>|<username>|<password>" — password login per
+      // call keeps the flat-cred contract (jwt rotates per login anyway).
+      // Payload 'to' = community_id, 'body' = post body.
+      const [inst = "", user = "", pass = ""] = cred.split("|");
+      if (!inst || !user || !pass)
+        return { ok: false, status: 500, error: "conn:lemmy must be '<instance_base>|<username>|<password>'" };
+      const base = inst.replace(/\/+$/, "");
+      const login = await connPost(`${base}/api/v3/user/login`, {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ username_or_email: user, password: pass }),
+      });
+      const jwt = (login.body as { jwt?: string } | undefined)?.jwt;
+      if (!login.ok || !jwt) return { ok: false, status: login.status ?? 401, error: "lemmy login failed" };
+      return connPost(`${base}/api/v3/post`, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${jwt}` },
+        body: JSON.stringify({
+          name: text.slice(0, 200), body: String(b.body ?? text),
+          community_id: Number(b.to ?? 0) || undefined, auth: jwt,
+        }),
+      });
+    }
+    case "listmonk": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<base_url>|<user>|<pass>|<list_id>" — creates a draft campaign
+      // (send:false) for review before broadcast.
+      const [bs = "", user = "", pass = "", list = ""] = cred.split("|");
+      if (!bs || !list)
+        return { ok: false, status: 500, error: "conn:listmonk must be '<base_url>|<user>|<pass>|<list_id>'" };
+      return connPost(`${bs.replace(/\/+$/, "")}/api/campaigns`, {
+        method: "POST",
+        headers: { authorization: `Basic ${btoa(`${user}:${pass}`)}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          name: text.slice(0, 80), subject: String(b.subject ?? text.slice(0, 80)),
+          lists: [Number(list)], type: "regular", content_type: "html",
+          body: String(b.body ?? text), send_later: false,
+        }),
+      });
+    }
+    case "snapchat":
+      return { ok: false, status: 400, error: "snapchat has no organic-post API — Marketing API is ads-only; use meta for ads" };
+    case "nostr":
+      return { ok: false, status: 400, error: "nostr publishes over relay websockets, not REST — no write endpoint to call from a Worker" };
     case "brevo": {
       const to = String(b.to ?? "");
       if (!to) return { ok: false, status: 400, error: "to required" };

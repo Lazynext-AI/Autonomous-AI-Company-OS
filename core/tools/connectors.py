@@ -68,15 +68,16 @@ async def _x(text: str, cred: str) -> dict:
 
 
 async def _linkedin(text: str, cred: str) -> dict:
-    # cred: "<access_token>" or "<access_token>:<numeric_org_id>" — the author
-    # URN needs the org's numeric id; bare "lazynext" is a best-effort default
-    # LinkedIn may reject (invalid URN → 4xx).
-    token, _, org = cred.partition(":")
+    # cred: "<access_token>" or "<access_token>:<author>" where author is a
+    # full urn ("urn:li:person:x" from the OAuth flow, "urn:li:organization:x")
+    # or a bare numeric org id.
+    token, _, suffix = cred.partition(":")
+    author = suffix if suffix.startswith("urn:") else f"urn:li:organization:{suffix or 'lazynext'}"
     return await _post(
         "https://api.linkedin.com/v2/ugcPosts",
         headers={"authorization": f"Bearer {token}"},
         json_body={
-            "author": f"urn:li:organization:{org or 'lazynext'}",
+            "author": author,
             "lifecycleState": "PUBLISHED",
             "specificContent": {
                 "com.linkedin.ugc.ShareContent": {
@@ -714,6 +715,115 @@ async def _whatsapp(payload: dict, cred: str) -> dict:
 
 # --- Email marketing ------------------------------------------------------
 
+async def _youtube(payload: dict, cred: str) -> dict:
+    # cred: "<access_token>" — resumable video upload; YouTube has no
+    # text/community-post API. payload.media_url is fetched and streamed.
+    media = str(payload.get("media_url") or "")
+    if not media:
+        return {"ok": False, "error": "youtube requires media_url — no text/community posts via API"}
+    token = cred.split(":", 1)[0]
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        init = await client.post(
+            "https://upload.youtube.com/upload/youtube/v3/videos?part=snippet,status&uploadType=resumable",
+            headers={"authorization": f"Bearer {token}"},
+            json={
+                "snippet": {"title": str(payload.get("text") or "Lazynext")[:100],
+                            "description": str(payload.get("body") or payload.get("text") or "")},
+                "status": {"privacyStatus": str(payload.get("privacy") or "public")},
+            },
+        )
+        loc = init.headers.get("location")
+        if init.status_code >= 400 or not loc:
+            return {"ok": False, "status": init.status_code, "error": f"upload init failed: {init.text[:200]}"}
+        vid = await client.get(media)
+        if vid.status_code >= 400:
+            return {"ok": False, "status": 400, "error": f"media_url not fetchable ({vid.status_code})"}
+        up = await client.put(loc, content=vid.content,
+                              headers={"content-type": vid.headers.get("content-type", "video/mp4")})
+        return {"status": up.status_code, "ok": up.status_code < 400,
+                "body": up.json() if up.content else {}}
+
+
+async def _tiktok(payload: dict, cred: str) -> dict:
+    # cred: "<access_token>" — PULL_FROM_URL: TikTok fetches the video itself.
+    media = str(payload.get("media_url") or "")
+    if not media:
+        return {"ok": False, "error": "tiktok requires media_url (video) — no text posts via API"}
+    return await _post(
+        "https://open.tiktokapis.com/v2/post/publish/video/init/",
+        headers={"authorization": f"Bearer {cred.split(':', 1)[0]}"},
+        json_body={
+            "post_info": {"title": str(payload.get("text") or "Lazynext")[:150]},
+            "source_info": {"source": "PULL_FROM_URL", "video_url": media},
+        },
+    )
+
+
+async def _gmb(text: str, cred: str) -> dict:
+    # cred: "<access_token>:<accounts/{a}/locations/{l}>" — Google Business
+    # Profile local post.
+    token, _, loc = cred.partition(":")
+    if not loc:
+        return {"ok": False, "error": "conn:gmb must be '<access_token>:<accounts/{a}/locations/{l}>'"}
+    return await _post(
+        f"https://mybusiness.googleapis.com/v4/{loc}/localPosts",
+        headers={"authorization": f"Bearer {token}"},
+        json_body={
+            "languageCode": "en", "summary": text, "topicType": "STANDARD",
+            "callToAction": {"actionType": "LEARN_MORE", "url": "https://lazynext.com"},
+        },
+    )
+
+
+async def _lemmy(payload: dict, cred: str) -> dict:
+    # cred: "<instance_base>|<username>|<password>" — login per call;
+    # payload.to = community_id, payload.body = post body.
+    inst, _, rest = cred.partition("|")
+    user, _, pw = rest.partition("|")
+    text = str(payload.get("text") or "")
+    if not inst or not user or not pw:
+        return {"ok": False, "error": "conn:lemmy must be '<instance_base>|<username>|<password>'"}
+    base = inst.rstrip("/")
+    login = await _post(f"{base}/api/v3/user/login",
+                        json_body={"username_or_email": user, "password": pw})
+    jwt = (login.get("body") or {}).get("jwt")
+    if not jwt:
+        return {"ok": False, "status": login.get("status"), "error": "lemmy login failed"}
+    return await _post(
+        f"{base}/api/v3/post",
+        headers={"authorization": f"Bearer {jwt}"},
+        json_body={"name": text[:200], "body": str(payload.get("body") or text),
+                   "community_id": int(payload.get("to") or 0) or None, "auth": jwt},
+    )
+
+
+async def _listmonk(payload: dict, cred: str) -> dict:
+    # cred: "<base_url>|<user>|<pass>|<list_id>" — creates a draft campaign.
+    bs, _, rest = cred.partition("|")
+    user, _, rest2 = rest.partition("|")
+    pw, _, lst = rest2.partition("|")
+    text = str(payload.get("text") or "")
+    if not bs or not lst:
+        return {"ok": False, "error": "conn:listmonk must be '<base_url>|<user>|<pass>|<list_id>'"}
+    return await _post(
+        f"{bs.rstrip('/')}/api/campaigns",
+        auth=(user, pw),
+        json_body={
+            "name": text[:80], "subject": str(payload.get("subject") or text[:80]),
+            "lists": [int(lst)], "type": "regular", "content_type": "html",
+            "body": str(payload.get("body") or text), "send_later": False,
+        },
+    )
+
+
+async def _snapchat(text: str, cred: str) -> dict:
+    return {"ok": False, "error": "snapchat has no organic-post API — Marketing API is ads-only"}
+
+
+async def _nostr(text: str, cred: str) -> dict:
+    return {"ok": False, "error": "nostr publishes over relay websockets, not REST — no write endpoint"}
+
+
 async def _brevo(payload: dict, cred: str) -> dict:
     # cred format: "<sender_email>:<api_key>" — a bare key falls back to
     # support@lazynext.com as the verified sender. Key from brevo.com →
@@ -784,12 +894,14 @@ _DISPATCH = {
     "facebook": _facebook, "instagram": _instagram, "threads": _threads,
     "bluesky": _bluesky, "mastodon": _mastodon, "reddit": _reddit,
     "pinterest": _pinterest, "vk": _vk,
+    "youtube": _youtube, "tiktok": _tiktok, "gmb": _gmb, "snapchat": _snapchat,
     "discord": _discord, "slack": _slack, "telegram": _telegram,
     "matrix": _matrix, "teams": _teams, "mattermost": _mattermost,
     "zulip": _zulip, "viber": _viber, "line": _line,
     "devto": _devto, "hashnode": _hashnode, "medium": _medium,
     "wordpress": _wordpress, "github": _github, "gitlab": _gitlab,
     "tumblr": _tumblr, "ghost": _ghost, "beehiiv": _beehiiv,
+    "lemmy": _lemmy, "listmonk": _listmonk, "nostr": _nostr,
     "webhook": _webhook, "ayrshare": _ayrshare, "postiz": _postiz,
     "buffer": _buffer,
     "twilio": _twilio, "whatsapp": _whatsapp,

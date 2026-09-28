@@ -26,21 +26,24 @@ const INTEGRATIONS = [
 // scheduling, commerce, and email marketing are all native on D1 now.
 // What's left are destination networks Cloudflare can't reach, Brevo for
 // email delivery, plus SignWell for legal-grade e-signatures.
-const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; name: string; hint: string }[] }[] = [
+const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; name: string; hint: string; oauth?: boolean }[] }[] = [
   {
     group: "Social posting", icon: Share2,
     items: [
-      { id: "x", name: "X / Twitter", hint: "OAuth2 bearer — agents post marketing tweets" },
-      { id: "linkedin", name: "LinkedIn", hint: "access_token[:org_id] — agents post B2B content" },
-      { id: "meta", name: "Meta Ads", hint: "access_token:ad_account_id — run paid campaigns" },
-      { id: "facebook", name: "Facebook Page", hint: "page_access_token:page_id — organic page posts" },
-      { id: "instagram", name: "Instagram", hint: "access_token:ig_user_id — image+caption posts" },
-      { id: "threads", name: "Threads", hint: "access_token:threads_user_id — Meta text posts" },
+      { id: "x", name: "X / Twitter", hint: "OAuth2 bearer — agents post marketing tweets", oauth: true },
+      { id: "linkedin", name: "LinkedIn", hint: "access_token[:urn] — agents post B2B content", oauth: true },
+      { id: "meta", name: "Meta Ads", hint: "access_token:ad_account_id — run paid campaigns", oauth: true },
+      { id: "facebook", name: "Facebook Page", hint: "page_access_token:page_id — organic page posts", oauth: true },
+      { id: "instagram", name: "Instagram", hint: "access_token:ig_user_id — image+caption posts", oauth: true },
+      { id: "threads", name: "Threads", hint: "access_token:threads_user_id — Meta text posts", oauth: true },
       { id: "bluesky", name: "Bluesky", hint: "handle:app_password — bsky.app → Settings → App passwords" },
       { id: "mastodon", name: "Mastodon", hint: "instance_host:access_token — any fediverse instance" },
       { id: "reddit", name: "Reddit", hint: "client_id:secret:user:pass:sub — script app OAuth" },
-      { id: "pinterest", name: "Pinterest", hint: "access_token:board_id — link/image pins" },
+      { id: "pinterest", name: "Pinterest", hint: "access_token:board_id — link/image pins", oauth: true },
       { id: "vk", name: "VK", hint: "access_token:owner_id — vk.com/dev app; negative owner = community wall" },
+      { id: "youtube", name: "YouTube", hint: "OAuth — video uploads only (media_url); no text posts via API", oauth: true },
+      { id: "tiktok", name: "TikTok", hint: "OAuth — video posts via pull-from-url (media_url)", oauth: true },
+      { id: "gmb", name: "Google Business", hint: "OAuth — local posts on the Maps/Search listing", oauth: true },
     ],
   },
   {
@@ -69,6 +72,8 @@ const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; nam
       { id: "tumblr", name: "Tumblr", hint: "access_token:blog_name — tumblr.com/oauth app" },
       { id: "ghost", name: "Ghost", hint: "site_base|key_id:key_secret — custom integration admin key" },
       { id: "beehiiv", name: "beehiiv", hint: "api_key:publication_id — Max/Enterprise plan only" },
+      { id: "lemmy", name: "Lemmy", hint: "instance|user|pass — fediverse; 'to' = community_id" },
+      { id: "listmonk", name: "Listmonk", hint: "base|user|pass|list_id — self-hosted newsletter campaigns" },
     ],
   },
   {
@@ -143,8 +148,9 @@ function ChatHook({ platform }: { platform: string }) {
   );
 }
 
-function ConnectorHook({ id, name, hint }: { id: string; name: string; hint: string }) {
+function ConnectorHook({ id, name, hint, oauth }: { id: string; name: string; hint: string; oauth?: boolean }) {
   const [val, setVal] = useState("");
+  const [appVal, setAppVal] = useState("");
   const [saved, setSaved] = useState(false);
   useEffect(() => {
     fetch("/api/kv", {
@@ -187,7 +193,42 @@ function ConnectorHook({ id, name, hint }: { id: string; name: string; hint: str
         >
           {saved ? "Update" : "Connect"}
         </button>
+        {oauth && (
+          <a
+            href={`/api/connect/${id}`}
+            className="text-xs bg-input hover:bg-border text-fg font-semibold px-3.5 py-2 rounded-lg transition shrink-0"
+            title="OAuth connect — stores conn:{id} automatically (set app creds below first)"
+          >
+            OAuth ↗
+          </a>
+        )}
       </div>
+      {oauth && (
+        <div className="flex gap-2 mt-2">
+          <input
+            type="password"
+            value={appVal}
+            onChange={(e) => setAppVal(e.target.value)}
+            placeholder="conn:app — client_id:client_secret (dev app)"
+            className="flex-1 bg-input border border-border rounded-lg px-3 py-1.5 text-[11px] text-fg outline-none focus:border-accent transition"
+          />
+          <button
+            onClick={async () => {
+              if (!appVal) return;
+              const r = await fetch("/api/kv", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ action: "put", key: `conn:${id}:app`, value: appVal }),
+              });
+              toast(r.ok ? `${name} app creds saved` : "Failed");
+              if (r.ok) setAppVal("");
+            }}
+            className="text-[11px] bg-input hover:bg-border text-fg font-semibold px-3 py-1.5 rounded-lg transition shrink-0"
+          >
+            Save app
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -473,7 +514,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-4">
                   {g.items.map((c) => (
-                    <ConnectorHook key={c.id} id={c.id} name={c.name} hint={c.hint} />
+                    <ConnectorHook key={c.id} id={c.id} name={c.name} hint={c.hint} oauth={c.oauth} />
                   ))}
                 </div>
               </div>
