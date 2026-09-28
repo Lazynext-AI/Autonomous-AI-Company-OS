@@ -252,6 +252,173 @@ async def _telegram(text: str, cred: str) -> dict:
     )
 
 
+async def _matrix(text: str, cred: str) -> dict:
+    # cred: "<homeserver_base>|<room_id>|<access_token>" — room_id looks like
+    # !abc:matrix.org, so '|' separates (the parts carry their own ':').
+    hs, _, rest = cred.partition("|")
+    room, _, tok = rest.partition("|")
+    if not hs or not room or not tok:
+        return {"ok": False, "error": "conn:matrix must be '<homeserver_base>|<room_id>|<access_token>'"}
+    import time
+    from urllib.parse import quote
+    return await _post(
+        f"{hs.rstrip('/')}/_matrix/client/v3/rooms/{quote(room, safe='')}/send/m.room.message/{int(time.time() * 1000)}",
+        headers={"authorization": f"Bearer {tok}"},
+        json_body={"msgtype": "m.text", "body": text},
+    )
+
+
+# --- Dev publishing -------------------------------------------------------
+
+async def _devto(payload: dict, cred: str) -> dict:
+    if isinstance(payload, str):
+        payload = {"text": payload}
+    # cred: "<api_key>" — dev.to → Settings → Extensions → DEV API Keys.
+    # Payload 'title' overrides the default (first line); 'draft: true'
+    # publishes silently for review instead of going live.
+    text = payload.get("text") or ""
+    return await _post(
+        "https://dev.to/api/articles",
+        headers={"api-key": cred},
+        json_body={
+            "article": {
+                "title": payload.get("title") or text.split("\n")[0][:100],
+                "body_markdown": text,
+                "published": payload.get("draft") is not True,
+                "tags": payload.get("tags") or ["webdev"],
+            }
+        },
+    )
+
+
+async def _hashnode(payload: dict, cred: str) -> dict:
+    if isinstance(payload, str):
+        payload = {"text": payload}
+    # cred: "<token>:<publication_id>" — hashnode.com → Account → Developer.
+    token, _, pub = cred.partition(":")
+    text = payload.get("text") or ""
+    if not pub:
+        return {"ok": False, "error": "conn:hashnode must be '<token>:<publication_id>'"}
+    return await _post(
+        "https://gql.hashnode.com/",
+        headers={"authorization": token},
+        json_body={
+            "query": "mutation($input: PublishPostInput!) { publishPost(input: $input) { post { id url } } }",
+            "variables": {
+                "input": {
+                    "title": payload.get("title") or text.split("\n")[0][:100],
+                    "contentMarkdown": text,
+                    "publicationId": pub,
+                }
+            },
+        },
+    )
+
+
+async def _medium(payload: dict, cred: str) -> dict:
+    if isinstance(payload, str):
+        payload = {"text": payload}
+    # cred: "<integration_token>" — medium.com → Settings → Integration tokens.
+    # /v1/me resolves the user id at call time so the cred stays one value.
+    text = payload.get("text") or ""
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        me = await client.get("https://api.medium.com/v1/me",
+                              headers={"authorization": f"Bearer {cred}"})
+    if me.status_code >= 400:
+        return {"status": me.status_code, "ok": False, "body": me.json() if me.text else {}}
+    uid = (me.json().get("data") or {}).get("id")
+    if not uid:
+        return {"ok": False, "error": "medium /v1/me returned no user id"}
+    return await _post(
+        f"https://api.medium.com/v1/users/{uid}/posts",
+        headers={"authorization": f"Bearer {cred}"},
+        json_body={
+            "title": payload.get("title") or text.split("\n")[0][:100],
+            "contentFormat": "markdown", "content": text,
+            "publishStatus": "public",
+        },
+    )
+
+
+async def _wordpress(payload: dict, cred: str) -> dict:
+    if isinstance(payload, str):
+        payload = {"text": payload}
+    # cred: "<site_base>|<username>|<app_password>" — '|' because site_base
+    # carries its own ':' (https://…). App passwords: WP Admin → Users →
+    # Profile → Application Passwords (needs WP ≥5.6).
+    site, _, rest = cred.partition("|")
+    user, _, app = rest.partition("|")
+    text = payload.get("text") or ""
+    if not site or not user or not app:
+        return {"ok": False, "error": "conn:wordpress must be '<site_base>|<username>|<app_password>'"}
+    return await _post(
+        f"{site.rstrip('/')}/wp-json/wp/v2/posts",
+        auth=(user, app),
+        json_body={
+            "title": payload.get("title") or text.split("\n")[0][:100],
+            "content": text, "status": "publish",
+        },
+    )
+
+
+async def _github(payload: dict, cred: str) -> dict:
+    if isinstance(payload, str):
+        payload = {"text": payload}
+    # cred: "<pat>" — posts a public gist; the same PAT powers repo ops.
+    text = payload.get("text") or ""
+    return await _post(
+        "https://api.github.com/gists",
+        headers={"authorization": f"Bearer {cred}", "accept": "application/vnd.github+json"},
+        json_body={
+            "public": True,
+            "description": payload.get("title") or "Lazynext",
+            "files": {"post.md": {"content": text}},
+        },
+    )
+
+
+async def _gitlab(payload: dict, cred: str) -> dict:
+    if isinstance(payload, str):
+        payload = {"text": payload}
+    # cred: "<pat>" (gitlab.com) or "<host>:<pat>" — PAT needs 'api' scope.
+    first, _, maybe = cred.partition(":")
+    host, tok = (first, maybe) if maybe else ("gitlab.com", first)
+    text = payload.get("text") or ""
+    return await _post(
+        f"https://{host}/api/v4/snippets",
+        headers={"private-token": tok},
+        json_body={
+            "title": payload.get("title") or "Lazynext post",
+            "visibility": "public",
+            "files": [{"file_path": "post.md", "content": text}],
+        },
+    )
+
+
+# --- Bridges ----------------------------------------------------------------
+
+async def _webhook(payload: dict, cred: str) -> dict:
+    if isinstance(payload, str):
+        payload = {"text": payload}
+    # cred: "<url>" or "<url>|<bearer>" — generic outbound bridge to
+    # Zapier/Make/n8n/IFTTT/Pabbly, which fan out to every other network.
+    url, _, bearer = cred.partition("|")
+    if not url.startswith("https://"):
+        return {"ok": False, "error": "conn:webhook must be an https:// url (|bearer optional)"}
+    body: dict[str, Any] = {
+        "text": payload.get("text") or "",
+        "source": "lazynext",
+        "ts": int(__import__('time').time() * 1000),
+    }
+    if isinstance(payload.get("payload"), dict):
+        body["payload"] = payload["payload"]
+    return await _post(
+        url,
+        headers={"authorization": f"Bearer {bearer}"} if bearer else None,
+        json_body=body,
+    )
+
+
 # --- Sales CRM ------------------------------------------------------------
 
 # --- Commerce -------------------------------------------------------------
@@ -358,6 +525,10 @@ _DISPATCH = {
     "bluesky": _bluesky, "mastodon": _mastodon, "reddit": _reddit,
     "pinterest": _pinterest,
     "discord": _discord, "slack": _slack, "telegram": _telegram,
+    "matrix": _matrix,
+    "devto": _devto, "hashnode": _hashnode, "medium": _medium,
+    "wordpress": _wordpress, "github": _github, "gitlab": _gitlab,
+    "webhook": _webhook,
     "twilio": _twilio, "whatsapp": _whatsapp,
     "brevo": _brevo,
     "signwell": _signwell,

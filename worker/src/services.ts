@@ -549,7 +549,9 @@ export async function signwellSendFromTemplate(
 const CONNECTOR_IDS = [
   "x", "linkedin", "meta", "facebook", "instagram", "threads",
   "bluesky", "mastodon", "reddit", "pinterest",
-  "discord", "slack", "telegram", "twilio", "whatsapp",
+  "discord", "slack", "telegram", "matrix",
+  "devto", "hashnode", "medium", "wordpress", "github", "gitlab",
+  "webhook", "twilio", "whatsapp",
   "brevo", "signwell",
 ];
 
@@ -809,6 +811,151 @@ async function callConnector(
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ chat_id: chat, text }),
+      });
+    }
+    case "matrix": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<homeserver_base>|<room_id>|<access_token>" — room_id looks like
+      // !abc:matrix.org, so '|' separates (the parts carry their own ':').
+      const [hs, room = "", tok = ""] = cred.split("|");
+      if (!hs || !room || !tok)
+        return { ok: false, status: 500, error: "conn:matrix must be '<homeserver_base>|<room_id>|<access_token>'" };
+      return connPost(
+        `${hs.replace(/\/+$/, "")}/_matrix/client/v3/rooms/${encodeURIComponent(room)}/send/m.room.message/${Date.now()}`,
+        {
+          method: "PUT",
+          headers: { authorization: `Bearer ${tok}`, "content-type": "application/json" },
+          body: JSON.stringify({ msgtype: "m.text", body: text }),
+        },
+      );
+    }
+    case "devto": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<api_key>" — dev.to → Settings → Extensions → DEV API Keys.
+      // Payload 'title' overrides the default (first line); 'draft: true'
+      // publishes silently for review instead of going live.
+      return connPost("https://dev.to/api/articles", {
+        method: "POST",
+        headers: { "api-key": cred, "content-type": "application/json" },
+        body: JSON.stringify({
+          article: {
+            title: String(b.title ?? text.split("\n")[0].slice(0, 100)),
+            body_markdown: text,
+            published: b.draft !== true,
+            tags: (b.tags as string[]) ?? ["webdev"],
+          },
+        }),
+      });
+    }
+    case "hashnode": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<token>:<publication_id>" — hashnode.com → Account → Developer.
+      const [token, pub = ""] = cred.split(":", 2);
+      if (!pub) return { ok: false, status: 500, error: "conn:hashnode must be '<token>:<publication_id>'" };
+      return connPost("https://gql.hashnode.com/", {
+        method: "POST",
+        headers: { authorization: token, "content-type": "application/json" },
+        body: JSON.stringify({
+          query: "mutation($input: PublishPostInput!) { publishPost(input: $input) { post { id url } } }",
+          variables: {
+            input: {
+              title: String(b.title ?? text.split("\n")[0].slice(0, 100)),
+              contentMarkdown: text,
+              publicationId: pub,
+            },
+          },
+        }),
+      });
+    }
+    case "medium": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<integration_token>" — medium.com → Settings → Integration tokens.
+      // /v1/me resolves the user id at call time so the cred stays one value.
+      const me = await connPost("https://api.medium.com/v1/me", {
+        method: "GET",
+        headers: { authorization: `Bearer ${cred}` },
+      });
+      if (!me.ok) return me;
+      const uid = ((me.body ?? {}) as { data?: { id?: string } }).data?.id;
+      if (!uid) return { ok: false, status: 500, error: "medium /v1/me returned no user id" };
+      return connPost(`https://api.medium.com/v1/users/${uid}/posts`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${cred}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          title: String(b.title ?? text.split("\n")[0].slice(0, 100)),
+          contentFormat: "markdown", content: text, publishStatus: "public",
+        }),
+      });
+    }
+    case "wordpress": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<site_base>|<username>|<app_password>" — '|' because site_base
+      // carries its own ':' (https://…). App passwords: WP Admin → Users →
+      // Profile → Application Passwords (needs WP ≥5.6).
+      const [site, user = "", app = ""] = cred.split("|");
+      if (!site || !user || !app)
+        return { ok: false, status: 500, error: "conn:wordpress must be '<site_base>|<username>|<app_password>'" };
+      return connPost(`${site.replace(/\/+$/, "")}/wp-json/wp/v2/posts`, {
+        method: "POST",
+        headers: {
+          authorization: `Basic ${btoa(`${user}:${app}`)}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          title: String(b.title ?? text.split("\n")[0].slice(0, 100)),
+          content: text, status: "publish",
+        }),
+      });
+    }
+    case "github": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<pat>" — posts a public gist; the same PAT powers repo ops.
+      return connPost("https://api.github.com/gists", {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${cred}`,
+          accept: "application/vnd.github+json",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          public: true,
+          description: String(b.title ?? "Lazynext"),
+          files: { "post.md": { content: text } },
+        }),
+      });
+    }
+    case "gitlab": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<pat>" (gitlab.com) or "<host>:<pat>" — PAT needs 'api' scope.
+      const [first, maybeTok] = cred.split(":", 2);
+      const host = maybeTok ? first : "gitlab.com";
+      const tok = maybeTok || first;
+      return connPost(`https://${host}/api/v4/snippets`, {
+        method: "POST",
+        headers: { "private-token": tok, "content-type": "application/json" },
+        body: JSON.stringify({
+          title: String(b.title ?? "Lazynext post"), visibility: "public",
+          files: [{ file_path: "post.md", content: text }],
+        }),
+      });
+    }
+    case "webhook": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<url>" or "<url>|<bearer>" — generic outbound bridge to
+      // Zapier/Make/n8n/IFTTT/Pabbly, which fan out to every other network.
+      const [url, bearer = ""] = cred.split("|");
+      if (!url.startsWith("https://"))
+        return { ok: false, status: 500, error: "conn:webhook must be an https:// url (|bearer optional)" };
+      return connPost(url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          ...(bearer ? { authorization: `Bearer ${bearer}` } : {}),
+        },
+        body: JSON.stringify({
+          text, source: "lazynext", ts: Date.now(),
+          ...(typeof b.payload === "object" && b.payload !== null ? { payload: b.payload } : {}),
+        }),
       });
     }
     case "brevo": {

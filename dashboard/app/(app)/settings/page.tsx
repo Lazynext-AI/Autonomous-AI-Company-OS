@@ -8,7 +8,7 @@ import Link from "next/link";
 import {
   GitBranch, Mail, TerminalSquare, Globe, Database, Palette, Cpu, CreditCard,
   Share2, Briefcase, ShoppingCart, Phone, LifeBuoy, Send, CalendarClock, MessageCircle,
-  FileCheck2,
+  FileCheck2, BookOpen, Webhook,
 } from "lucide-react";
 
 const INTEGRATIONS = [
@@ -48,6 +48,24 @@ const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; nam
       { id: "discord", name: "Discord", hint: "channel webhook URL — server announcements" },
       { id: "slack", name: "Slack", hint: "incoming-webhook URL — workspace updates" },
       { id: "telegram", name: "Telegram", hint: "bot_token:chat_id — channel/group messages" },
+      { id: "matrix", name: "Matrix", hint: "homeserver|room_id|access_token — Element etc." },
+    ],
+  },
+  {
+    group: "Dev publishing", icon: BookOpen,
+    items: [
+      { id: "devto", name: "Dev.to", hint: "api_key — dev.to → Settings → Extensions → API keys" },
+      { id: "hashnode", name: "Hashnode", hint: "token:publication_id — Account → Developer settings" },
+      { id: "medium", name: "Medium", hint: "integration_token — Settings → Integration tokens" },
+      { id: "wordpress", name: "WordPress", hint: "site_base|user|app_password — WP ≥5.6 app passwords" },
+      { id: "github", name: "GitHub", hint: "pat — posts public gists; PAT already powers repo ops" },
+      { id: "gitlab", name: "GitLab", hint: "pat or host:pat — 'api' scope, posts public snippets" },
+    ],
+  },
+  {
+    group: "Bridges", icon: Webhook,
+    items: [
+      { id: "webhook", name: "Webhook", hint: "https:// url (|bearer) — Zapier/Make/n8n/IFTTT fan-out" },
     ],
   },
   {
