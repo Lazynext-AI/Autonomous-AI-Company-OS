@@ -98,7 +98,7 @@ export async function handleServices(
     const sent = await brevoSend(
       env, t.email, subject,
       `<p>${esc(body).replace(/\n/g, "<br>")}</p><p style="color:#888;font-size:12px">Ticket #${id} — reply to this email to continue the thread.</p>`,
-    );
+      undefined, undefined, `ticket:${id}`);
     if (!sent.ok) return json({ error: sent.error ?? "send failed" }, 502);
     await env.DB.prepare(
       "UPDATE support_tickets SET body = substr(body || '\n\n--- agent reply ' || datetime('now') || ' ---\n' || ?, 1, 20000), status = 'pending', updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?",
@@ -176,7 +176,7 @@ export async function handleServices(
         const r = await brevoSend(
           env, c.email, String(camp.subject),
           String(camp.html) + await marketingFooter(env, c.email),
-          undefined, await unsubHeaders(env, c.email));
+          undefined, await unsubHeaders(env, c.email), `campaign:${id}`);
         if (r.ok) sent++;
       } catch {}
     }
@@ -184,6 +184,22 @@ export async function handleServices(
       "UPDATE email_campaigns SET status='sent', sent_count=?, sent_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?",
     ).bind(sent, id).run();
     return json({ ok: true, id, sent, total: contacts.length });
+  }
+  // Engagement roll-up over email_events — every Brevo transactional webhook
+  // callback lands there, tagged by the send path (campaign:<id>, seq:<stage>,
+  // ticket:<id>, trial:reminder, monitor:alert, manual). Unique recipients
+  // dedup repeated opens by the same address.
+  if (path === "/api/v1/marketing/stats" && req.method === "GET") {
+    const { results: totals } = await env.DB.prepare(
+      "SELECT event, COUNT(*) c, COUNT(DISTINCT email) uniq FROM email_events GROUP BY event",
+    ).all();
+    const { results: byTag } = await env.DB.prepare(
+      "SELECT COALESCE(tag,'(untagged)') tag, event, COUNT(*) c, COUNT(DISTINCT email) uniq FROM email_events GROUP BY tag, event ORDER BY tag, event",
+    ).all();
+    const { results: recent } = await env.DB.prepare(
+      "SELECT event, email, tag, ts_epoch, link, created_at FROM email_events ORDER BY id DESC LIMIT 20",
+    ).all();
+    return json({ totals, by_tag: byTag, recent });
   }
 
   // --- Connector invocation -------------------------------------------------
@@ -294,7 +310,7 @@ async function brevoCred(env: Env): Promise<{ from: string; key: string } | null
 
 export async function brevoSend(
   env: Env, to: string, subject: string, html: string, name?: string,
-  headers?: Record<string, string>,
+  headers?: Record<string, string>, tag?: string,
 ): Promise<{ ok: boolean; status: number; messageId?: string; error?: string }> {
   const cred = await brevoCred(env);
   if (!cred)
@@ -312,6 +328,10 @@ export async function brevoSend(
       subject,
       htmlContent: html,
       ...(headers ? { headers } : {}),
+      // tags echo back on every transactional webhook event — the only way a
+      // delivered/opened/click event can be attributed to the campaign,
+      // sequence stage, or ticket that minted the send.
+      ...(tag ? { tags: [tag] } : {}),
       ...(inboundAddr ? { replyTo: { email: inboundAddr, name: "Lazynext Support" } } : {}),
     }),
   });
@@ -466,7 +486,7 @@ export async function enrollLead(
     await env.EPHEMERAL.put(`lead:${email}:joined`, String(Date.now()), { expirationTtl: 31_536_000 });
     const s = await brevoSend(env, email, SEQUENCE[0].subject,
       SEQUENCE[0].html + await marketingFooter(env, email),
-      undefined, await unsubHeaders(env, email));
+      undefined, await unsubHeaders(env, email), "seq:0");
     sent = s.ok;
     await env.EPHEMERAL.put(`lead:${email}:stage`, s.ok ? "1" : "0", { expirationTtl: 31_536_000 });
   }
@@ -499,13 +519,19 @@ export async function handleBrevoWebhook(
   const expected = await env.EPHEMERAL.get("brevo:webhook_secret");
   if (!expected || sec !== expected) return json({ error: "forbidden" }, 403);
   const body = await req.json().catch(() => ({})) as
-    { event?: string; email?: string; events?: { event?: string; email?: string }[] }
-    | { event?: string; email?: string }[];
+    { event?: string; email?: string; tag?: string; tags?: string[] | string;
+      ts_epoch?: number; link?: string;
+      events?: { event?: string; email?: string; tag?: string; tags?: string[] | string;
+        ts_epoch?: number; link?: string }[] }
+    | { event?: string; email?: string; tag?: string; tags?: string[] | string;
+        ts_epoch?: number; link?: string }[];
   // Brevo sends one object per event; a `batched` webhook (not enabled today)
   // would deliver an array or {events:[...]} — handle all shapes.
-  const events: { event?: string; email?: string }[] = Array.isArray(body)
-    ? body
-    : Array.isArray(body?.events) ? body.events : [body];
+  const events: { event?: string; email?: string; tag?: string;
+    tags?: string[] | string; ts_epoch?: number; link?: string }[] =
+    Array.isArray(body)
+      ? body
+      : Array.isArray(body?.events) ? body.events : [body];
   const list = JSON.parse(
     (await env.EPHEMERAL.get("brevo:events")) ?? "[]") as unknown[];
   let suppressedAny = false;
@@ -514,7 +540,18 @@ export async function handleBrevoWebhook(
     const name = (ev.event ?? "").toLowerCase().replace(/[_-]/g, "");
     const suppress = BREVO_SUPPRESS_EVENTS.has(name) && email.includes("@");
     if (suppress) { await unsubscribeEmail(env, email); suppressedAny = true; }
-    list.unshift({ event: ev.event, email, suppressed: suppress,
+    // Engagement log — suppress events land here too, so email_events is the
+    // single queryable record of every Brevo callback (deliverability AND
+    // engagement). tag comes from brevoSend's tags[] — campaign:<id>,
+    // seq:<stage>, ticket:<id>, trial:reminder, monitor:alert, manual.
+    const tag = ev.tag
+      ?? (Array.isArray(ev.tags) ? ev.tags[0] : ev.tags) ?? null;
+    await env.DB.prepare(
+      "INSERT INTO email_events (event, email, tag, ts_epoch, link) VALUES (?, ?, ?, ?, ?)",
+    ).bind(ev.event ?? "unknown", email || null, tag,
+      typeof ev.ts_epoch === "number" ? ev.ts_epoch : null,
+      ev.link ?? null).run().catch(() => {});
+    list.unshift({ event: ev.event, email, tag, suppressed: suppress,
       received_at: new Date().toISOString() });
   }
   await env.EPHEMERAL.put("brevo:events", JSON.stringify(list.slice(0, 50)));
@@ -639,6 +676,7 @@ export async function handleBrevoInbound(
         env, p.from,
         `Re: ${p.subject.slice(0, 120) || "your message"} [#${ticketId}]`,
         `<p>Thanks for writing in — this is ticket <b>#${ticketId}</b>. An agent is on it; replying to this email adds to the thread.</p>`,
+        undefined, undefined, `ticket:${ticketId}`,
       );
     }
     processed++;
@@ -1353,7 +1391,8 @@ async function callConnector(
     case "brevo": {
       const to = String(b.to ?? "");
       if (!to) return { ok: false, status: 400, error: "to required" };
-      return brevoSend(env, to, String(b.subject ?? "Lazynext"), String(b.html ?? text));
+      return brevoSend(env, to, String(b.subject ?? "Lazynext"), String(b.html ?? text),
+        undefined, undefined, "connector:brevo");
     }
     case "signwell":
       return { ok: false, status: 400, error: "use /api/v1/signwell/send for signing" };

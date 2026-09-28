@@ -7,7 +7,7 @@ import { toast } from "@/components/Toast";
 import { Send, Plus, X, Users, Mail } from "lucide-react";
 
 interface Contact { id: number; email: string; name?: string; subscribed: number; created_at: string }
-interface Campaign { id: number; name: string; subject: string; status: string; sent_count: number; created_at: string }
+interface Campaign { id: number; name: string; subject: string; status: string; sent_count: number; created_at: string; opens?: number; clicks?: number }
 
 export default function CampaignsPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -21,7 +21,14 @@ export default function CampaignsPage() {
   const load = async () => {
     try {
       setContacts(await queryApi<Contact>("SELECT * FROM email_contacts ORDER BY id DESC LIMIT 200"));
-      setCampaigns(await queryApi<Campaign>("SELECT * FROM email_campaigns ORDER BY id DESC LIMIT 100"));
+      // Engagement roll-up — email_events rows are written by the Brevo
+      // webhook; sends carry tag 'campaign:<id>' so unique opens/clicks join
+      // straight onto the campaign row.
+      setCampaigns(await queryApi<Campaign>(
+        "SELECT c.*, " +
+        "(SELECT COUNT(DISTINCT e.email) FROM email_events e WHERE e.tag = 'campaign:' || c.id AND e.event = 'opened') opens, " +
+        "(SELECT COUNT(DISTINCT e.email) FROM email_events e WHERE e.tag = 'campaign:' || c.id AND e.event = 'click') clicks " +
+        "FROM email_campaigns c ORDER BY c.id DESC LIMIT 100"));
     } catch {}
     setLoading(false);
   };
@@ -79,7 +86,9 @@ export default function CampaignsPage() {
                 <div className="text-xs text-muted truncate">{c.subject}</div>
                 <div className="text-[10px] text-muted mt-0.5">
                   <span className={c.status === "sent" ? "text-ok" : "text-warn"}>{c.status}</span>
-                  {c.sent_count > 0 && ` · sent to ${c.sent_count}`} · {timeAgo(c.created_at)}
+                  {c.sent_count > 0 && ` · sent to ${c.sent_count}`}
+                  {c.sent_count > 0 && ` · ${c.opens ?? 0} opens · ${c.clicks ?? 0} clicks`}
+                  {" · "}{timeAgo(c.created_at)}
                 </div>
               </div>
               {c.status !== "sent" && (

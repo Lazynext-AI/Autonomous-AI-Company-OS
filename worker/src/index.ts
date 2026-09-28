@@ -205,7 +205,7 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
       // Real transactional email via Brevo — founder flows (verify, reset, alerts).
       const b = await readBody<{ to: string; subject: string; html: string }>(req);
       if (!b.to || !b.subject || !b.html) return json({ error: "to, subject, html required" }, 400);
-      const r = await brevoSend(env, b.to, b.subject, b.html);
+      const r = await brevoSend(env, b.to, b.subject, b.html, undefined, undefined, "manual");
       if (!r.ok) return json({ error: r.error ?? "send failed" }, r.status);
       return json({ ok: true, id: r.messageId });
     }
@@ -415,7 +415,7 @@ async function advanceLeadSequence(env: Env) {
     if (days >= SEQ_DAYS[stage]) {
       const s = await brevoSend(env, email, SEQUENCE[stage].subject,
         SEQUENCE[stage].html + await marketingFooter(env, email),
-        undefined, await unsubHeaders(env, email)).catch(() => null);
+        undefined, await unsubHeaders(env, email), `seq:${stage}`).catch(() => null);
       if (s?.ok) await env.EPHEMERAL.put(`lead:${email}:stage`, String(stage + 1), { expirationTtl: 31_536_000 });
     }
   }
@@ -444,6 +444,7 @@ async function runDailyMaintenance(env: Env) {
       env, email,
       "Your Accessibility Checker Pro trial ends in 3 days",
       "<p>Your 14-day Pro trial ends in 3 days. Your subscription then continues at $9/mo automatically — cancel any time before then to keep the free tier.</p>",
+      undefined, undefined, "trial:reminder",
     ).catch(() => null);
     if (s?.ok) await env.EPHEMERAL.put(`trial:${email}:reminded`, "1", { expirationTtl: 31_536_000 });
   }
@@ -506,6 +507,7 @@ async function runDailyMaintenance(env: Env) {
           rec.email,
           `Accessibility alert: ${rec.url} dropped to ${d.score}/100`,
           `<p>Your monitored page <b>${rec.url}</b> scored <b>${d.score}/100</b> — down ${(prev ?? 0) - d.score} points from ${prev}.</p><p>Full report: <a href="${d.report ?? ""}">${d.report ?? ""}</a></p>`,
+          undefined, undefined, "monitor:alert",
         ).catch((e: unknown) => sweep.errors.push(`${k.name}: brevo ${e instanceof Error ? e.name : "err"}`));
       }
     } catch (e) {
