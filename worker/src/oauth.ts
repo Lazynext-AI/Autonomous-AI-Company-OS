@@ -15,10 +15,15 @@ export async function handleOAuth(
 ): Promise<Response> {
   // Token endpoint — exchange credentials for a bearer token.
   if (req.method === "POST" && path === "/oauth/token") {
-    const form = await req.formData().catch(() => null);
-    const body: Record<string, string> = form
-      ? Object.fromEntries(form as unknown as Iterable<[string, string]>)
-      : ((await req.json().catch(() => ({}))) as Record<string, string>);
+    // Dispatch on content-type — req.formData() on a JSON body consumes the
+    // stream before throwing, so the .json() fallback would read a used body.
+    const ct = req.headers.get("content-type") ?? "";
+    const body: Record<string, string> =
+      ct.includes("form-urlencoded") || ct.includes("multipart/form-data")
+        ? Object.fromEntries(
+            (await req.formData().catch(() => new FormData())) as unknown as Iterable<[string, string]>,
+          )
+        : ((await req.json().catch(() => ({}))) as Record<string, string>);
 
     const grant = body.grant_type;
 
