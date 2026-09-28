@@ -239,10 +239,28 @@ Return ONLY the JSON object."""
             return
 
         now = datetime.now(timezone.utc).date()
+        # Persisted gate — the in-memory _last_brief_date resets on every
+        # fleet restart (launchd KeepAlive), which fired a briefing per
+        # restart instead of per week.
+        client = None
+        try:
+            from core.cloudflare_client import CloudflareClient
+            c = CloudflareClient()
+            client = c if c.is_configured() else None
+            last = await client.kv_get("brief:last:founder") if client else None
+            if last and (now - datetime.fromisoformat(last).date()).days < 7:
+                return
+        except Exception as e:
+            self.logger.warning("brief_gate_read_failed", error=str(e))
         if self._last_brief_date and (now - self._last_brief_date).days < 7:
             return
         brief = await self.generate_weekly_brief()
         self._last_brief_date = now
+        try:
+            if client:
+                await client.kv_put("brief:last:founder", now.isoformat(), ttl=0)
+        except Exception as e:
+            self.logger.warning("brief_gate_write_failed", error=str(e))
         from core.operations.briefings import post_briefing
         await post_briefing("founder_brief", "Founder Briefing", brief)
 
@@ -283,6 +301,32 @@ Return ONLY the JSON object."""
         m_uptime = getattr(metrics, "uptime_pct", 100) or (metrics.get("uptime_pct", 100) if isinstance(metrics, dict) else 100)
         m_errors = getattr(metrics, "error_rate", 0) or (metrics.get("error_rate", 0) if isinstance(metrics, dict) else 0)
         m_deploys = getattr(metrics, "deploy_count", 0) or (metrics.get("deploy_count", 0) if isinstance(metrics, dict) else 0)
+        # brain.metrics has no writer for users/revenue — pull the live product
+        # funnel so the brief reports real counts instead of fabricated zeros.
+        funnel_line = ""
+        try:
+            from core.cloudflare_client import CloudflareClient
+            import httpx
+
+            client = CloudflareClient()
+            if client.is_configured():
+                def _funnel():
+                    with httpx.Client(timeout=15.0, headers=client._headers) as http:
+                        r = http.get(f"{client.url}/api/v1/billing/funnel")
+                        return r.json() if r.status_code == 200 else {}
+
+                funnel = await asyncio.to_thread(_funnel)
+                if funnel:
+                    m_users = m_users or (funnel.get("licenses_pro", 0) + funnel.get("licenses_free", 0))
+                    funnel_line = (
+                        f"\n- Funnel (live): scans_30d={funnel.get('scans_30d')}, "
+                        f"leads={funnel.get('leads')}, crm_leads={funnel.get('crm_leads')}, "
+                        f"email_contacts={funnel.get('email_contacts')}, "
+                        f"trials={funnel.get('trials_active')}, pro={funnel.get('licenses_pro')}, "
+                        f"subs={funnel.get('subscriptions_active')}, monitors={funnel.get('monitors')}"
+                    )
+        except Exception as e:
+            self.logger.warning("funnel_fetch_failed", error=str(e))
         shipped = brain.shipped_features or []
         bugs = [b for b in (brain.open_bugs or [])
                 if (b.get("status", "open") if isinstance(b, dict) else getattr(b, "status", "open")) == "open"]
@@ -298,7 +342,7 @@ COMPANY DATA:
 - Shipped: {shipped if shipped else 'None yet'}
 - Bugs: {bug_descs if bug_descs else 'None'}
 - Blockers: {blocker_descs if blocker_descs else 'None'}
-- Metrics: Users={m_users}, Revenue=${m_revenue}, MRR=${m_mrr}, Uptime={m_uptime}%, Error rate={m_errors}%, Deploys={m_deploys}
+- Metrics: Users={m_users}, Revenue=${m_revenue}, MRR=${m_mrr}, Uptime={m_uptime}%, Error rate={m_errors}%, Deploys={m_deploys}{funnel_line}
 
 Use these section headers in order. Fill each with real content from the data above:
 - ## Founder Briefing with **Date:** {date_str}
