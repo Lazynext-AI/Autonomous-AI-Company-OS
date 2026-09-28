@@ -4,6 +4,7 @@
  * scheduling (Calendly), and a storefront (Shopify; checkout via Dodo).
  */
 import { Env, json, authorize, touchKey } from "./gateway";
+import { publishToBus } from "./webhooks";
 
 async function list(env: Env, table: string, extra = ""): Promise<Response> {
   const { results } = await env.DB.prepare(
@@ -272,6 +273,10 @@ export async function brevoSend(
   const cred = await brevoCred(env);
   if (!cred)
     return { ok: false, status: 503, error: "brevo not connected — set it in Settings → Connector library" };
+  // config:inbound_addr (e.g. support@reply.lazynext.com) routes every reply
+  // through Brevo inbound parse → tickets. Left unset until the receiving
+  // subdomain's MX records exist — setting it early would blackhole replies.
+  const inboundAddr = (await env.EPHEMERAL.get("config:inbound_addr")) ?? undefined;
   const r = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: { "api-key": cred.key, "content-type": "application/json" },
@@ -281,6 +286,7 @@ export async function brevoSend(
       subject,
       htmlContent: html,
       ...(headers ? { headers } : {}),
+      ...(inboundAddr ? { replyTo: { email: inboundAddr, name: "Lazynext Support" } } : {}),
     }),
   });
   const d = (await r.json().catch(() => ({}))) as { messageId?: string; message?: string };
@@ -487,6 +493,136 @@ export async function handleBrevoWebhook(
   }
   await env.EPHEMERAL.put("brevo:events", JSON.stringify(list.slice(0, 50)));
   return json({ ok: true, suppressed: suppressedAny });
+}
+
+// --- Brevo inbound parse → support tickets -----------------------------------
+// A dedicated receiving subdomain (e.g. reply.lazynext.com, MX →
+// inbound1/2.sendinblue.com) delivers every parsed message to this webhook as
+// {items:[...]}. New mail → new ticket + ONE ack carrying [#id]; a reply whose
+// subject carries [#id] appends to that ticket and gets NO ack — that asymmetry
+// is what keeps the ack loop bounded. Path secret is the same
+// brevo:webhook_secret as /brevo/events/.
+type InboundParsed = {
+  id: string | null;
+  from: string;
+  subject: string;
+  body: string;
+  auto: boolean;
+  spamScore: number;
+  ticketRef: number | null;
+};
+
+export function parseInboundItem(item: Record<string, unknown>): InboundParsed {
+  const str = (v: unknown) => (typeof v === "string" ? v : "");
+  const pick = (o: unknown, ...ks: string[]) => {
+    const r = (o ?? {}) as Record<string, unknown>;
+    for (const k of ks) {
+      const v = str(r[k]).trim();
+      if (v) return v;
+    }
+    return "";
+  };
+  const from = pick(item.From, "Address", "address", "Email", "email")
+    || pick(item, "From", "from", "Sender", "sender");
+  const subject = pick(item, "Subject", "subject");
+  const html = pick(item, "RawHtmlBody", "HtmlBody", "rawHtmlBody");
+  const body = (
+    pick(item, "ExtractedMarkdownMessage", "extractedMarkdownMessage")
+    || pick(item, "RawTextBody", "TextBody", "rawTextBody")
+    || html.replace(/<[^>]+>/g, " ")
+  ).replace(/\s+/g, " ").trim().slice(0, 8000);
+  const headers = (() => {
+    const h = item.Headers ?? item.headers;
+    const out: Record<string, string> = {};
+    if (Array.isArray(h))
+      for (const e of h) {
+        const n = String((e as Record<string, unknown>)?.Name ?? (e as Record<string, unknown>)?.name ?? "").toLowerCase();
+        const v = String((e as Record<string, unknown>)?.Value ?? (e as Record<string, unknown>)?.value ?? "");
+        if (n) out[n] = v;
+      }
+    else if (h && typeof h === "object")
+      for (const [k, v] of Object.entries(h as Record<string, unknown>)) out[k.toLowerCase()] = String(v);
+    return out;
+  })();
+  const auto =
+    /mailer[-_.]?daemon|postmaster|no[-_.]?reply|donotreply|bounce/i.test(from)
+    || (!!headers["auto-submitted"] && headers["auto-submitted"] !== "no")
+    || /^(bulk|list|junk)$/i.test(headers["precedence"] ?? "");
+  const ref = /\[#(\d{1,9})\]/.exec(subject);
+  const rawSpam = item.SpamScore ?? item.spamScore;
+  return {
+    id: pick(item, "MessageId", "messageId", "Uuid", "uuid") || null,
+    from: from.toLowerCase(),
+    subject: subject.slice(0, 200),
+    body,
+    auto,
+    spamScore: typeof rawSpam === "number" && isFinite(rawSpam) ? rawSpam : Number(rawSpam) || 0,
+    ticketRef: ref ? Number(ref[1]) : null,
+  };
+}
+
+export function classifyInbound(p: InboundParsed): { action: "skip" | "thread" | "ticket"; priority: string } {
+  if (!p.from.includes("@") || p.auto) return { action: "skip", priority: "normal" };
+  if (p.ticketRef != null) return { action: "thread", priority: "normal" };
+  return { action: "ticket", priority: p.spamScore >= 5 ? "low" : "normal" };
+}
+
+export async function handleBrevoInbound(
+  req: Request, env: Env, ctx: ExecutionContext, path: string,
+): Promise<Response> {
+  if (req.method !== "POST") return json({ error: "method" }, 405);
+  const sec = path.split("/").pop() ?? "";
+  const expected = await env.EPHEMERAL.get("brevo:webhook_secret");
+  if (!expected || sec !== expected) return json({ error: "forbidden" }, 403);
+  const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+  const items = Array.isArray(body?.items)
+    ? (body.items as Record<string, unknown>[])
+    : body && typeof body === "object" && (body.Subject || body.From) ? [body] : [];
+  let processed = 0;
+  const results: Record<string, unknown>[] = [];
+  for (const raw of items.slice(0, 50)) {
+    const p = parseInboundItem(raw);
+    const d = classifyInbound(p);
+    if (d.action === "skip") { results.push({ from: p.from, skipped: true }); continue; }
+    // Dedup before the write: Brevo retries a non-2xx webhook, so an
+    // at-least-once delivery must not mint duplicate tickets.
+    if (p.id) {
+      const seen = `brevo:inseen:${p.id}`;
+      if (await env.EPHEMERAL.get(seen)) { results.push({ from: p.from, duplicate: true }); continue; }
+      await env.EPHEMERAL.put(seen, "1", { expirationTtl: 172800 });
+    }
+    let ticketId: number | null = p.ticketRef;
+    if (d.action === "thread" && ticketId != null) {
+      const hit = await env.DB.prepare("SELECT id FROM support_tickets WHERE id = ?")
+        .bind(ticketId).first<{ id: number }>().catch(() => null);
+      if (hit) {
+        await env.DB.prepare(
+          "UPDATE support_tickets SET body = substr(body || '\n\n--- reply ' || datetime('now') || ' ---\n' || ?, 1, 20000), status = 'open', updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?",
+        ).bind(p.body, ticketId).run();
+      } else ticketId = null;
+    }
+    if (ticketId == null) {
+      const res = await env.DB.prepare(
+        "INSERT INTO support_tickets (subject, email, body, status, priority) VALUES (?, ?, ?, 'open', ?)",
+      ).bind(p.subject || "(no subject)", p.from, p.body, d.priority).run();
+      ticketId = Number(res.meta.last_row_id);
+      // One ack, carrying the thread tag — a reply to it lands in the
+      // thread branch and gets no ack of its own. Reply-To routing into the
+      // inbound domain only happens once config:inbound_addr is set.
+      await brevoSend(
+        env, p.from,
+        `Re: ${p.subject.slice(0, 120) || "your message"} [#${ticketId}]`,
+        `<p>Thanks for writing in — this is ticket <b>#${ticketId}</b>. An agent is on it; replying to this email adds to the thread.</p>`,
+      );
+    }
+    processed++;
+    results.push({ from: p.from, ticket: ticketId, threaded: d.action === "thread" });
+    await publishToBus(
+      env, ctx, "support.inbound",
+      JSON.stringify({ from: p.from, subject: p.subject, ticket_id: ticketId, threaded: d.action === "thread" }),
+    ).catch(() => {});
+  }
+  return json({ ok: true, processed, results });
 }
 // are free, unlimited and not legally binding), then calls the SignWell API.
 // Returns {connected:false} when no credential is set.

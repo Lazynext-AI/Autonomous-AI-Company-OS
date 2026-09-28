@@ -51,7 +51,7 @@ const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n
 const TOOLS = [
   {
     name: "company_status",
-    description: "Company snapshot: task/briefing/knowledge counts and pending deliveries.",
+    description: "Company snapshot: task/briefing/knowledge counts and bus delivery receipts.",
     inputSchema: { type: "object", properties: {} },
     scope: "read",
   },
@@ -153,7 +153,7 @@ async function callTool(env: Env, ctx: ExecutionContext, name: string, args: Jso
         tasks_logged: tasks.results?.[0]?.n ?? 0,
         briefings: briefings.results?.[0]?.n ?? 0,
         knowledge_chunks: chunks.results?.[0]?.n ?? 0,
-        pending_deliveries: pending.results?.[0]?.n ?? 0,
+        deliveries_logged: pending.results?.[0]?.n ?? 0,
       };
     }
     case "list_briefings": {

@@ -85,7 +85,7 @@ async function companyStatus(env: Env): Promise<Response> {
     tasks_logged: tasks.results?.[0]?.n ?? 0,
     briefings: briefings.results?.[0]?.n ?? 0,
     knowledge_chunks: chunks.results?.[0]?.n ?? 0,
-    pending_deliveries: pending.results?.[0]?.n ?? 0,
+    deliveries_logged: pending.results?.[0]?.n ?? 0,
   });
 }
 
