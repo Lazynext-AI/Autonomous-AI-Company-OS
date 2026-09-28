@@ -94,6 +94,42 @@ approval. Hosted aggregators remain as fallback connectors
 - **Buffer** (`conn:buffer` = `<api_key>:<channel_id>`) — GraphQL `createPost`
   scheduler; queues by default, `share_now` publishes immediately.
 
+## Fastest paths — connect today, zero app review
+
+These credentials are self-service and take effect the moment `conn:<id>`
+lands in KV (Settings → Connector library, or `POST /kv/put` with the
+internal token). No platform-side approval, no OAuth flow, no review
+queue — roughly 15 minutes of clicking each:
+
+| Connector | Where the credential comes from |
+| --- | --- |
+| `discord` / `slack` / `mattermost` | Channel/server settings → Integrations → Webhooks → copy URL |
+| `teams` | Power Automate → new flow → "When a Teams webhook request is received" → copy URL |
+| `telegram` | @BotFather → `/newbot` → token; `chat_id` via `getUpdates` |
+| `bluesky` | Settings → App passwords → `<handle>:<app_password>` |
+| `mastodon` | Instance preferences → Development → new app → token; prepend instance host |
+| `devto` | dev.to Settings → Extensions → API keys |
+| `hashnode` | Hashnode settings → Developer → token + publication id |
+| `medium` | Medium Settings → Security and apps → integration token (works, best-effort — API officially unsupported) |
+| `wordpress` | WP Admin → Users → Application Passwords → `<site_base>\|<user>\|<app_password>` |
+| `ghost` | Ghost Admin → Integrations → custom → Admin API key |
+| `gitlab` | GitLab → Preferences → Access Tokens (`api` scope) |
+| `matrix` | Any client access token (Element → Settings → Help & About → access token) |
+| `zulip` | Zulip → Settings → Bots → API key |
+| `reddit` | reddit.com/prefs/apps → create script app → `<client_id>:<secret>:<user>:<pass>:<sub>` |
+| `lemmy` | Instance account login — just `<instance>\|<user>\|<pass>` |
+| `line` | LINE Developers console → channel → channel access token (self-serve) |
+| `beehiiv` | beehiiv Settings → API → key + publication id |
+| `tumblr` | tumblr.com/oauth/apps → register → consumer key + blog name |
+| `listmonk` | Any listmonk instance URL + user/pass + list id |
+| `webhook` | Any URL you control |
+| `viber` | partners.viber.com → create bot → token (self-serve, brand-name review is cosmetic) |
+
+That's 20+ dispatch paths live without touching Meta/TikTok/LinkedIn/X
+review gates. For the gated majors, the OAuth `connect/{id}/start` flow is
+ready; approval is the platform's decision — or bridge through
+`ayrshare`/`buffer` in the meantime.
+
 ## No programmatic write API exists (cannot be honestly connected)
 
 `snapchat` and `nostr` are catalog entries that fail fast with an
