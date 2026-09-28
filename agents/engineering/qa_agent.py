@@ -102,6 +102,15 @@ class QAAgent(BaseAgent):
             )
             return
 
+        # Auto-resolve incidents this pass just disproved — open_bugs had no
+        # recovery path, so transient api_health/frontend failures reported
+        # "open" in every briefing forever after the underlying fix.
+        verified = {"api_health", "frontend"}
+        for bug in list(brain.open_bugs):
+            if getattr(bug, "status", "open") == "open" and getattr(bug, "component", "") in verified:
+                await self.company_brain.resolve_bug(bug.id)
+                self.logger.info("qa_incident_auto_resolved", bug_id=bug.id, component=bug.component)
+
         await self.company_brain.update_metrics({"uptime_pct": 100})
 
     async def _raise_incident(
