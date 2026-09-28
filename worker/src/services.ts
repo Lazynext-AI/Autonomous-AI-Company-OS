@@ -79,6 +79,32 @@ export async function handleServices(
     if (b.priority) f.priority = b.priority;
     return update(env, "support_tickets", id, f);
   }
+  // Agent reply → real email to the ticket's sender. The subject re-carries
+  // the [#id] tag so the customer's reply threads back via inbound parse
+  // (same contract the auto-ack uses). This sends company-branded mail, so
+  // it is admin-scoped like connector dispatch — a plain 'write' key minted
+  // for CRM work must not be able to email our customers.
+  if (/^\/api\/v1\/support\/tickets\/\d+\/reply$/.test(path) && req.method === "POST" && id) {
+    if (!(key!.scopes ?? "").split(",").map((s) => s.trim()).includes("admin"))
+      return json({ error: "scope 'admin' required — ticket replies send company-branded email" }, 403);
+    const body = str(b.body);
+    if (!body) return json({ error: "body required" }, 400);
+    const t = await env.DB.prepare(
+      "SELECT email, subject FROM support_tickets WHERE id = ?",
+    ).bind(id).first<{ email: string; subject: string }>();
+    if (!t) return json({ error: "ticket not found" }, 404);
+    const subject = `Re: ${t.subject.replace(/\s*\[#\d+\]/g, "").trim().slice(0, 100)} [#${id}]`;
+    const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const sent = await brevoSend(
+      env, t.email, subject,
+      `<p>${esc(body).replace(/\n/g, "<br>")}</p><p style="color:#888;font-size:12px">Ticket #${id} — reply to this email to continue the thread.</p>`,
+    );
+    if (!sent.ok) return json({ error: sent.error ?? "send failed" }, 502);
+    await env.DB.prepare(
+      "UPDATE support_tickets SET body = substr(body || '\n\n--- agent reply ' || datetime('now') || ' ---\n' || ?, 1, 20000), status = 'pending', updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?",
+    ).bind(body, id).run();
+    return json({ ok: true, ticket: id, messageId: sent.messageId });
+  }
 
   // --- Scheduling (bookings) ------------------------------------------------
   if (path === "/api/v1/booking" && req.method === "GET")
