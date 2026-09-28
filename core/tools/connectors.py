@@ -229,6 +229,25 @@ async def _pinterest(payload: dict, cred: str) -> dict:
     )
 
 
+async def _vk(payload: dict, cred: str) -> dict:
+    if isinstance(payload, str):
+        payload = {"text": payload}
+    # cred: "<access_token>:<owner_id>" — vk.com/dev standalone app token;
+    # owner_id negative for communities ('-123456' posts to the group wall),
+    # positive for a user wall.
+    token, _, owner = cred.partition(":")
+    if not owner:
+        return {"ok": False, "error": "conn:vk must be '<access_token>:<owner_id>'"}
+    return await _post(
+        "https://api.vk.com/method/wall.post",
+        data={
+            "access_token": token, "owner_id": owner,
+            "message": payload.get("text") or "",
+            "from_group": 1 if owner.startswith("-") else 0, "v": "5.199",
+        },
+    )
+
+
 # --- Chat / messaging communities ----------------------------------------
 
 async def _discord(text: str, cred: str) -> dict:
@@ -265,6 +284,90 @@ async def _matrix(text: str, cred: str) -> dict:
         f"{hs.rstrip('/')}/_matrix/client/v3/rooms/{quote(room, safe='')}/send/m.room.message/{int(time.time() * 1000)}",
         headers={"authorization": f"Bearer {tok}"},
         json_body={"msgtype": "m.text", "body": text},
+    )
+
+
+async def _teams(payload: dict, cred: str) -> dict:
+    if isinstance(payload, str):
+        payload = {"text": payload}
+    # cred: full incoming-webhook URL — Teams channel → ⋯ → Connectors →
+    # Incoming Webhook. Accepts the MessageCard-compatible {text} body.
+    if not cred.startswith("https://"):
+        return {"ok": False, "error": "conn:teams must be an https:// incoming-webhook URL"}
+    return await _post(cred, json_body={"text": payload.get("text") or ""})
+
+
+async def _mattermost(payload: dict, cred: str) -> dict:
+    if isinstance(payload, str):
+        payload = {"text": payload}
+    # cred: full incoming-webhook URL — Mattermost → Integrations → Incoming
+    # Webhooks (…/hooks/<id>). Payload 'username'/'icon_url' override sender.
+    if not cred.startswith("https://"):
+        return {"ok": False, "error": "conn:mattermost must be an https:// incoming-webhook URL"}
+    body: dict[str, Any] = {"text": payload.get("text") or ""}
+    for k in ("username", "icon_url"):
+        if payload.get(k):
+            body[k] = payload[k]
+    return await _post(cred, json_body=body)
+
+
+async def _zulip(payload: dict, cred: str) -> dict:
+    if isinstance(payload, str):
+        payload = {"text": payload}
+    # cred: "<base_url>|<bot_email>|<api_key>" — Zulip → Settings → Bots →
+    # zuliprc (bot email + key). Payload 'to' = stream name, 'topic' = thread.
+    base, _, rest = cred.partition("|")
+    email, _, key = rest.partition("|")
+    if not base or not email or not key:
+        return {"ok": False, "error": "conn:zulip must be '<base_url>|<bot_email>|<api_key>'"}
+    to = payload.get("to")
+    if not to:
+        return {"ok": False, "error": "zulip needs payload.to — the stream name"}
+    return await _post(
+        f"{base.rstrip('/')}/api/v1/messages",
+        auth=(email, key),
+        data={
+            "type": "stream", "to": to,
+            "topic": payload.get("topic") or "Lazynext",
+            "content": payload.get("text") or "",
+        },
+    )
+
+
+async def _viber(payload: dict, cred: str) -> dict:
+    if isinstance(payload, str):
+        payload = {"text": payload}
+    # cred: "<auth_token>" — partners.viber.com bot account token. Payload
+    # 'broadcast_list' (≤300 subscribed user ids) → broadcast to all (needs
+    # Viber approval); payload 'to' → send_message to one subscriber.
+    sender = {"name": payload.get("sender") or "Lazynext"}
+    bl = payload.get("broadcast_list")
+    if bl:
+        return await _post(
+            "https://chatapi.viber.com/pa/broadcast_message",
+            headers={"x-viber-auth-token": cred},
+            json_body={"broadcast_list": bl, "min_api_version": 7,
+                       "sender": sender, "type": "text", "text": payload.get("text") or ""},
+        )
+    return await _post(
+        "https://chatapi.viber.com/pa/send_message",
+        headers={"x-viber-auth-token": cred},
+        json_body={"receiver": payload.get("to") or "", "min_api_version": 7,
+                   "sender": sender, "type": "text", "text": payload.get("text") or "",
+                   "tracking_data": "lazynext"},
+    )
+
+
+async def _line(payload: dict, cred: str) -> dict:
+    if isinstance(payload, str):
+        payload = {"text": payload}
+    # cred: "<channel_access_token>" — LINE Developers console → Messaging API
+    # channel → issue a long-lived token. Broadcasts to every friend of the
+    # Official Account.
+    return await _post(
+        "https://api.line.me/v2/bot/message/broadcast",
+        headers={"authorization": f"Bearer {cred}"},
+        json_body={"messages": [{"type": "text", "text": payload.get("text") or ""}]},
     )
 
 
@@ -395,6 +498,78 @@ async def _gitlab(payload: dict, cred: str) -> dict:
     )
 
 
+async def _tumblr(payload: dict, cred: str) -> dict:
+    if isinstance(payload, str):
+        payload = {"text": payload}
+    # cred: "<access_token>:<blog_name>" — tumblr.com/oauth app → OAuth2
+    # token; blog_name is the tumblog subdomain ('lazynext' →
+    # lazynext.tumblr.com). Posts in NPF: a single text content block.
+    token, _, blog = cred.partition(":")
+    if not blog:
+        return {"ok": False, "error": "conn:tumblr must be '<access_token>:<blog_name>'"}
+    return await _post(
+        f"https://api.tumblr.com/v2/blog/{blog}/posts",
+        headers={"authorization": f"Bearer {token}"},
+        json_body={"content": [{"type": "text", "text": payload.get("text") or ""}]},
+    )
+
+
+async def _ghost(payload: dict, cred: str) -> dict:
+    if isinstance(payload, str):
+        payload = {"text": payload}
+    # cred: "<site_base>|<key_id>:<secret_hex>" — Ghost Admin → Settings →
+    # Integrations → custom integration (key shown as '<id>:<secret>'). We
+    # mint a 5-min HS256 JWT (kid = key id, aud '/admin/'); '?source=html'
+    # converts the html field into the post body.
+    import base64
+    import hashlib
+    import hmac as _hmac
+    import json as _json
+    import time
+    base, _, key = cred.partition("|")
+    kid, _, secret = key.partition(":")
+    if not base or not kid or not secret:
+        return {"ok": False, "error": "conn:ghost must be '<site_base>|<key_id>:<secret_hex>'"}
+
+    def _b64(b: bytes) -> str:
+        return base64.urlsafe_b64encode(b).rstrip(b"=").decode()
+
+    now = int(time.time())
+    head = _b64(_json.dumps({"alg": "HS256", "typ": "JWT", "kid": kid}).encode())
+    pay = _b64(_json.dumps({"iat": now, "exp": now + 300, "aud": "/admin/"}).encode())
+    sig = _b64(_hmac.new(bytes.fromhex(secret), f"{head}.{pay}".encode(), hashlib.sha256).digest())
+    text = payload.get("text") or ""
+    return await _post(
+        f"{base.rstrip('/')}/ghost/api/admin/posts/?source=html",
+        headers={"authorization": f"Ghost {head}.{pay}.{sig}"},
+        json_body={"posts": [{
+            "title": payload.get("title") or text.split("\n")[0][:100],
+            "html": text, "status": "published",
+        }]},
+    )
+
+
+async def _beehiiv(payload: dict, cred: str) -> dict:
+    if isinstance(payload, str):
+        payload = {"text": payload}
+    # cred: "<api_key>:<publication_id>" — beehiiv → Settings → API ('pub_…'
+    # id). Create-post is a Max/Enterprise endpoint; since Aug-2026 it must
+    # carry status:'confirmed' to publish immediately.
+    key, _, pub = cred.partition(":")
+    if not pub:
+        return {"ok": False, "error": "conn:beehiiv must be '<api_key>:<publication_id>'"}
+    text = payload.get("text") or ""
+    return await _post(
+        f"https://api.beehiiv.com/v2/publications/{pub}/posts",
+        headers={"authorization": f"Bearer {key}"},
+        json_body={
+            "title": payload.get("title") or text.split("\n")[0][:100],
+            "status": "confirmed",
+            "content": {"free_web": text},
+        },
+    )
+
+
 # --- Bridges ----------------------------------------------------------------
 
 async def _webhook(payload: dict, cred: str) -> dict:
@@ -416,6 +591,91 @@ async def _webhook(payload: dict, cred: str) -> dict:
         url,
         headers={"authorization": f"Bearer {bearer}"} if bearer else None,
         json_body=body,
+    )
+
+
+async def _ayrshare(payload: dict, cred: str) -> dict:
+    if isinstance(payload, str):
+        payload = {"text": payload}
+    # cred: "<api_key>" — ayrshare.com dashboard → API Key. One call fans out
+    # to every linked network — incl. TikTok, YouTube, Snapchat and GMB, which
+    # have no sane direct posting API. Payload 'platforms' overrides the
+    # default all-linked list.
+    return await _post(
+        "https://api.ayrshare.com/api/post",
+        headers={"authorization": f"Bearer {cred}"},
+        json_body={
+            "post": payload.get("text") or "",
+            "platforms": payload.get("platforms") or ["all"],
+        },
+    )
+
+
+async def _postiz(payload: dict, cred: str) -> dict:
+    if isinstance(payload, str):
+        payload = {"text": payload}
+    # cred: "<api_key>|<integration_id>[|<base_url>]" — Postiz → Settings →
+    # Public API key; integration (= channel) ids from GET …/public/v1/
+    # integrations. base_url defaults to cloud; self-hosted is '<domain>/api'.
+    # The auth header takes the raw key — no Bearer prefix.
+    key, _, rest = cred.partition("|")
+    integ, _, base = rest.partition("|")
+    if not integ:
+        return {"ok": False, "error": "conn:postiz must be '<api_key>|<integration_id>[|<base_url>]"}
+    base = (base or "https://api.postiz.com").rstrip("/")
+    text = payload.get("text") or ""
+    # Every platform validates a settings.__type — resolve the integration's
+    # provider so a bare text post passes schema checks where possible.
+    provider = ""
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        il = await client.get(f"{base}/public/v1/integrations",
+                              headers={"authorization": key})
+    if il.status_code < 400:
+        data = il.json()
+        for i in data if isinstance(data, list) else data.get("integrations", []):
+            if str(i.get("id")) == integ:
+                provider = i.get("identifier") or i.get("provider") or ""
+                break
+    import datetime as _dt
+    return await _post(
+        f"{base}/public/v1/posts",
+        headers={"authorization": key},
+        json_body={
+            "type": "now",
+            "date": _dt.datetime.now(_dt.timezone.utc).isoformat(),
+            "shortLink": False, "tags": [],
+            "posts": [{
+                "integration": {"id": integ},
+                "value": [{"content": text, "image": []}],
+                "settings": payload.get("settings") or ({"__type": provider} if provider else {}),
+            }],
+        },
+    )
+
+
+async def _buffer(payload: dict, cred: str) -> dict:
+    if isinstance(payload, str):
+        payload = {"text": payload}
+    # cred: "<api_key>:<channel_id>" — buffer.com → Settings → API key; the
+    # channel id is in the channel's dashboard URL. GraphQL createPost lands
+    # in the channel queue; payload 'share_now': true publishes immediately.
+    key, _, chan = cred.partition(":")
+    if not chan:
+        return {"ok": False, "error": "conn:buffer must be '<api_key>:<channel_id>'"}
+    return await _post(
+        "https://api.buffer.com",
+        headers={"authorization": f"Bearer {key}"},
+        json_body={
+            "query": "mutation($input: CreatePostInput!) { createPost(input: $input) { ... on PostActionSuccess { post { id } } ... on MutationError { message } } }",
+            "variables": {
+                "input": {
+                    "text": payload.get("text") or "",
+                    "channelId": chan,
+                    "schedulingType": "automatic",
+                    "mode": "shareNow" if payload.get("share_now") else "addToQueue",
+                }
+            },
+        },
     )
 
 
@@ -523,12 +783,15 @@ _DISPATCH = {
     "x": _x, "linkedin": _linkedin, "meta": _meta,
     "facebook": _facebook, "instagram": _instagram, "threads": _threads,
     "bluesky": _bluesky, "mastodon": _mastodon, "reddit": _reddit,
-    "pinterest": _pinterest,
+    "pinterest": _pinterest, "vk": _vk,
     "discord": _discord, "slack": _slack, "telegram": _telegram,
-    "matrix": _matrix,
+    "matrix": _matrix, "teams": _teams, "mattermost": _mattermost,
+    "zulip": _zulip, "viber": _viber, "line": _line,
     "devto": _devto, "hashnode": _hashnode, "medium": _medium,
     "wordpress": _wordpress, "github": _github, "gitlab": _gitlab,
-    "webhook": _webhook,
+    "tumblr": _tumblr, "ghost": _ghost, "beehiiv": _beehiiv,
+    "webhook": _webhook, "ayrshare": _ayrshare, "postiz": _postiz,
+    "buffer": _buffer,
     "twilio": _twilio, "whatsapp": _whatsapp,
     "brevo": _brevo,
     "signwell": _signwell,

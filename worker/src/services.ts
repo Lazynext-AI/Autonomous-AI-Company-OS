@@ -548,10 +548,13 @@ export async function signwellSendFromTemplate(
 // connectors that have no other invocation path.
 const CONNECTOR_IDS = [
   "x", "linkedin", "meta", "facebook", "instagram", "threads",
-  "bluesky", "mastodon", "reddit", "pinterest",
+  "bluesky", "mastodon", "reddit", "pinterest", "vk",
   "discord", "slack", "telegram", "matrix",
+  "teams", "mattermost", "zulip", "viber", "line",
   "devto", "hashnode", "medium", "wordpress", "github", "gitlab",
-  "webhook", "twilio", "whatsapp",
+  "tumblr", "ghost", "beehiiv",
+  "webhook", "ayrshare", "postiz", "buffer",
+  "twilio", "whatsapp",
   "brevo", "signwell",
 ];
 
@@ -784,6 +787,22 @@ async function callConnector(
         }),
       });
     }
+    case "vk": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<access_token>:<owner_id>" — vk.com/dev standalone app token;
+      // owner_id negative for communities ('-123456' posts to the group
+      // wall), positive for a user wall.
+      const [token, owner = ""] = cred.split(":", 2);
+      if (!owner) return { ok: false, status: 500, error: "conn:vk must be '<access_token>:<owner_id>'" };
+      return connPost("https://api.vk.com/method/wall.post", {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          access_token: token, owner_id: owner, message: text,
+          from_group: owner.startsWith("-") ? "1" : "0", v: "5.199",
+        }).toString(),
+      });
+    }
     case "discord": {
       if (!text) return { ok: false, status: 400, error: "text required" };
       // cred: full channel webhook URL — no app review needed.
@@ -828,6 +847,85 @@ async function callConnector(
           body: JSON.stringify({ msgtype: "m.text", body: text }),
         },
       );
+    }
+    case "teams": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: full incoming-webhook URL — Teams channel → ⋯ → Connectors →
+      // Incoming Webhook. Accepts the MessageCard-compatible {text} body.
+      if (!cred.startsWith("https://"))
+        return { ok: false, status: 500, error: "conn:teams must be an https:// incoming-webhook URL" };
+      return connPost(cred, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+    }
+    case "mattermost": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: full incoming-webhook URL — Mattermost → Integrations →
+      // Incoming Webhooks (…/hooks/<id>). Payload 'username'/'icon_url'
+      // override sender.
+      if (!cred.startsWith("https://"))
+        return { ok: false, status: 500, error: "conn:mattermost must be an https:// incoming-webhook URL" };
+      return connPost(cred, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          text,
+          ...(b.username ? { username: String(b.username) } : {}),
+          ...(b.icon_url ? { icon_url: String(b.icon_url) } : {}),
+        }),
+      });
+    }
+    case "zulip": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<base_url>|<bot_email>|<api_key>" — Zulip → Settings → Bots →
+      // zuliprc (bot email + key). Payload 'to' = stream name, 'topic' =
+      // thread.
+      const [base, email = "", key = ""] = cred.split("|");
+      if (!base || !email || !key)
+        return { ok: false, status: 500, error: "conn:zulip must be '<base_url>|<bot_email>|<api_key>'" };
+      const stream = String(b.to ?? "");
+      if (!stream) return { ok: false, status: 400, error: "zulip needs payload.to — the stream name" };
+      return connPost(`${base.replace(/\/+$/, "")}/api/v1/messages`, {
+        method: "POST",
+        headers: {
+          authorization: `Basic ${btoa(`${email}:${key}`)}`,
+          "content-type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          type: "stream", to: stream,
+          topic: String(b.topic ?? "Lazynext"), content: text,
+        }).toString(),
+      });
+    }
+    case "viber": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<auth_token>" — partners.viber.com bot account token. Payload
+      // 'broadcast_list' (≤300 subscribed user ids) → broadcast to all
+      // (needs Viber approval); payload 'to' → send_message to one
+      // subscriber.
+      const sender = { name: String(b.sender ?? "Lazynext") };
+      const bl = b.broadcast_list as string[] | undefined;
+      const body = Array.isArray(bl) && bl.length
+        ? { broadcast_list: bl, min_api_version: 7, sender, type: "text", text }
+        : { receiver: String(b.to ?? ""), min_api_version: 7, sender, type: "text", text, tracking_data: "lazynext" };
+      return connPost(`https://chatapi.viber.com/pa/${Array.isArray(bl) && bl.length ? "broadcast_message" : "send_message"}`, {
+        method: "POST",
+        headers: { "x-viber-auth-token": cred, "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    }
+    case "line": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<channel_access_token>" — LINE Developers console → Messaging
+      // API channel → long-lived token. Broadcasts to every friend of the
+      // Official Account.
+      return connPost("https://api.line.me/v2/bot/message/broadcast", {
+        method: "POST",
+        headers: { authorization: `Bearer ${cred}`, "content-type": "application/json" },
+        body: JSON.stringify({ messages: [{ type: "text", text }] }),
+      });
     }
     case "devto": {
       if (!text) return { ok: false, status: 400, error: "text required" };
@@ -939,6 +1037,67 @@ async function callConnector(
         }),
       });
     }
+    case "tumblr": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<access_token>:<blog_name>" — tumblr.com/oauth app → OAuth2
+      // token; blog_name is the tumblog subdomain ('lazynext' →
+      // lazynext.tumblr.com). Posts in NPF: a single text content block.
+      const [token, blog = ""] = cred.split(":", 2);
+      if (!blog) return { ok: false, status: 500, error: "conn:tumblr must be '<access_token>:<blog_name>'" };
+      return connPost(`https://api.tumblr.com/v2/blog/${blog}/posts`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({ content: [{ type: "text", text }] }),
+      });
+    }
+    case "ghost": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<site_base>|<key_id>:<secret_hex>" — Ghost Admin → Settings →
+      // Integrations → custom integration (key shown as '<id>:<secret>').
+      // We mint a 5-min HS256 JWT (kid = key id, aud '/admin/'); '?source=html'
+      // converts the html field into the post body.
+      const [site, key = ""] = cred.split("|");
+      const [kid, secret = ""] = key.split(":");
+      if (!site || !kid || !secret)
+        return { ok: false, status: 500, error: "conn:ghost must be '<site_base>|<key_id>:<secret_hex>'" };
+      const b64 = (input: string | ArrayBuffer): string => {
+        const bytes = typeof input === "string" ? new TextEncoder().encode(input) : new Uint8Array(input);
+        let s = "";
+        for (const c of bytes) s += String.fromCharCode(c);
+        return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+      };
+      const now = Math.floor(Date.now() / 1000);
+      const signingInput = `${b64(JSON.stringify({ alg: "HS256", typ: "JWT", kid }))}.${b64(JSON.stringify({ iat: now, exp: now + 300, aud: "/admin/" }))}`;
+      const secretBytes = new Uint8Array((secret.match(/../g) ?? []).map((h) => parseInt(h, 16)));
+      const ck = await crypto.subtle.importKey("raw", secretBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+      const sig = await crypto.subtle.sign("HMAC", ck, new TextEncoder().encode(signingInput));
+      return connPost(`${site.replace(/\/+$/, "")}/ghost/api/admin/posts/?source=html`, {
+        method: "POST",
+        headers: { authorization: `Ghost ${signingInput}.${b64(sig)}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          posts: [{
+            title: String(b.title ?? text.split("\n")[0].slice(0, 100)),
+            html: text, status: "published",
+          }],
+        }),
+      });
+    }
+    case "beehiiv": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<api_key>:<publication_id>" — beehiiv → Settings → API
+      // ('pub_…' id). Create-post is a Max/Enterprise endpoint; since
+      // Aug-2026 it must carry status:'confirmed' to publish immediately.
+      const [key, pub = ""] = cred.split(":", 2);
+      if (!pub) return { ok: false, status: 500, error: "conn:beehiiv must be '<api_key>:<publication_id>'" };
+      return connPost(`https://api.beehiiv.com/v2/publications/${pub}/posts`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          title: String(b.title ?? text.split("\n")[0].slice(0, 100)),
+          status: "confirmed", content: { free_web: text },
+        }),
+      });
+    }
     case "webhook": {
       if (!text) return { ok: false, status: 400, error: "text required" };
       // cred: "<url>" or "<url>|<bearer>" — generic outbound bridge to
@@ -955,6 +1114,77 @@ async function callConnector(
         body: JSON.stringify({
           text, source: "lazynext", ts: Date.now(),
           ...(typeof b.payload === "object" && b.payload !== null ? { payload: b.payload } : {}),
+        }),
+      });
+    }
+    case "ayrshare": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<api_key>" — ayrshare.com dashboard → API Key. One call fans
+      // out to every linked network — incl. TikTok, YouTube, Snapchat and
+      // GMB, which have no sane direct posting API. Payload 'platforms'
+      // overrides the default all-linked list.
+      return connPost("https://api.ayrshare.com/api/post", {
+        method: "POST",
+        headers: { authorization: `Bearer ${cred}`, "content-type": "application/json" },
+        body: JSON.stringify({ post: text, platforms: (b.platforms as string[]) ?? ["all"] }),
+      });
+    }
+    case "postiz": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<api_key>|<integration_id>[|<base_url>]" — Postiz → Settings →
+      // Public API key; integration (= channel) ids from GET …/public/v1/
+      // integrations. base_url defaults to cloud; self-hosted is
+      // '<domain>/api'. The auth header takes the raw key — no Bearer prefix.
+      const [key, integ = "", baseRaw = ""] = cred.split("|");
+      if (!integ)
+        return { ok: false, status: 500, error: "conn:postiz must be '<api_key>|<integration_id>[|<base_url>]'" };
+      const base = (baseRaw || "https://api.postiz.com").replace(/\/+$/, "");
+      // Every platform validates a settings.__type — resolve the
+      // integration's provider so a bare text post passes schema checks
+      // where possible.
+      let provider = "";
+      const il = await connPost(`${base}/public/v1/integrations`, {
+        method: "GET", headers: { authorization: key },
+      });
+      if (il.ok) {
+        const list = Array.isArray(il.body)
+          ? (il.body as { id?: unknown; identifier?: string; provider?: string }[])
+          : (((il.body as { integrations?: unknown[] })?.integrations ?? []) as { id?: unknown; identifier?: string; provider?: string }[]);
+        for (const i of list)
+          if (String(i.id) === integ) { provider = i.identifier ?? i.provider ?? ""; break; }
+      }
+      return connPost(`${base}/public/v1/posts`, {
+        method: "POST",
+        headers: { authorization: key, "content-type": "application/json" },
+        body: JSON.stringify({
+          type: "now", date: new Date().toISOString(), shortLink: false, tags: [],
+          posts: [{
+            integration: { id: integ },
+            value: [{ content: text, image: [] }],
+            settings: (b.settings as object) ?? (provider ? { __type: provider } : {}),
+          }],
+        }),
+      });
+    }
+    case "buffer": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<api_key>:<channel_id>" — buffer.com → Settings → API key;
+      // the channel id is in the channel's dashboard URL. GraphQL createPost
+      // lands in the channel queue; payload 'share_now': true publishes
+      // immediately.
+      const [key, chan = ""] = cred.split(":", 2);
+      if (!chan) return { ok: false, status: 500, error: "conn:buffer must be '<api_key>:<channel_id>'" };
+      return connPost("https://api.buffer.com", {
+        method: "POST",
+        headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          query: "mutation($input: CreatePostInput!) { createPost(input: $input) { ... on PostActionSuccess { post { id } } ... on MutationError { message } } }",
+          variables: {
+            input: {
+              text, channelId: chan, schedulingType: "automatic",
+              mode: b.share_now === true ? "shareNow" : "addToQueue",
+            },
+          },
         }),
       });
     }

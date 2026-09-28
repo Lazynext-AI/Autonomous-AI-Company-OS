@@ -40,6 +40,7 @@ const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; nam
       { id: "mastodon", name: "Mastodon", hint: "instance_host:access_token — any fediverse instance" },
       { id: "reddit", name: "Reddit", hint: "client_id:secret:user:pass:sub — script app OAuth" },
       { id: "pinterest", name: "Pinterest", hint: "access_token:board_id — link/image pins" },
+      { id: "vk", name: "VK", hint: "access_token:owner_id — vk.com/dev app; negative owner = community wall" },
     ],
   },
   {
@@ -49,6 +50,11 @@ const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; nam
       { id: "slack", name: "Slack", hint: "incoming-webhook URL — workspace updates" },
       { id: "telegram", name: "Telegram", hint: "bot_token:chat_id — channel/group messages" },
       { id: "matrix", name: "Matrix", hint: "homeserver|room_id|access_token — Element etc." },
+      { id: "teams", name: "MS Teams", hint: "incoming-webhook URL — channel → Connectors → Incoming Webhook" },
+      { id: "mattermost", name: "Mattermost", hint: "incoming-webhook URL — Integrations → Incoming Webhooks" },
+      { id: "zulip", name: "Zulip", hint: "base_url|bot_email|api_key — Settings → Bots → zuliprc" },
+      { id: "viber", name: "Viber", hint: "auth_token — partners.viber.com bot; payload.to or broadcast_list" },
+      { id: "line", name: "LINE", hint: "channel_access_token — Messaging API; broadcasts to all friends" },
     ],
   },
   {
@@ -60,12 +66,18 @@ const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; nam
       { id: "wordpress", name: "WordPress", hint: "site_base|user|app_password — WP ≥5.6 app passwords" },
       { id: "github", name: "GitHub", hint: "pat — posts public gists; PAT already powers repo ops" },
       { id: "gitlab", name: "GitLab", hint: "pat or host:pat — 'api' scope, posts public snippets" },
+      { id: "tumblr", name: "Tumblr", hint: "access_token:blog_name — tumblr.com/oauth app" },
+      { id: "ghost", name: "Ghost", hint: "site_base|key_id:key_secret — custom integration admin key" },
+      { id: "beehiiv", name: "beehiiv", hint: "api_key:publication_id — Max/Enterprise plan only" },
     ],
   },
   {
     group: "Bridges", icon: Webhook,
     items: [
       { id: "webhook", name: "Webhook", hint: "https:// url (|bearer) — Zapier/Make/n8n/IFTTT fan-out" },
+      { id: "ayrshare", name: "Ayrshare", hint: "api_key — one call posts to TikTok/YouTube/Snapchat/GMB +10" },
+      { id: "postiz", name: "Postiz", hint: "api_key|integration_id[|base_url] — open-source, 27 platforms" },
+      { id: "buffer", name: "Buffer", hint: "api_key:channel_id — Settings → API key; queues to the channel" },
     ],
   },
   {
