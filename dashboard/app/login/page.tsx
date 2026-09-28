@@ -30,11 +30,11 @@ export default function LoginPage() {
     });
     const d = await r.json().catch(() => ({}));
     setBusy(false);
-    if (r.ok) {
+    if (d.totp) {
+      setTotpStep(true);
+    } else if (r.ok) {
       router.push("/");
       router.refresh();
-    } else if (d.totp) {
-      setTotpStep(true);
     } else {
       setError(d.error ?? (email ? "Invalid credentials" : "Wrong passphrase"));
     }
