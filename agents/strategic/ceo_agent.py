@@ -284,10 +284,11 @@ Return ONLY the JSON object."""
         m_errors = getattr(metrics, "error_rate", 0) or (metrics.get("error_rate", 0) if isinstance(metrics, dict) else 0)
         m_deploys = getattr(metrics, "deploy_count", 0) or (metrics.get("deploy_count", 0) if isinstance(metrics, dict) else 0)
         shipped = brain.shipped_features or []
-        bugs = brain.open_bugs or []
+        bugs = [b for b in (brain.open_bugs or [])
+                if (b.get("status", "open") if isinstance(b, dict) else getattr(b, "status", "open")) == "open"]
         blockers = brain.blockers or []
-        bug_descs = [getattr(b, "description", str(b)) for b in bugs[:5]] if bugs else []
-        blocker_descs = [getattr(b, "description", str(b)) for b in blockers[:5]] if blockers else []
+        bug_descs = [(b.get("description", str(b)) if isinstance(b, dict) else getattr(b, "description", str(b))) for b in bugs[:5]] if bugs else []
+        blocker_descs = [(b.get("description", str(b)) if isinstance(b, dict) else getattr(b, "description", str(b))) for b in blockers[:5]] if blockers else []
 
         prompt = f"""Generate a Founder Briefing email. Use the EXACT date: {date_str}. Never use placeholders.
 

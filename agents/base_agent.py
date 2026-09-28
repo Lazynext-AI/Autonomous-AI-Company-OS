@@ -138,7 +138,7 @@ class BaseAgent(ABC):
             parts.append(f"Mission: {brain.mission}")
             parts.append(f"Current sprint: {brain.current_sprint}")
             parts.append(f"Metrics: {brain.metrics}")
-            parts.append(f"Open bugs: {len(brain.open_bugs)}")
+            parts.append(f"Open bugs: {sum(1 for b in brain.open_bugs if (b.get('status', 'open') if isinstance(b, dict) else getattr(b, 'status', 'open')) == 'open')}")
             parts.append(f"Tech stack: {brain.tech_stack}")
         except Exception as e:
             self.logger.warning("build_context_brain_failed", error=str(e))
