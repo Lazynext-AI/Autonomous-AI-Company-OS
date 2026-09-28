@@ -98,6 +98,160 @@ async def _meta(text: str, cred: str) -> dict:
     )
 
 
+async def _facebook(text: str, cred: str) -> dict:
+    # cred: "<page_access_token>:<page_id>" — organic Page post (unpaid reach,
+    # unlike meta which is the paid Ads API).
+    token, _, page = cred.partition(":")
+    if not page:
+        return {"ok": False, "error": "conn:facebook must be '<page_access_token>:<page_id>'"}
+    return await _post(
+        f"https://graph.facebook.com/v19.0/{page}/feed",
+        json_body={"message": text, "access_token": token},
+    )
+
+
+async def _instagram(payload: dict, cred: str) -> dict:
+    # cred: "<access_token>:<ig_user_id>" — IG can only publish media:
+    # payload needs {text: caption, image_url: <public https image>}.
+    token, _, uid = cred.partition(":")
+    image = payload.get("image_url") or ""
+    if not uid or not image:
+        return {"ok": False, "error": "instagram requires image_url in payload — IG has no text-only posts"}
+    c = await _post(
+        f"https://graph.facebook.com/v19.0/{uid}/media",
+        json_body={"image_url": image, "caption": payload.get("text", ""), "access_token": token},
+    )
+    if not c.get("ok"):
+        return c
+    return await _post(
+        f"https://graph.facebook.com/v19.0/{uid}/media_publish",
+        json_body={"creation_id": (c.get("body") or {}).get("id"), "access_token": token},
+    )
+
+
+async def _threads(text: str, cred: str) -> dict:
+    # cred: "<access_token>:<threads_user_id>" — create container, then publish.
+    token, _, uid = cred.partition(":")
+    if not uid:
+        return {"ok": False, "error": "conn:threads must be '<access_token>:<threads_user_id>'"}
+    c = await _post(
+        f"https://graph.threads.net/v1.0/{uid}/threads",
+        json_body={"media_type": "TEXT", "text": text, "access_token": token},
+    )
+    if not c.get("ok"):
+        return c
+    return await _post(
+        f"https://graph.threads.net/v1.0/{uid}/threads_publish",
+        json_body={"creation_id": (c.get("body") or {}).get("id"), "access_token": token},
+    )
+
+
+async def _bluesky(text: str, cred: str) -> dict:
+    # cred: "<handle.bsky.social>:<app_password>" — session token then post.
+    handle, _, app_pw = cred.partition(":")
+    sess = await _post(
+        "https://bsky.social/xrpc/com.atproto.server.createSession",
+        json_body={"identifier": handle, "password": app_pw},
+    )
+    if not sess.get("ok"):
+        return sess
+    s = sess.get("body") or {}
+    return await _post(
+        "https://bsky.social/xrpc/com.atproto.repo.createRecord",
+        headers={"authorization": f"Bearer {s.get('accessJwt')}"},
+        json_body={
+            "repo": s.get("did"), "collection": "app.bsky.feed.post",
+            "record": {"$type": "app.bsky.feed.post", "text": text,
+                       "createdAt": __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()},
+        },
+    )
+
+
+async def _mastodon(text: str, cred: str) -> dict:
+    # cred: "<instance_host>:<access_token>" — host without scheme.
+    host, _, token = cred.partition(":")
+    if not host or not token:
+        return {"ok": False, "error": "conn:mastodon must be '<instance_host>:<access_token>'"}
+    return await _post(
+        f"https://{host}/api/v1/statuses",
+        headers={"authorization": f"Bearer {token}"},
+        json_body={"status": text, "visibility": "public"},
+    )
+
+
+async def _reddit(payload: dict, cred: str) -> dict:
+    # cred: "<client_id>:<client_secret>:<username>:<password>:<subreddit>" —
+    # script-app OAuth, then self-post. Payload 'to' overrides the subreddit,
+    # 'body' overrides the post body (text is the title).
+    parts = cred.split(":")
+    if len(parts) < 5:
+        return {"ok": False, "error": "conn:reddit must be '<client_id>:<client_secret>:<username>:<password>:<subreddit>'"}
+    cid, secret, user, pw, sr = parts[0], parts[1], parts[2], parts[3], parts[4]
+    tok = await _post(
+        "https://www.reddit.com/api/v1/access_token",
+        auth=(cid, secret),
+        headers={"user-agent": "lazynext/1.0"},
+        data={"grant_type": "password", "username": user, "password": pw},
+    )
+    if not tok.get("ok"):
+        return tok
+    at = (tok.get("body") or {}).get("access_token")
+    return await _post(
+        "https://oauth.reddit.com/api/submit",
+        headers={"authorization": f"Bearer {at}", "user-agent": "lazynext/1.0"},
+        data={
+            "sr": payload.get("to") or sr,
+            "title": (payload.get("text") or "")[:300],
+            "text": payload.get("body") or payload.get("text") or "",
+            "kind": "self", "api_type": "json",
+        },
+    )
+
+
+async def _pinterest(payload: dict, cred: str) -> dict:
+    # cred: "<access_token>:<board_id>" — link pin; attach {image_url} for an
+    # image pin (pins display richer with media).
+    token, _, board = cred.partition(":")
+    if not board:
+        return {"ok": False, "error": "conn:pinterest must be '<access_token>:<board_id>'"}
+    body: dict[str, Any] = {
+        "board_id": board,
+        "title": (payload.get("text") or "")[:100],
+        "description": payload.get("text") or "",
+        "link": payload.get("link") or "https://checker.lazynext.com",
+    }
+    if payload.get("image_url"):
+        body["media_source"] = {"source_type": "image_url", "url": payload["image_url"]}
+    return await _post(
+        "https://api.pinterest.com/v5/pins",
+        headers={"authorization": f"Bearer {token}"},
+        json_body=body,
+    )
+
+
+# --- Chat / messaging communities ----------------------------------------
+
+async def _discord(text: str, cred: str) -> dict:
+    # cred: full channel webhook URL — no app review needed.
+    return await _post(cred, json_body={"content": text})
+
+
+async def _slack(text: str, cred: str) -> dict:
+    # cred: full incoming-webhook URL.
+    return await _post(cred, json_body={"text": text})
+
+
+async def _telegram(text: str, cred: str) -> dict:
+    # cred: "<bot_token>:<chat_id>" — bot must be admin/member of the chat.
+    token, _, chat = cred.partition(":")
+    if not chat:
+        return {"ok": False, "error": "conn:telegram must be '<bot_token>:<chat_id>'"}
+    return await _post(
+        f"https://api.telegram.org/bot{token}/sendMessage",
+        json_body={"chat_id": chat, "text": text},
+    )
+
+
 # --- Sales CRM ------------------------------------------------------------
 
 # --- Commerce -------------------------------------------------------------
@@ -200,6 +354,10 @@ async def _signwell(payload: dict, cred: str) -> dict:
 
 _DISPATCH = {
     "x": _x, "linkedin": _linkedin, "meta": _meta,
+    "facebook": _facebook, "instagram": _instagram, "threads": _threads,
+    "bluesky": _bluesky, "mastodon": _mastodon, "reddit": _reddit,
+    "pinterest": _pinterest,
+    "discord": _discord, "slack": _slack, "telegram": _telegram,
     "twilio": _twilio, "whatsapp": _whatsapp,
     "brevo": _brevo,
     "signwell": _signwell,

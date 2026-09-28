@@ -546,7 +546,12 @@ export async function signwellSendFromTemplate(
 // The ids the dashboard Connector library offers. brevo/signwell have their own
 // dedicated routes but still report status here; POST dispatch covers the
 // connectors that have no other invocation path.
-const CONNECTOR_IDS = ["x", "linkedin", "meta", "twilio", "whatsapp", "brevo", "signwell"];
+const CONNECTOR_IDS = [
+  "x", "linkedin", "meta", "facebook", "instagram", "threads",
+  "bluesky", "mastodon", "reddit", "pinterest",
+  "discord", "slack", "telegram", "twilio", "whatsapp",
+  "brevo", "signwell",
+];
 
 // KV conn:<id> first — the dashboard write path is the runtime source of
 // truth — then a CONN_<ID> worker secret as static fallback. The local fleet
@@ -643,6 +648,167 @@ async function callConnector(
         body: JSON.stringify({
           messaging_product: "whatsapp", to, type: "text", text: { body: text },
         }),
+      });
+    }
+    case "facebook": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<page_access_token>:<page_id>" — organic Page post (unpaid reach,
+      // unlike conn:meta which is the paid Ads API).
+      const [token, page = ""] = cred.split(":", 2);
+      if (!page) return { ok: false, status: 500, error: "conn:facebook must be '<page_access_token>:<page_id>'" };
+      return connPost(`https://graph.facebook.com/v19.0/${page}/feed`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message: text, access_token: token }),
+      });
+    }
+    case "instagram": {
+      // cred: "<access_token>:<ig_user_id>" — IG can only publish media:
+      // payload needs {text: caption, image_url: <public https image>}.
+      const [token, uid = ""] = cred.split(":", 2);
+      const image = String(b.image_url ?? "");
+      if (!uid || !image)
+        return { ok: false, status: 400, error: "instagram requires image_url in payload — IG has no text-only posts" };
+      const c = await connPost(`https://graph.facebook.com/v19.0/${uid}/media`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ image_url: image, caption: text, access_token: token }),
+      });
+      if (!c.ok) return c;
+      const cid = (c.body as { id?: string }).id;
+      return connPost(`https://graph.facebook.com/v19.0/${uid}/media_publish`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ creation_id: cid, access_token: token }),
+      });
+    }
+    case "threads": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<access_token>:<threads_user_id>" — create container, then publish.
+      const [token, uid = ""] = cred.split(":", 2);
+      if (!uid) return { ok: false, status: 500, error: "conn:threads must be '<access_token>:<threads_user_id>'" };
+      const c = await connPost(`https://graph.threads.net/v1.0/${uid}/threads`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ media_type: "TEXT", text, access_token: token }),
+      });
+      if (!c.ok) return c;
+      const cid = (c.body as { id?: string }).id;
+      return connPost(`https://graph.threads.net/v1.0/${uid}/threads_publish`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ creation_id: cid, access_token: token }),
+      });
+    }
+    case "bluesky": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<handle.bsky.social>:<app_password>" — session token then post.
+      const [handle, appPw = ""] = cred.split(":", 2);
+      const sess = await connPost("https://bsky.social/xrpc/com.atproto.server.createSession", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ identifier: handle, password: appPw }),
+      });
+      if (!sess.ok) return sess;
+      const s = (sess.body ?? {}) as { accessJwt?: string; did?: string };
+      return connPost("https://bsky.social/xrpc/com.atproto.repo.createRecord", {
+        method: "POST",
+        headers: { authorization: `Bearer ${s.accessJwt}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          repo: s.did, collection: "app.bsky.feed.post",
+          record: { $type: "app.bsky.feed.post", text, createdAt: new Date().toISOString() },
+        }),
+      });
+    }
+    case "mastodon": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<instance_host>:<access_token>" — host without scheme.
+      const [host, token = ""] = cred.split(":", 2);
+      if (!host || !token)
+        return { ok: false, status: 500, error: "conn:mastodon must be '<instance_host>:<access_token>'" };
+      return connPost(`https://${host}/api/v1/statuses`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({ status: text, visibility: "public" }),
+      });
+    }
+    case "reddit": {
+      // cred: "<client_id>:<client_secret>:<username>:<password>:<subreddit>" —
+      // script-app OAuth, then self-post. Payload 'to' overrides the subreddit,
+      // 'body' overrides the post body (text is the title).
+      const parts = cred.split(":");
+      if (parts.length < 5)
+        return { ok: false, status: 500, error: "conn:reddit must be '<client_id>:<client_secret>:<username>:<password>:<subreddit>'" };
+      const [cid, secret, user, pass, sr] = parts;
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      const tok = await connPost("https://www.reddit.com/api/v1/access_token", {
+        method: "POST",
+        headers: {
+          authorization: `Basic ${btoa(`${cid}:${secret}`)}`,
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "lazynext/1.0",
+        },
+        body: new URLSearchParams({ grant_type: "password", username: user, password: pass }).toString(),
+      });
+      if (!tok.ok) return tok;
+      const at = ((tok.body ?? {}) as { access_token?: string }).access_token;
+      return connPost("https://oauth.reddit.com/api/submit", {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${at}`,
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "lazynext/1.0",
+        },
+        body: new URLSearchParams({
+          sr: String(b.to ?? sr), title: text.slice(0, 300),
+          text: String(b.body ?? text), kind: "self", api_type: "json",
+        }).toString(),
+      });
+    }
+    case "pinterest": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<access_token>:<board_id>" — link pin; attach {image_url} for an
+      // image pin (pins display richer with media).
+      const [token, board = ""] = cred.split(":", 2);
+      if (!board) return { ok: false, status: 500, error: "conn:pinterest must be '<access_token>:<board_id>'" };
+      const link = String(b.link ?? "https://checker.lazynext.com");
+      const image = String(b.image_url ?? "");
+      return connPost("https://api.pinterest.com/v5/pins", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          board_id: board, title: text.slice(0, 100), description: text, link,
+          ...(image ? { media_source: { source_type: "image_url", url: image } } : {}),
+        }),
+      });
+    }
+    case "discord": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: full channel webhook URL — no app review needed.
+      return connPost(cred, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ content: text }),
+      });
+    }
+    case "slack": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: full incoming-webhook URL.
+      return connPost(cred, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+    }
+    case "telegram": {
+      // cred: "<bot_token>:<chat_id>" — bot must be admin/member of the chat.
+      const [token, chat = ""] = cred.split(":", 2);
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      if (!chat) return { ok: false, status: 500, error: "conn:telegram must be '<bot_token>:<chat_id>'" };
+      return connPost(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ chat_id: chat, text }),
       });
     }
     case "brevo": {

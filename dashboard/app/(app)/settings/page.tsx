@@ -30,9 +30,24 @@ const CONNECTORS: { group: string; icon: typeof Share2; items: { id: string; nam
   {
     group: "Social posting", icon: Share2,
     items: [
-      { id: "x", name: "X / Twitter", hint: "API key + secret — agents post marketing tweets" },
+      { id: "x", name: "X / Twitter", hint: "OAuth2 bearer — agents post marketing tweets" },
       { id: "linkedin", name: "LinkedIn", hint: "access_token[:org_id] — agents post B2B content" },
-      { id: "meta", name: "Meta Ads", hint: "Access token + ad account id — run paid campaigns" },
+      { id: "meta", name: "Meta Ads", hint: "access_token:ad_account_id — run paid campaigns" },
+      { id: "facebook", name: "Facebook Page", hint: "page_access_token:page_id — organic page posts" },
+      { id: "instagram", name: "Instagram", hint: "access_token:ig_user_id — image+caption posts" },
+      { id: "threads", name: "Threads", hint: "access_token:threads_user_id — Meta text posts" },
+      { id: "bluesky", name: "Bluesky", hint: "handle:app_password — bsky.app → Settings → App passwords" },
+      { id: "mastodon", name: "Mastodon", hint: "instance_host:access_token — any fediverse instance" },
+      { id: "reddit", name: "Reddit", hint: "client_id:secret:user:pass:sub — script app OAuth" },
+      { id: "pinterest", name: "Pinterest", hint: "access_token:board_id — link/image pins" },
+    ],
+  },
+  {
+    group: "Chat / messaging", icon: MessageCircle,
+    items: [
+      { id: "discord", name: "Discord", hint: "channel webhook URL — server announcements" },
+      { id: "slack", name: "Slack", hint: "incoming-webhook URL — workspace updates" },
+      { id: "telegram", name: "Telegram", hint: "bot_token:chat_id — channel/group messages" },
     ],
   },
   {
