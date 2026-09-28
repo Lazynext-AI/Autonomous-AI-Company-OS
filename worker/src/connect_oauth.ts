@@ -110,15 +110,24 @@ async function appCred(env: Env, id: string): Promise<{ id: string; secret: stri
   return i === -1 ? { id: raw, secret: "" } : { id: raw.slice(0, i), secret: raw.slice(i + 1) };
 }
 
-/** Admin-scope check for the browser-link ?key= path — same hash lookup as the
- *  gateway's authorize(), which only reads Authorization/x-api-key headers. */
-async function authorizeAdmin(url: URL, env: Env): Promise<boolean> {
-  const raw = url.searchParams.get("key") ?? "";
+/** Admin auth for the connect start route. Accepts the internal API_TOKEN
+ *  (dashboard proxy path) or an admin-scoped lzk_ key via Authorization /
+ *  x-api-key header or ?key= — an invalid or non-admin credential fails. */
+async function isAdminLzk(raw: string, env: Env): Promise<boolean> {
   if (!raw.startsWith("lzk_")) return false;
   const key = await env.DB.prepare(
     "SELECT scopes FROM api_keys WHERE key_hash = ? AND revoked_at IS NULL",
   ).bind(await sha256(raw)).first<{ scopes: string }>();
   return !!key && key.scopes.split(",").map((s) => s.trim()).includes("admin");
+}
+
+async function startAuthed(req: Request, url: URL, env: Env): Promise<boolean> {
+  const auth = req.headers.get("authorization") ?? "";
+  if (auth && env.API_TOKEN && auth === `Bearer ${env.API_TOKEN}`) return true;
+  if (auth.startsWith("Bearer ")) return isAdminLzk(auth.slice(7).trim(), env);
+  const xk = req.headers.get("x-api-key");
+  if (xk) return isAdminLzk(xk, env);
+  return isAdminLzk(url.searchParams.get("key") ?? "", env);
 }
 
 export async function handleConnect(
@@ -134,7 +143,7 @@ export async function handleConnect(
 
   if (phase === "start") {
     const authedHeader = req.headers.get("authorization") ?? "";
-    if (!authedHeader && !(await authorizeAdmin(url, env)))
+    if (!(await startAuthed(req, url, env)))
       return json({ error: "admin key required — pass ?key=<lzk_admin> or Authorization: Bearer" }, 401);
     const app = await appCred(env, id);
     if (!app)

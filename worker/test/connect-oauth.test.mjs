@@ -35,8 +35,11 @@ test("callback writes conn:{id} + conn:{id}:oauth and redirects to settings", ()
   assert.match(oauth, /dashboard\.lazynext\.com\/settings\?connected=/);
 });
 
-test("start requires admin scope — ?key= path or Authorization header", () => {
-  assert.match(oauth, /authorizeAdmin/);
+test("start requires admin — API_TOKEN or admin-scoped lzk only", () => {
+  assert.match(oauth, /startAuthed/);
+  assert.match(oauth, /Bearer \$\{env\.API_TOKEN\}/);        // internal token path
+  assert.match(oauth, /isAdminLzk/);                        // lzk admin-scope check
+  assert.doesNotMatch(oauth, /authedHeader\s*&&\s*!/);      // no bare-header bypass
   assert.match(index, /path\.startsWith\("\/api\/v1\/connect\/"\)/);
   assert.match(index, /handleConnect\(req, env, path, url\)/);
 });

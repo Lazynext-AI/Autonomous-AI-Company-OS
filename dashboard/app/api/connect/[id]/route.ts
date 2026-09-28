@@ -8,7 +8,9 @@ export const dynamic = "force-dynamic";
 // provider's authorize URL. Requires conn:{id}:app in KV ("client_id[:secret]").
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const r = await workerFetch(`/api/v1/connect/${encodeURIComponent(id)}/start`, undefined, "GET");
+  // internal=true → the worker's API_TOKEN (the connect route accepts it as
+  // the admin path); the read/write-scoped LAZYNEXT_API_KEY would 401.
+  const r = await workerFetch(`/api/v1/connect/${encodeURIComponent(id)}/start`, undefined, "GET", true);
   const d = (await r.json()) as { authorize_url?: string; error?: string };
   if (!r.ok || !d.authorize_url) return NextResponse.json(d, { status: r.status });
   return NextResponse.redirect(d.authorize_url);
