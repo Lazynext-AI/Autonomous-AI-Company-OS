@@ -194,9 +194,23 @@ class CTOAgent(BaseAgent):
                 # Deterministic kill for impossible/already-shipped classes —
                 # prompt bounds are advisory; this gate is not. Recorded as a
                 # terminal failed row so the dedup corpus suppresses
-                # paraphrases for 24h (agentTick only requeues attempts<3).
+                # paraphrases permanently (agentTick only requeues attempts<3).
                 infeasible = infeasible_task_reason(t.description)
                 if infeasible:
+                    # Class-level dedup: the kill label IS the dead-class name,
+                    # so one anchor tombstone covers every paraphrase.
+                    # Word-overlap dedup above only catches near-identical
+                    # phrasing — divergent rewordings slip it then re-die here,
+                    # and each wrote a fresh tombstone: measured 2026-09-28,
+                    # ~137 rows/day dominated by the "section 508" and
+                    # "audit-report doc churn" classes. Mirror of
+                    # worker/src/index.ts operate() — keep in sync.
+                    if await self._dead_class_anchored(infeasible):
+                        self.logger.info(
+                            "infeasible_class_suppressed",
+                            description=t.description[:60], reason=infeasible,
+                        )
+                        continue
                     self.logger.info("infeasible_task_filtered", description=t.description[:60], reason=infeasible)
                     await self.task_tracker.create_task(
                         t.task_id, assign, t.description, status="failed", attempts=3,
@@ -268,6 +282,32 @@ class CTOAgent(BaseAgent):
         except Exception as e:
             self.logger.warning("recent_tasks_fetch_failed", error=str(e))
             return []
+
+    async def _dead_class_anchored(self, label: str) -> bool:
+        """True when an infeasible tombstone for this kill class already exists.
+
+        The " (" terminator stops prefix collisions between labels; LIKE
+        wildcards can't appear in the static label list. The worker mirror
+        writes the marker to error_log, this one to result — check both.
+        Fail-open returns False so a query error writes one extra row rather
+        than risking a dropped task.
+        """
+        try:
+            from core.cloudflare_client import CloudflareClient
+
+            client = CloudflareClient()
+            if not client.is_configured():
+                return False
+            pat = f"infeasible: {label} (%"
+            rows = await asyncio.to_thread(
+                client.query,
+                "SELECT 1 AS x FROM task_log WHERE result LIKE ? "
+                "OR error_log LIKE ? LIMIT 1",
+                [pat, pat],
+            )
+            return bool(rows)
+        except Exception:
+            return False
 
     def _description_is_duplicate(self, description: str, recent_tasks: list[dict]) -> bool:
         """Substring + stemmed content-word overlap against fetched rows."""

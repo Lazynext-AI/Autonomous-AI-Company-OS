@@ -124,3 +124,32 @@ def test_dead_corpus_limit_matches_across_mirrors() -> None:
 
     assert w_limit == c_limit
     assert w_limit >= 10000
+
+
+def test_kill_class_anchor_check_precedes_tombstone() -> None:
+    # Second flood mechanism (measured 2026-09-28, ~137 rows/day): divergent
+    # paraphrases of a dead class share too few content words to trip
+    # word-overlap dedup, slip to the kill-list, and each write a fresh
+    # tombstone. The kill label IS the class name, so both mirrors must check
+    # for an existing `infeasible: {label} (` anchor BEFORE writing — one row
+    # per dead class ever, not one per paraphrase.
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2]
+
+    worker = (root / "worker/src/index.ts").read_text()
+    w_anchor = worker.index("result LIKE ? OR error_log LIKE ? LIMIT 1")
+    w_insert = worker.index("auto-killed at insert")
+    assert w_anchor < w_insert
+    # The prefix pattern pins the class label plus the " (" terminator —
+    # dropping the terminator lets "audit" shadow "audit-report doc churn".
+    assert "infeasible: ${infeasible} (%" in worker
+
+    cto = (root / "agents/strategic/cto_agent.py").read_text()
+    c_call = cto.index("self._dead_class_anchored(infeasible)")
+    c_insert = cto.index('status="failed", attempts=3')
+    assert c_call < c_insert
+    assert 'f"infeasible: {label} (%"' in cto
+    # Both columns: this mirror writes result=, the worker writes error_log=.
+    assert re.search(r"result LIKE \?\s*\"\s*\n\s*\"OR error_log LIKE \?", cto)

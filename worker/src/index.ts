@@ -815,15 +815,36 @@ async function operate(env: Env, ctx: ExecutionContext, brain: Brain, urls: Reco
     } else {
       const infeasible = infeasibleTaskReason(task);
       if (infeasible) {
-        // Terminal failed row — attempts=3 keeps agentTick from requeuing, and
-        // the infeasible: marker lands it in the dead corpus so paraphrases
-        // stay dead permanently (not just for the 24h live window).
-        await env.DB.prepare(
-          "INSERT INTO task_log (task_id, agent_id, description, status, attempts, error_log, created_at) VALUES (lower(hex(randomblob(4))), ?, ?, 'failed', 3, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
+        // Class-level dedup: the kill label IS the dead-class name, so one
+        // anchor tombstone covers every paraphrase. Word-overlap dedup above
+        // only catches near-identical phrasing — divergent rewordings slip it
+        // (inter<threshold) then re-die here, and each wrote a fresh
+        // tombstone: measured 2026-09-28, ~137 rows/day dominated by the
+        // "section 508" and "audit-report doc churn" classes. With the anchor
+        // check a repeat kill costs a read, not a row. The " (" terminator
+        // stops prefix collisions between labels; LIKE chars can't appear in
+        // the static label list. Marker sits in error_log here, result in the
+        // local mirror — check both. Fail-open on query error keeps the
+        // pre-anchor behavior (one extra row, never a dropped task).
+        const anchored = await env.DB.prepare(
+          "SELECT 1 AS x FROM task_log WHERE result LIKE ? OR error_log LIKE ? LIMIT 1",
         )
-          .bind(a.id, task, `infeasible: ${infeasible} (auto-killed at insert)`)
-          .run();
-        taskDropped = infeasible;
+          .bind(`infeasible: ${infeasible} (%`, `infeasible: ${infeasible} (%`)
+          .all()
+          .catch(() => null);
+        if (anchored?.results?.length) {
+          taskDropped = `${infeasible} (dead class)`;
+        } else {
+          // Terminal failed row — attempts=3 keeps agentTick from requeuing, and
+          // the infeasible: marker lands it in the dead corpus so paraphrases
+          // stay dead permanently (not just for the 24h live window).
+          await env.DB.prepare(
+            "INSERT INTO task_log (task_id, agent_id, description, status, attempts, error_log, created_at) VALUES (lower(hex(randomblob(4))), ?, ?, 'failed', 3, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
+          )
+            .bind(a.id, task, `infeasible: ${infeasible} (auto-killed at insert)`)
+            .run();
+          taskDropped = infeasible;
+        }
       } else {
         // Dedupe: skip if the same task is already queued or running.
         await env.DB.prepare(
