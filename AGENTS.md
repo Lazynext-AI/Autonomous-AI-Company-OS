@@ -14,7 +14,7 @@ D1 + KV (`EPHEMERAL`) + Vectorize (`VECTORS`, index `company-knowledge`, 384d)
 - Dashboard: `https://dashboard.lazynext.com` (session cookie `lazynext_session`)
 - `app.lazynext.com` → bound to `accessibility-checker` (the product app); `status.lazynext.com` → `status-redirect` worker (`ops/status-redirect/`) 301s to `lazynext.com/status`; `marketing.lazynext.com` → `lazynext-marketing` (alias of the apex marketing site). All three were stale 522 DNS records — revived via `PUT accounts/{acct}/workers/domains` bindings, no DNS:edit needed. Repo `homepage` metadata is **not** auto-fixed by GitHub on transfer — after `Lazynext-Platform` → `Lazynext-AI` the product repo homepage still pointed at the dead `lazynext-platform.github.io` host until `PATCH /repos/.../accessibility-checker` set it to `checker.lazynext.com`.
 - Product repo: `github.com/Lazynext-AI/accessibility-checker` (mirrored at `products/accessibility-checker`)
-- Monorepo remotes: `origin` = `ujjwalredd/Autonomous-AI-Company-Operating-System` (personal — the Lazynext-AI deploy credentials get 403 there); push to the `lazynext` remote = `Lazynext-AI/Autonomous-AI-Company-Operating-System` (org mirror).
+- Monorepo remotes: `origin` = `ujjwalredd/Autonomous-AI-Company-Operating-System` (personal — the Lazynext-AI deploy credentials get 403 there); push to the `lazynext` remote = `Lazynext-AI/Autonomous-AI-Company-Operating-System` (org mirror). **Bare `gh` in this dir resolves to the `ujjwalredd` repo** — always pass `--repo Lazynext-AI/...` or CI/workflow queries silently hit the empty fork (404'd `backup.yml` lookup, 2026-09-28). `git status` ahead/behind vs `origin` is meaningless — compare `lazynext/main`.
 
 ## Commands
 
