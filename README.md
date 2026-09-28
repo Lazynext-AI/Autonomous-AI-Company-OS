@@ -71,6 +71,18 @@ External consumers use `lzk_*` API keys (issued via `/api/v1/keys` with the admi
 
 The dashboard is also an installable PWA (manifest + icons) — "Add to Home Screen" / browser install works on mobile and desktop.
 
+### Internal service families
+
+Operational surfaces behind the admin token (not in the public OpenAPI spec — used by the dashboard, agents, and scripts):
+
+- **CRM** — `GET|POST /api/v1/crm/leads`, `PATCH|PUT /api/v1/crm/leads/{id}` — lead capture + pipeline stage management; feeds from the product's scan/waitlist funnels
+- **Support** — `GET|POST /api/v1/support/tickets`, `PATCH|PUT /api/v1/support/tickets/{id}` — ticket queue incl. the `support@lazynext.com` inbound route (Cloudflare email worker → API)
+- **Booking** — `GET|POST /api/v1/booking`, `PATCH|DELETE /api/v1/booking/{id}` — sales/demo call scheduling
+- **Store** — `GET|POST /api/v1/store/products`, `GET|POST /api/v1/store/orders` — internal product/order ledger
+- **Marketing** — `GET|POST /api/v1/marketing/contacts[/{id}]`, `GET|POST /api/v1/marketing/campaigns`, `GET /api/v1/marketing/stats` — contacts, campaign records, and engagement rollups (`totals`/`by_tag`/`recent`) fed by the Brevo webhook (12 events incl. delivered/opened/click/suppression)
+- **Signatures** — `POST /api/v1/signwell/send`, `GET /api/v1/signwell/documents`, `GET /api/v1/signwell/events`, `POST /api/v1/signwell/webhook/{token}` — SignWell document send/status/webhook; subscription activation auto-sends `config:signwell_template` when set
+- **Connectors** — `GET|POST /api/v1/connectors[/{id}]` — registry + dispatch for the 37-channel write matrix (social, chat, blog, git, telco): x, linkedin, meta, facebook, instagram, threads, bluesky, mastodon, reddit, pinterest, vk, discord, slack, telegram, matrix, teams, mattermost, zulip, viber, line, devto, hashnode, medium, wordpress, github, gitlab, tumblr, ghost, beehiiv, ayrshare, postiz, buffer, twilio, whatsapp, brevo, signwell + generic `webhook`. Credentials live in KV `conn:{id}` (403-guarded over HTTP); `core/tools/connectors.py` mirrors the matrix locally
+
 ### Message Bus (D1-backed Streams)
 
 The system uses a D1-backed message bus exposed by the Worker for inter-agent communication. Each channel represents a specific message type or routing destination:
