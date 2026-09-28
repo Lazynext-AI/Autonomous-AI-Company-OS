@@ -28,6 +28,7 @@ D1 + KV (`EPHEMERAL`) + Vectorize (`VECTORS`, index `company-knowledge`, 384d)
 ## Credentials — read carefully
 
 - `CLOUDFLARE_API_TOKEN` in `.env` is the **worker bearer token** (used as `Authorization: Bearer` against the platform worker). Wrangler rejects it.
+- `CLOUDFLARE_API_URL` is the worker **root** (no `/api/v1`) — internal routes hang off it directly (`/query`, `/kv/get`, `/kv/put`), while public/service routes need the `/api/v1/…` prefix (`/api/v1/connectors`, `/api/v1/crm/leads`). Hitting `/crm/leads` without the prefix falls through to the internal guard → `{"error":"unauthorized"}` — a misleading 401 that looks like an auth failure but is really a path bug.
 - `CLOUDFLARE_DEPLOY_TOKEN` is the real Cloudflare REST token — map it into `CLOUDFLARE_API_TOKEN` for wrangler deploys only.
 - GitHub/Brevo/SignWell keys live in KV as `conn:*` (credential-guarded, 403 via HTTP) with `.env` fallbacks.
 - `DASHBOARD_SESSION_TOKEN` + `DASHBOARD_PASSPHRASE` in `.env`; login sets the `lazynext_session` cookie. Optional TOTP: `flag:two_factor` + `2fa:secret` in KV — **verified E2E** (no code→`{totp:true}`, bad code→401, valid SHA1/6-digit/30s window±1→`{ok:true}`+session). **LIVE since 2026-09-28 — the founder deliberately enrolled (Google Authenticator "Lazynext: Admin"); do NOT delete these keys** — `flag:two_factor` gates every login incl. the founder's and removing `2fa:secret` orphans the enrollment. Deletion route if ever intentionally disabled: `POST /kv/delete` (`/kv/del` is not a route).
