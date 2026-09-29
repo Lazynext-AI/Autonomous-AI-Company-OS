@@ -1,0 +1,18 @@
+name = "postiz-stack"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[containers]
+# wrangler builds Dockerfile and pushes to the CF registry on deploy.
+image = "./Dockerfile"
+class_name = "PostizStack"
+max_instances = 1
+
+[[durable_objects.bindings]]
+name = "POSTIZ"
+class_name = "PostizStack"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["PostizStack"]
