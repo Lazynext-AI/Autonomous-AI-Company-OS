@@ -1,7 +1,7 @@
 """Agent tools: code executor (Cloudflare container), email (Brevo), web search (Serper), scraping (Browser Rendering)."""
 
 from core.tools.code_executor import CodeExecutionResult, run_code
-from core.tools.connectors import call_connector, connector_status, schedule_connector_post
+from core.tools.connectors import call_connector, connector_status, schedule_connector_post, request_native_signature
 from core.tools.email_tool import send_email
 from core.tools.scrape_tool import research_topic, scrape_url
 from core.tools.search_tool import search_web
@@ -22,6 +22,7 @@ __all__ = [
     "call_connector",
     "connector_status",
     "schedule_connector_post",
+    "request_native_signature",
     "add_lead",
     "list_leads",
     "update_lead",

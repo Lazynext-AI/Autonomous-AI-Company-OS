@@ -1005,6 +1005,65 @@ async def connector_status() -> dict[str, bool]:
     return out
 
 
+async def request_native_signature(
+    signer_email: str,
+    title: str,
+    doc_text: str | None = None,
+    doc_url: str | None = None,
+    signer_name: str | None = None,
+    requester_email: str | None = None,
+) -> dict[str, Any]:
+    """Send a document for e-signature via the native Cloudflare flow
+    (worker sign.ts — SignWell replacement). Snapshots the doc into KV,
+    emails the signer a token-gated link, and freezes a certificate on
+    completion. Exactly one of doc_text/doc_url required. Uses the public
+    API surface — LAZYNEXT_API_KEY (write scope) is the credential.
+    """
+    import os
+    s = get_settings()
+    if not doc_text and not doc_url:
+        return {"ok": False, "error": "doc_text or doc_url required"}
+    body: dict[str, Any] = {"signer_email": signer_email, "title": title}
+    if doc_text:
+        body["doc_text"] = doc_text
+    if doc_url:
+        body["doc_url"] = doc_url
+    if signer_name:
+        body["signer_name"] = signer_name
+    if requester_email:
+        body["requester_email"] = requester_email
+    # Internal bearer door first (fleet pattern — same as /social/schedule);
+    # the public lzk surface is the fallback for caller contexts without it.
+    attempts: list[tuple[str, str]] = []
+    if s.cloudflare_api_url and s.cloudflare_api_token:
+        attempts.append((f"{s.cloudflare_api_url.rstrip('/')}/sign/request", s.cloudflare_api_token))
+    lzk = os.environ.get("LAZYNEXT_API_KEY", "")
+    if lzk:
+        attempts.append(("https://ai-company.lazynext.com/api/v1/sign/requests", lzk))
+    if not attempts:
+        return {"ok": False, "error": "CLOUDFLARE_API_URL/TOKEN or LAZYNEXT_API_KEY required"}
+    last_err = ""
+    for endpoint, token in attempts:
+        try:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                r = await client.post(
+                    endpoint,
+                    headers={
+                        "authorization": f"Bearer {token}",
+                        "content-type": "application/json",
+                    },
+                    json=body,
+                )
+            data = r.json()
+            if r.status_code < 400:
+                return {"ok": True, **{k: data[k] for k in ("public_id", "status", "url", "emailed") if k in data}}
+            last_err = data.get("error", f"HTTP {r.status_code}")
+        except Exception as e:
+            last_err = str(e)
+    logger.error("native_sign_failed", signer=signer_email, error=last_err)
+    return {"ok": False, "error": last_err}
+
+
 async def schedule_connector_post(
     connector_id: str,
     payload: dict[str, Any] | str,

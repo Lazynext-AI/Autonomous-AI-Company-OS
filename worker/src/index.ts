@@ -18,7 +18,8 @@ import { getContainer } from "@cloudflare/containers";
 export { CodeExecContainer } from "./exec_container";
 import { handleWidget } from "./widget";
 import { fanOut, handleWebhooks, publishToBus } from "./webhooks";
-import { handleServices, handleSignwellWebhook, handleBrevoWebhook, handleBrevoInbound, brevoSend, marketingFooter, unsubHeaders, unsubscribeEmail, enrollLead, dispatchScheduledPosts, CONNECTOR_IDS, SEQUENCE, SEQ_DAYS } from "./services";
+import { handleServices, handleSignwellWebhook, handleBrevoWebhook, handleBrevoInbound, brevoSend, marketingFooter, unsubHeaders, unsubscribeEmail, enrollLead, dispatchScheduledPosts, handleMediaServe, CONNECTOR_IDS, SEQUENCE, SEQ_DAYS } from "./services";
+import { handleSignApi, handleSignPublic, createSignRequest } from "./sign";
 import { handleConnect, refreshConnectorTokens } from "./connect_oauth";
 
 export { Env };
@@ -247,6 +248,13 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
       return json({ id: r.meta.last_row_id, status: "queued" }, 201);
     }
 
+    case "/sign/request": {
+      // Fleet-facing e-sign door — same shape as /social/schedule: the local
+      // fleet holds the internal bearer, not an lzk_* key.
+      const b = await readBody<Record<string, unknown>>(req);
+      return createSignRequest(env, ctx, b, "internal:fleet");
+    }
+
     case "/bus/ack": {
       const b = await readBody<{ channel: string; group: string; ids: (string | number)[] }>(req);
       if (!b.ids?.length) return json({ ok: true });
@@ -385,10 +393,23 @@ export default {
         return cors(req, await handleBrevoInbound(req, env, ctx, path));
       if (path.startsWith("/api/v1/connect/"))
         return cors(req, await handleConnect(req, env, path, url));
+      // Public media serve — social platforms fetch these URLs server-side.
+      // UUID-shaped only so the public gate can't shadow internal routes.
+      if (/^\/media\/[0-9a-f-]{36}$/.test(path))
+        return cors(req, await handleMediaServe(req, env, path));
+      // Public e-sign surface — token-gated signing page + completion cert.
+      // UUID-shaped only: a bare /sign/ prefix would shadow internal routes
+      // like /sign/request before the bearer gate.
+      if (/^\/sign\/[0-9a-f-]{36}/.test(path))
+        return cors(req, await handleSignPublic(req, env, ctx, path, url));
+      // Native e-sign API — trailing slash keeps it disjoint from /signwell.
+      if (path.startsWith("/api/v1/sign/"))
+        return cors(req, await handleSignApi(req, env, ctx, path));
       if (path.startsWith("/api/v1/crm") || path.startsWith("/api/v1/support") ||
           path.startsWith("/api/v1/booking") || path.startsWith("/api/v1/store") ||
           path.startsWith("/api/v1/marketing") || path.startsWith("/api/v1/signwell") ||
-          path.startsWith("/api/v1/social") || path.startsWith("/api/v1/connectors"))
+          path.startsWith("/api/v1/social") || path.startsWith("/api/v1/connectors") ||
+          path.startsWith("/api/v1/media"))
         return cors(req, await handleServices(req, env, ctx, path));
       if (path.startsWith("/api/")) return cors(req, await handlePublicApi(req, env, ctx, path));
 
@@ -479,7 +500,7 @@ async function runDailyMaintenance(env: Env) {
     try {
       const raw = await env.EPHEMERAL.get(k.name);
       if (!raw) continue;
-      let rec: { url?: string; email?: string; last_score?: number | null; scans?: number; alerts?: number };
+      let rec: { url?: string; email?: string; viewport?: string; last_score?: number | null; scans?: number; alerts?: number };
       try {
         rec = JSON.parse(raw);
       } catch {
@@ -498,7 +519,7 @@ async function runDailyMaintenance(env: Env) {
       const scan = await env.A11Y.fetch("https://a11y.internal/scan", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ url: rec.url, license: rec.email }),
+        body: JSON.stringify({ url: rec.url, license: rec.email, viewport: rec.viewport ?? "desktop" }),
       }).catch(() => null);
       if (!scan?.ok) {
         sweep.errors.push(`${k.name}: scan ${scan?.status ?? "fetch-failed"}`);

@@ -90,17 +90,30 @@ export async function handlePdf(req: Request, env: Env): Promise<Response> {
 // HTML plus computed text styles so the scanner can check REAL contrast
 // (post-CSS) instead of guessing from markup.
 export async function handleRender(req: Request, env: Env): Promise<Response> {
-  const { url } = (await req.json()) as { url?: string };
+  const { url, viewport } = (await req.json()) as { url?: string; viewport?: string };
   if (!url || !/^https?:\/\//i.test(url)) return json({ error: "valid url required" }, 400);
   if (!env.BROWSER) return json({ error: "browser binding not configured" }, 503);
+  // Rendered scans emulate a mobile handset by default — the a11y failures
+  // most users actually hit live in the mobile layout (hamburger menus, tap
+  // targets, reflow). "desktop" preserves the pre-mobile baseline render
+  // (default 800×600 viewport, desktop UA) so pinned monitors keep comparing
+  // like-for-like.
+  const mobile = viewport !== "desktop";
 
   let browser;
   try {
     browser = await launchBrowser(env.BROWSER);
     const page = await browser.newPage();
-    await page.setUserAgent(
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-    );
+    if (mobile) {
+      await page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true, deviceScaleFactor: 3 });
+      await page.setUserAgent(
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+      );
+    } else {
+      await page.setUserAgent(
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+      );
+    }
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
     const data = await page.evaluate(() => {
       const doc = (globalThis as any).document;
@@ -585,6 +598,7 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
 
     return json({
       url,
+      viewport: mobile ? "mobile" : "desktop",
       title: data.title,
       html: data.html,
       styles: data.styles,

@@ -3,8 +3,18 @@
  * CRM (HubSpot/Salesforce), support tickets (Intercom/Zendesk),
  * scheduling (Calendly), and a storefront (Shopify; checkout via Dodo).
  */
-import { Env, json, authorize, touchKey } from "./gateway";
+import { Env, json, authorize, touchKey, listAll } from "./gateway";
 import { publishToBus } from "./webhooks";
+
+// Media library — KV-backed asset store, the Postiz piece the native
+// scheduler lacked. Bytes live at media:{id} (KV values up to 25MiB; capped
+// at 5MB here), metadata at media:{id}:meta. The public /media/:id route in
+// index.ts serves them so external platforms can fetch image_url payloads
+// server-side when publishing (Instagram/Pinterest require one).
+const MEDIA_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif"]);
+const MEDIA_MAX_BYTES = 5 * 1024 * 1024;
+const MEDIA_MAX_B64 = Math.ceil((MEDIA_MAX_BYTES * 4) / 3) + 64;
+const MEDIA_BASE = "https://ai-company.lazynext.com";
 
 async function list(env: Env, table: string, extra = ""): Promise<Response> {
   const { results } = await env.DB.prepare(
@@ -294,6 +304,50 @@ export async function handleServices(
     return r.meta.changes
       ? json({ cancelled: true, id: Number(postDel[1]) })
       : json({ error: "post not queued or already dispatched" }, 404);
+  }
+
+  // --- Media library --------------------------------------------------------
+  // Upload needs 'write' (it only stores bytes — publishing still requires
+  // the admin scope on /social/posts); list reads; delete writes.
+  if (path === "/api/v1/media" && req.method === "POST") {
+    const type = String(b.type ?? "").toLowerCase();
+    if (!MEDIA_TYPES.has(type)) return json({ error: `unsupported type '${type}' — png, jpeg, webp, gif or avif` }, 400);
+    const dataB64 = String(b.data_b64 ?? "");
+    if (!dataB64) return json({ error: "data_b64 required" }, 400);
+    if (dataB64.length > MEDIA_MAX_B64) return json({ error: "file too large (5MB max)" }, 413);
+    let bytes: Uint8Array;
+    try {
+      bytes = Uint8Array.from(atob(dataB64), (c) => c.charCodeAt(0));
+    } catch {
+      return json({ error: "data_b64 is not valid base64" }, 400);
+    }
+    if (!bytes.length || bytes.length > MEDIA_MAX_BYTES)
+      return json({ error: bytes.length ? "file too large (5MB max)" : "empty file" }, bytes.length ? 413 : 400);
+    const id = crypto.randomUUID();
+    const name = String(b.name ?? "").slice(0, 200) || id;
+    await env.EPHEMERAL.put(`media:${id}`, bytes);
+    await env.EPHEMERAL.put(`media:${id}:meta`, JSON.stringify({ name, type, size: bytes.length, created: Date.now() }));
+    return json({ id, name, type, size: bytes.length, url: `${MEDIA_BASE}/media/${id}` }, 201);
+  }
+  if (path === "/api/v1/media" && req.method === "GET") {
+    const keys = await listAll(env.EPHEMERAL, "media:");
+    const items: Record<string, unknown>[] = [];
+    for (const k of keys) {
+      if (!k.name.endsWith(":meta")) continue;
+      const raw = await env.EPHEMERAL.get(k.name);
+      if (!raw) continue;
+      try {
+        const id = k.name.slice(6, -5);
+        items.push({ id, url: `${MEDIA_BASE}/media/${id}`, ...(JSON.parse(raw) as object) });
+      } catch {}
+    }
+    return json({ media: items.sort((a, z) => Number((z as { created?: number }).created ?? 0) - Number((a as { created?: number }).created ?? 0)) });
+  }
+  const mediaDel = path.match(/^\/api\/v1\/media\/([0-9a-f-]{36})$/);
+  if (mediaDel && req.method === "DELETE") {
+    await env.EPHEMERAL.delete(`media:${mediaDel[1]}`);
+    await env.EPHEMERAL.delete(`media:${mediaDel[1]}:meta`);
+    return json({ deleted: true, id: mediaDel[1] });
   }
 
   // --- SignWell e-sign ------------------------------------------------------
@@ -1698,4 +1752,30 @@ export async function dispatchScheduledPosts(env: Env): Promise<{ posted: number
     }
   }
   return { posted, failed };
+}
+
+// Public media serve — unguessable UUID keys, read-only, cache-immutable.
+// External platforms (Instagram, Pinterest, …) fetch these URLs server-side
+// when publishing an image_url post, so the route sits in front of the
+// bearer gate in index.ts like /oauth and /widget.js.
+export async function handleMediaServe(req: Request, env: Env, path: string): Promise<Response> {
+  const m = path.match(/^\/media\/([0-9a-f-]{36})$/);
+  if (!m || (req.method !== "GET" && req.method !== "HEAD"))
+    return json({ error: "not found" }, 404);
+  const metaRaw = await env.EPHEMERAL.get(`media:${m[1]}:meta`);
+  const bytes = await env.EPHEMERAL.get(`media:${m[1]}`, "arrayBuffer");
+  if (!metaRaw || !bytes || !bytes.byteLength) return json({ error: "not found" }, 404);
+  let meta: { name?: string; type?: string } = {};
+  try {
+    meta = JSON.parse(metaRaw) as { name?: string; type?: string };
+  } catch {}
+  const safeName = String(meta.name ?? "media").replace(/[^\w. -]/g, "_").slice(0, 120);
+  return new Response(bytes, {
+    headers: {
+      "content-type": meta.type ?? "application/octet-stream",
+      "content-length": String(bytes.byteLength),
+      "content-disposition": `inline; filename="${safeName}"`,
+      "cache-control": "public, max-age=31536000, immutable",
+    },
+  });
 }
