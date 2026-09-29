@@ -15,6 +15,9 @@ export interface Env {
   // Optional — deploys without the [[queues]] stanzas fall back to cron-only
   // inline dispatch in dispatchScheduledPosts, so the binding is strictly additive.
   SOCIAL_QUEUE?: Queue<{ post_id: number }>;
+  // Optional — media bytes go to R2 when bound (video-capable, up to 64MB);
+  // unbound deploys keep the KV media:{id} path at its 5MB ceiling.
+  MEDIA?: R2Bucket;
   API_TOKEN?: string;
   BREVO_API_KEY?: string;
   DODO_API_KEY?: string;

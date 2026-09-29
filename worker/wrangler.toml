@@ -21,6 +21,12 @@ id = "15bccb97f4aa4f9c8c1a1b97b54a558f"
 binding = "VECTORS"
 index_name = "company-knowledge"
 
+# R2 media bucket — media bytes live here (video-capable); meta stays in KV
+# for the list route. Legacy KV media:{id} objects still serve via fallback.
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "lazynext-media"
+
 # Workers AI — free-tier Llama model — the agent brain.
 [ai]
 binding = "AI"

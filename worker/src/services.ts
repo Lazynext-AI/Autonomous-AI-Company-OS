@@ -6,14 +6,17 @@
 import { Env, json, authorize, touchKey, listAll } from "./gateway";
 import { publishToBus } from "./webhooks";
 
-// Media library — KV-backed asset store, the Postiz piece the native
-// scheduler lacked. Bytes live at media:{id} (KV values up to 25MiB; capped
-// at 5MB here), metadata at media:{id}:meta. The public /media/:id route in
-// index.ts serves them so external platforms can fetch image_url payloads
-// server-side when publishing (Instagram/Pinterest require one).
-const MEDIA_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif"]);
-const MEDIA_MAX_BYTES = 5 * 1024 * 1024;
-const MEDIA_MAX_B64 = Math.ceil((MEDIA_MAX_BYTES * 4) / 3) + 64;
+// Media library — the Postiz piece the native scheduler lacked. Bytes live
+// in R2 (media/{id}) when the MEDIA binding is bound — video-capable up to
+// 64MB — else KV at media:{id} (25MiB value max; capped 5MB). Metadata stays
+// at media:{id}:meta either way so the list route is store-agnostic. The
+// public /media/:id route in index.ts serves them so external platforms can
+// fetch media payloads server-side when publishing (Instagram/Pinterest
+// require an image_url; TikTok/YouTube require video — KV was too small).
+const MEDIA_TYPES_IMG = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif"]);
+const MEDIA_TYPES_VIDEO = new Set(["video/mp4", "video/quicktime", "video/webm"]);
+const MEDIA_MAX_KV = 5 * 1024 * 1024;
+const MEDIA_MAX_R2 = 64 * 1024 * 1024; // b64 request body still fits the 100MB worker limit
 const MEDIA_BASE = "https://ai-company.lazynext.com";
 
 async function list(env: Env, table: string, extra = ""): Promise<Response> {
@@ -314,22 +317,32 @@ export async function handleServices(
   // the admin scope on /social/posts); list reads; delete writes.
   if (path === "/api/v1/media" && req.method === "POST") {
     const type = String(b.type ?? "").toLowerCase();
-    if (!MEDIA_TYPES.has(type)) return json({ error: `unsupported type '${type}' — png, jpeg, webp, gif or avif` }, 400);
+    const isVideo = MEDIA_TYPES_VIDEO.has(type);
+    if (!MEDIA_TYPES_IMG.has(type) && !isVideo)
+      return json({ error: `unsupported type '${type}' — png, jpeg, webp, gif, avif${env.MEDIA ? ", mp4, mov or webm" : ""}` }, 400);
+    if (isVideo && !env.MEDIA)
+      return json({ error: "video uploads need R2 media storage — not bound on this deploy" }, 400);
     const dataB64 = String(b.data_b64 ?? "");
     if (!dataB64) return json({ error: "data_b64 required" }, 400);
-    if (dataB64.length > MEDIA_MAX_B64) return json({ error: "file too large (5MB max)" }, 413);
+    const maxBytes = env.MEDIA ? MEDIA_MAX_R2 : MEDIA_MAX_KV;
+    if (dataB64.length > Math.ceil((maxBytes * 4) / 3) + 64)
+      return json({ error: `file too large (${Math.round(maxBytes / 1048576)}MB max)` }, 413);
     let bytes: Uint8Array;
     try {
       bytes = Uint8Array.from(atob(dataB64), (c) => c.charCodeAt(0));
     } catch {
       return json({ error: "data_b64 is not valid base64" }, 400);
     }
-    if (!bytes.length || bytes.length > MEDIA_MAX_BYTES)
-      return json({ error: bytes.length ? "file too large (5MB max)" : "empty file" }, bytes.length ? 413 : 400);
+    if (!bytes.length || bytes.length > maxBytes)
+      return json({ error: bytes.length ? `file too large (${Math.round(maxBytes / 1048576)}MB max)` : "empty file" }, bytes.length ? 413 : 400);
     const id = crypto.randomUUID();
     const name = String(b.name ?? "").slice(0, 200) || id;
-    await env.EPHEMERAL.put(`media:${id}`, bytes);
-    await env.EPHEMERAL.put(`media:${id}:meta`, JSON.stringify({ name, type, size: bytes.length, created: Date.now() }));
+    if (env.MEDIA) {
+      await env.MEDIA.put(`media/${id}`, bytes, { httpMetadata: { contentType: type } });
+    } else {
+      await env.EPHEMERAL.put(`media:${id}`, bytes);
+    }
+    await env.EPHEMERAL.put(`media:${id}:meta`, JSON.stringify({ name, type, size: bytes.length, created: Date.now(), store: env.MEDIA ? "r2" : "kv" }));
     return json({ id, name, type, size: bytes.length, url: `${MEDIA_BASE}/media/${id}` }, 201);
   }
   if (path === "/api/v1/media" && req.method === "GET") {
@@ -348,6 +361,7 @@ export async function handleServices(
   }
   const mediaDel = path.match(/^\/api\/v1\/media\/([0-9a-f-]{36})$/);
   if (mediaDel && req.method === "DELETE") {
+    await env.MEDIA?.delete(`media/${mediaDel[1]}`);
     await env.EPHEMERAL.delete(`media:${mediaDel[1]}`);
     await env.EPHEMERAL.delete(`media:${mediaDel[1]}:meta`);
     return json({ deleted: true, id: mediaDel[1] });
@@ -1834,7 +1848,11 @@ export async function handleMediaServe(req: Request, env: Env, path: string): Pr
   if (!m || (req.method !== "GET" && req.method !== "HEAD"))
     return json({ error: "not found" }, 404);
   const metaRaw = await env.EPHEMERAL.get(`media:${m[1]}:meta`);
-  const bytes = await env.EPHEMERAL.get(`media:${m[1]}`, "arrayBuffer");
+  let bytes: ArrayBuffer | null = null;
+  const obj = await env.MEDIA?.get(`media/${m[1]}`);
+  if (obj) bytes = await obj.arrayBuffer();
+  if (!bytes || !bytes.byteLength)
+    bytes = await env.EPHEMERAL.get(`media:${m[1]}`, "arrayBuffer");
   if (!metaRaw || !bytes || !bytes.byteLength) return json({ error: "not found" }, 404);
   let meta: { name?: string; type?: string } = {};
   try {
