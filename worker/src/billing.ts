@@ -353,8 +353,9 @@ export async function handleBilling(
   if (req.method === "POST" && path === "/api/v1/billing/products") {
     const auth = req.headers.get("authorization") ?? "";
     if (auth !== `Bearer ${env.API_TOKEN}`) return json({ error: "unauthorized" }, 401);
-    const b = (await req.json()) as { name?: string; description?: string; price_cents?: number; currency?: string; recurring?: boolean; trial_days?: number };
+    const b = (await req.json()) as { name?: string; description?: string; price_cents?: number; currency?: string; recurring?: boolean; trial_days?: number; period?: string };
     if (!b.name || !b.price_cents) return json({ error: "name and price_cents required" }, 400);
+    const period = b.period === "Year" ? "Year" : "Month";
     const r = await dodoFetch(env, "/products", {
       name: b.name,
       description: b.description ?? "",
@@ -367,8 +368,8 @@ export async function handleBilling(
         purchasing_power_parity: false,
         tax_inclusive: false,
         ...(b.recurring === false ? {} : {
-          payment_frequency_count: 1, payment_frequency_interval: "Month",
-          subscription_period_count: 1, subscription_period_interval: "Month",
+          payment_frequency_count: 1, payment_frequency_interval: period,
+          subscription_period_count: 1, subscription_period_interval: period,
           ...(b.trial_days ? { trial_period_days: b.trial_days } : {}),
         }),
       },
@@ -376,6 +377,25 @@ export async function handleBilling(
     const d = (await r.json()) as { product_id?: string; id?: string };
     if (!r.ok) return json({ error: "product create failed", detail: d }, 502);
     return json({ product_id: d.product_id ?? d.id });
+  }
+
+  // Product introspection + maintenance — internal token only. GET lists the
+  // Dodo catalog (used to verify periods after creation); PATCH updates or
+  // archives a product ({archived:true} retires a wrongly-created one).
+  if (req.method === "GET" && path === "/api/v1/billing/products") {
+    const auth = req.headers.get("authorization") ?? "";
+    if (auth !== `Bearer ${env.API_TOKEN}`) return json({ error: "unauthorized" }, 401);
+    const r = await dodoFetch(env, "/products?page_size=100", undefined, "GET");
+    return json(await r.json(), r.status);
+  }
+  const prodMatch = path.match(/^\/api\/v1\/billing\/products\/(pdt_[\w]+)$/);
+  if (prodMatch && (req.method === "GET" || req.method === "PATCH")) {
+    const auth = req.headers.get("authorization") ?? "";
+    if (auth !== `Bearer ${env.API_TOKEN}`) return json({ error: "unauthorized" }, 401);
+    const body = req.method === "PATCH" ? await req.json() : undefined;
+    const r = await dodoFetch(env, `/products/${prodMatch[1]}`, body, req.method);
+    const text = await r.text(); // Dodo PATCH answers 200/204 with an empty body
+    return json(text ? JSON.parse(text) : { ok: true }, r.status);
   }
 
   // Checkout — internal token only (dashboard calls this server-side).
