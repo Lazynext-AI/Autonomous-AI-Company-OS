@@ -176,13 +176,17 @@ export default function SignaturesPage() {
         <div className="mt-5 max-w-3xl">
           <div className="text-xs font-semibold text-muted mb-2">Recent signing events</div>
           <div className="space-y-1.5">
-            {events.slice(0, 10).map((e, i) => (
-              <div key={i} className="text-xs text-muted flex items-center gap-2">
-                <span className="text-ok">{(e.eventType ?? e.event ?? e.type ?? "event") as string}</span>
-                <span className="truncate">{(e.pdf_id ?? e.documentId ?? e.document_id ?? "") as string}</span>
-                <span className="ml-auto shrink-0">{timeAgo(e.received_at as string)}</span>
-              </div>
-            ))}
+            {events.slice(0, 10).map((e, i) => {
+              const ev = (typeof e.event === "object" && e.event ? e.event : e) as Record<string, unknown>;
+              const obj = (((e.data ?? {}) as Record<string, unknown>).object ?? {}) as Record<string, unknown>;
+              return (
+                <div key={i} className="text-xs text-muted flex items-center gap-2">
+                  <span className="text-ok">{String(ev.type ?? e.eventType ?? "event")}</span>
+                  <span className="truncate">{String(obj.name ?? obj.id ?? e.pdf_id ?? "")}</span>
+                  <span className="ml-auto shrink-0">{timeAgo(e.received_at as string)}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
