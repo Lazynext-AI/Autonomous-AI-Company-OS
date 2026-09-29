@@ -921,7 +921,7 @@ export const CONNECTOR_IDS = [
   "teams", "mattermost", "zulip", "viber", "line",
   "devto", "hashnode", "medium", "wordpress", "github", "gitlab",
   "tumblr", "ghost", "beehiiv", "lemmy", "listmonk", "nostr",
-  "webhook", "ayrshare", "postiz", "buffer",
+  "webhook", "ayrshare", "postiz", "buffer", "letmepost",
   "twilio", "whatsapp",
   "brevo", "signwell",
 ];
@@ -1581,6 +1581,27 @@ async function callConnector(
               mode: b.share_now === true ? "shareNow" : "addToQueue",
             },
           },
+        }),
+      });
+    }
+    case "letmepost": {
+      if (!text) return { ok: false, status: 400, error: "text required" };
+      // cred: "<api_key>|<account_ids_csv>[|<base_url>]" — letmepost.dev API
+      // key; account ids from GET /v1/accounts. Base defaults to the hosted
+      // API; self-hosted image takes '<domain>'. The key value: their
+      // reviewed app-of-record posts to X/Bluesky/Pinterest today and
+      // Meta/LinkedIn/TikTok as their platform reviews clear — no per-
+      // platform developer approval needed on our side.
+      const [key, accts = "", baseRaw = ""] = cred.split("|");
+      if (!accts)
+        return { ok: false, status: 500, error: "conn:letmepost must be '<api_key>|<account_ids>[|<base_url>]'" };
+      const base = (baseRaw || "https://api.letmepost.dev").replace(/\/+$/, "");
+      return connPost(`${base}/v1/posts`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          text,
+          account_ids: accts.split(",").map((s) => s.trim()).filter(Boolean),
         }),
       });
     }

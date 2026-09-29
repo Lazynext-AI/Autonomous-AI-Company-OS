@@ -55,13 +55,13 @@ test("CONNECTOR_IDS gains the new channels (44 total)", () => {
   const m = svc.match(/const CONNECTOR_IDS = \[([\s\S]*?)\];/);
   assert.ok(m, "CONNECTOR_IDS not found");
   const ids = [...m[1].matchAll(/"([a-z]+)"/g)].map((x) => x[1]);
-  for (const id of ["youtube", "tiktok", "gmb", "lemmy", "listmonk", "snapchat", "nostr"])
+  for (const id of ["youtube", "tiktok", "gmb", "lemmy", "listmonk", "snapchat", "nostr", "letmepost"])
     assert.ok(ids.includes(id), `missing connector id '${id}'`);
-  assert.equal(ids.length, 44, `expected 44 connectors, got ${ids.length}`);
+  assert.equal(ids.length, 45, `expected 45 connectors, got ${ids.length}`);
 });
 
 test("worker + python dispatch stay in sync for new connectors", () => {
-  for (const id of ["youtube", "tiktok", "gmb", "lemmy", "listmonk", "snapchat", "nostr"]) {
+  for (const id of ["youtube", "tiktok", "gmb", "lemmy", "listmonk", "snapchat", "nostr", "letmepost"]) {
     assert.match(svc, new RegExp(`case "${id}"`), `services.ts missing case '${id}'`);
     assert.match(py, new RegExp(`"${id}": _${id}`), `connectors.py missing _${id}`);
   }

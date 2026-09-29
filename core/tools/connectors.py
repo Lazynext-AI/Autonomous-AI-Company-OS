@@ -743,6 +743,32 @@ async def _buffer(payload: dict, cred: str) -> dict:
     )
 
 
+async def _letmepost(payload: dict, cred: str) -> dict:
+    if isinstance(payload, str):
+        payload = {"text": payload}
+    # cred: "<api_key>|<account_ids_csv>[|<base_url>]" — letmepost.dev API
+    # key; account ids from GET /v1/accounts. Base defaults to the hosted
+    # API; self-hosted image takes '<domain>'. Their reviewed app-of-record
+    # posts to X/Bluesky/Pinterest today and Meta/LinkedIn/TikTok as their
+    # platform reviews clear — no per-platform approval needed on our side.
+    key, _, rest = cred.partition("|")
+    accts, _, base = rest.partition("|")
+    if not accts:
+        return {"ok": False, "error": "conn:letmepost must be '<api_key>|<account_ids>[|<base_url>]"}
+    base = (base or "https://api.letmepost.dev").rstrip("/")
+    text = payload.get("text") or ""
+    if not text:
+        return {"ok": False, "error": "text required"}
+    return await _post(
+        f"{base}/v1/posts",
+        headers={"authorization": f"Bearer {key}"},
+        json_body={
+            "text": text,
+            "account_ids": [a.strip() for a in accts.split(",") if a.strip()],
+        },
+    )
+
+
 # --- Sales CRM ------------------------------------------------------------
 
 # --- Commerce -------------------------------------------------------------
@@ -972,7 +998,7 @@ _DISPATCH = {
     "tumblr": _tumblr, "ghost": _ghost, "beehiiv": _beehiiv,
     "lemmy": _lemmy, "listmonk": _listmonk, "nostr": _nostr,
     "webhook": _webhook, "ayrshare": _ayrshare, "postiz": _postiz,
-    "buffer": _buffer,
+    "buffer": _buffer, "letmepost": _letmepost,
     "twilio": _twilio, "whatsapp": _whatsapp,
     "brevo": _brevo,
     "signwell": _signwell,
