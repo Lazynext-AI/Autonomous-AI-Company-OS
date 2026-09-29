@@ -54,6 +54,22 @@ class_name = "CodeExecContainer"
 tag = "v1"
 new_sqlite_classes = ["CodeExecContainer"]
 
+# Social-post dispatch — D1 social_posts is the source of truth; the queue is
+# the delivery layer (second-precision delaySeconds vs ±10min cron latency,
+# per-message redelivery, DLQ for exhausted infra retries). The cron sweep in
+# dispatchScheduledPosts stays as the cold-path enqueuer (run_at > 12h can't
+# delaySeconds) and the safety net for lost sends.
+[[queues.producers]]
+binding = "SOCIAL_QUEUE"
+queue = "social-posts"
+
+[[queues.consumers]]
+queue = "social-posts"
+max_batch_size = 10
+max_batch_timeout = 30
+max_retries = 8
+dead_letter_queue = "social-posts-dlq"
+
 # Continuous agent loop — cron fires agentTick every 10 minutes.
 [triggers]
 crons = ["*/10 * * * *"]

@@ -18,7 +18,7 @@ import { getContainer } from "@cloudflare/containers";
 export { CodeExecContainer } from "./exec_container";
 import { handleWidget } from "./widget";
 import { fanOut, handleWebhooks, publishToBus } from "./webhooks";
-import { handleServices, handleSignwellWebhook, handleBrevoWebhook, handleBrevoInbound, brevoSend, marketingFooter, unsubHeaders, unsubscribeEmail, enrollLead, dispatchScheduledPosts, handleMediaServe, CONNECTOR_IDS, SEQUENCE, SEQ_DAYS } from "./services";
+import { handleServices, handleSignwellWebhook, handleBrevoWebhook, handleBrevoInbound, brevoSend, marketingFooter, unsubHeaders, unsubscribeEmail, enrollLead, dispatchScheduledPosts, dispatchSocialPost, queueSocialPost, handleMediaServe, CONNECTOR_IDS, SEQUENCE, SEQ_DAYS } from "./services";
 import { handleSignApi, handleSignPublic, createSignRequest } from "./sign";
 import { handleConnect, refreshConnectorTokens } from "./connect_oauth";
 
@@ -245,6 +245,8 @@ async function route(req: Request, env: Env, ctx: ExecutionContext, path: string
       const r = await env.DB.prepare(
         "INSERT INTO social_posts (connector, payload, run_at, status, attempts, created_at) VALUES (?, ?, ?, 'queued', 0, ?)",
       ).bind(id, JSON.stringify(payload), runAt, Date.now()).run();
+      // Same queue hot path as the public route — cron sweep is the fallback.
+      ctx.waitUntil(queueSocialPost(env, Number(r.meta.last_row_id), runAt));
       return json({ id: r.meta.last_row_id, status: "queued" }, 201);
     }
 
@@ -435,6 +437,30 @@ export default {
     ctx.waitUntil(runDailyMaintenance(env).then(() => undefined).catch(() => {}));
     ctx.waitUntil(refreshConnectorTokens(env).then(() => undefined).catch(() => {}));
     ctx.waitUntil(dispatchScheduledPosts(env).then(() => undefined).catch(() => {}));
+  },
+
+  // Cloudflare Queues consumer — hot-path delivery for social-post dispatch.
+  // Each message carries only the D1 row id; dispatchSocialPost's atomic claim
+  // makes at-least-once delivery + duplicate cron enqueues safe. Terminal and
+  // requeued outcomes both ack — connector retries re-enter through D1 run_at
+  // (the sweep re-enqueues), keeping backoff/cadence in one place. Only a
+  // pre-claim infra failure (e.g. D1 blip) retries at queue level; if that
+  // exhausts max_retries the message drops to social-posts-dlq while the row
+  // stays 'queued' and the next sweep re-enqueues it anyway.
+  async queue(batch: MessageBatch<{ post_id: number }>, env: Env) {
+    for (const msg of batch.messages) {
+      const id = Number(msg.body?.post_id);
+      if (!Number.isFinite(id)) {
+        msg.ack();
+        continue;
+      }
+      try {
+        await dispatchSocialPost(env, id);
+        msg.ack();
+      } catch {
+        msg.retry({ delaySeconds: 30 });
+      }
+    }
   },
 };
 

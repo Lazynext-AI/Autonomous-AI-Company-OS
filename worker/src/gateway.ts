@@ -12,6 +12,9 @@ export interface Env {
   BROWSER?: Fetcher;
   A11Y?: Fetcher;
   CODE_EXEC?: DurableObjectNamespace<import("./exec_container").CodeExecContainer>;
+  // Optional — deploys without the [[queues]] stanzas fall back to cron-only
+  // inline dispatch in dispatchScheduledPosts, so the binding is strictly additive.
+  SOCIAL_QUEUE?: Queue<{ post_id: number }>;
   API_TOKEN?: string;
   BREVO_API_KEY?: string;
   DODO_API_KEY?: string;

@@ -286,6 +286,9 @@ export async function handleServices(
     const r = await env.DB.prepare(
       "INSERT INTO social_posts (connector, payload, run_at, status, attempts, created_at) VALUES (?, ?, ?, 'queued', 0, ?)",
     ).bind(id, JSON.stringify(payload), runAt, Date.now()).run();
+    // Queue hot path — second-precision delivery for run_at ≤ 12h; the cron
+    // sweep enqueues anything this misses (far-future or failed send).
+    ctx.waitUntil(queueSocialPost(env, Number(r.meta.last_row_id), runAt));
     return json({ id: r.meta.last_row_id, connector: id, run_at: runAt, status: "queued" }, 201);
   }
   if (path === "/api/v1/social/posts" && req.method === "GET") {
@@ -1689,10 +1692,94 @@ async function callConnector(
 }
 
 // --- Scheduled-post dispatch ------------------------------------------------
-// Cron-driven publisher for /api/v1/social/posts. Claim-then-send: the UPDATE
-// … WHERE status='queued' claim is atomic in D1, so a double-firing cron can
-// never double-post (the second claimant's `changes` is 0).
-const SOCIAL_MAX_ATTEMPTS = 6; // ~1h of retries at the */10 cron cadence
+// Queue-backed publisher for /api/v1/social/posts. D1 `social_posts` is the
+// source of truth; Cloudflare Queue `social-posts` is the delivery layer:
+//   - each insert sends {post_id} with delaySeconds (second-precision vs the
+//     old ±10min cron latency) when run_at is inside Queues' 12h window
+//   - the queue consumer claims + dispatches each message (index.ts `queue()`)
+//   - the cron sweep enqueues any due 'queued' row — the cold path for
+//     run_at > 12h and the safety net for a lost producer send
+//   - transient failures requeue via run_at backoff; the sweep re-enqueues
+// Claim-then-send: the UPDATE … WHERE status='queued' claim is atomic in D1,
+// so at-least-once queue delivery + duplicate cron enqueues can never
+// double-post (the second claimant's `changes` is 0).
+const SOCIAL_MAX_ATTEMPTS = 6;
+// 'posting' rows carry their claim deadline in run_at — a consumer invocation
+// is wall-clock-capped by the runtime (~15min), so a row past a 20min deadline
+// is by definition an orphan (its consumer is dead), never a live dispatch.
+const SOCIAL_STUCK_MS = 20 * 60_000;
+const QUEUE_DELAY_MAX = 43_200; // Queues delaySeconds cap (12h)
+
+export type SocialPostOutcome = "posted" | "failed" | "requeued" | "skipped";
+
+// One message = one row. 'skipped' covers cancelled rows and duplicate
+// deliveries that arrive after the row already left 'queued'.
+export async function dispatchSocialPost(env: Env, postId: number): Promise<SocialPostOutcome> {
+  const claim = await env.DB.prepare(
+    "UPDATE social_posts SET status = 'posting', attempts = attempts + 1, run_at = ? WHERE id = ? AND status = 'queued'",
+  ).bind(Date.now() + SOCIAL_STUCK_MS, postId).run();
+  if (!claim.meta.changes) return "skipped";
+  const row = await env.DB.prepare(
+    "SELECT connector, payload, attempts FROM social_posts WHERE id = ?",
+  ).bind(postId).first<{ connector: string; payload: string; attempts: number }>();
+  if (!row) return "skipped";
+
+  // attempts is post-claim — the same count the old pre-claim `attempts+1`
+  // comparisons used. Requeue keeps 'queued'+future run_at so the cron sweep
+  // re-enqueues it; linear backoff gives a downed platform breathing room
+  // (5/10/15/20/25min) instead of the old flat next-tick hammer.
+  const failOrRequeue = async (errText: string): Promise<SocialPostOutcome> => {
+    if (row.attempts >= SOCIAL_MAX_ATTEMPTS) {
+      await env.DB.prepare(
+        "UPDATE social_posts SET status = 'failed', last_error = ? WHERE id = ?",
+      ).bind(errText, postId).run();
+      return "failed";
+    }
+    await env.DB.prepare(
+      "UPDATE social_posts SET status = 'queued', run_at = ?, last_error = ? WHERE id = ?",
+    ).bind(Date.now() + row.attempts * 300_000, errText, postId).run();
+    return "requeued";
+  };
+
+  try {
+    // callConnector's brevo case ignores `cred` (brevoSend re-resolves
+    // conn:brevo→BREVO_API_KEY itself) — gate on brevoCred presence instead.
+    const cred = row.connector === "brevo"
+      ? ((await brevoCred(env)) ? "brevo" : null)
+      : await connCred(env, row.connector);
+    if (!cred) {
+      // Not connected isn't a dispatch error — park the row visibly instead
+      // of burning retries on a credential nobody can mint from here.
+      await env.DB.prepare(
+        "UPDATE social_posts SET status = 'failed', last_error = ? WHERE id = ?",
+      ).bind(`'${row.connector}' not connected — set it in Settings → Connector library`, postId).run();
+      return "failed";
+    }
+    const out = await callConnector(env, row.connector, cred, JSON.parse(row.payload) as Record<string, unknown>);
+    if (out.ok) {
+      await env.DB.prepare(
+        "UPDATE social_posts SET status = 'posted', last_error = NULL, posted_at = ? WHERE id = ?",
+      ).bind(Date.now(), postId).run();
+      return "posted";
+    }
+    return await failOrRequeue(String(out.error ?? out.status ?? "dispatch failed"));
+  } catch (e) {
+    return await failOrRequeue(e instanceof Error ? e.message : String(e));
+  }
+}
+
+// Producer hot path — inserts send their own queue message when run_at is
+// inside the 12h delaySeconds window. Beyond that (or on a send failure) the
+// cron sweep enqueues at due time, so a missed send is latency, not loss.
+export async function queueSocialPost(env: Env, postId: number, runAt: number): Promise<void> {
+  if (!env.SOCIAL_QUEUE) return;
+  const delay = Math.floor((runAt - Date.now()) / 1000);
+  if (delay > QUEUE_DELAY_MAX) return;
+  await env.SOCIAL_QUEUE.send(
+    { post_id: postId },
+    { delaySeconds: Math.max(0, delay) },
+  ).catch(() => undefined);
+}
 
 export async function dispatchScheduledPosts(env: Env): Promise<{ posted: number; failed: number }> {
   // Self-heal the table — a fresh D1 or a dropped schema gets one cheap DDL
@@ -1710,46 +1797,30 @@ export async function dispatchScheduledPosts(env: Env): Promise<{ posted: number
        posted_at INTEGER
      )`,
   ).run();
+  const now = Date.now();
+  // Rescue claims orphaned by a dead consumer — 'posting' + claim deadline
+  // (run_at) in the past means nobody owns the row. Rescue runs BEFORE the
+  // due-select so a rescued row is enqueued in the same tick.
+  await env.DB.prepare(
+    "UPDATE social_posts SET status = 'queued', run_at = ? WHERE status = 'posting' AND run_at <= ?",
+  ).bind(now, now).run();
   const { results: due } = await env.DB.prepare(
-    "SELECT id, connector, payload, attempts FROM social_posts WHERE status = 'queued' AND run_at <= ? ORDER BY run_at LIMIT 20",
-  ).bind(Date.now()).all<{ id: number; connector: string; payload: string; attempts: number }>();
+    "SELECT id FROM social_posts WHERE status = 'queued' AND run_at <= ? ORDER BY run_at LIMIT 20",
+  ).bind(now).all<{ id: number }>();
 
   let posted = 0, failed = 0;
   for (const row of due ?? []) {
-    const claim = await env.DB.prepare(
-      "UPDATE social_posts SET status = 'posting', attempts = attempts + 1 WHERE id = ? AND status = 'queued'",
-    ).bind(row.id).run();
-    if (!claim.meta.changes) continue; // another tick claimed it
-    try {
-      // callConnector's brevo case ignores `cred` (brevoSend re-resolves
-      // conn:brevo→BREVO_API_KEY itself) — gate on brevoCred presence instead.
-      const cred = row.connector === "brevo"
-        ? ((await brevoCred(env)) ? "brevo" : null)
-        : await connCred(env, row.connector);
-      if (!cred) {
-        // Not connected isn't a dispatch error — park the row visibly instead
-        // of burning retries on a credential nobody can mint from here.
-        await env.DB.prepare(
-          "UPDATE social_posts SET status = 'failed', last_error = ? WHERE id = ?",
-        ).bind(`'${row.connector}' not connected — set it in Settings → Connector library`, row.id).run();
-        failed++;
-        continue;
-      }
-      const out = await callConnector(env, row.connector, cred, JSON.parse(row.payload) as Record<string, unknown>);
-      await env.DB.prepare(
-        "UPDATE social_posts SET status = ?, last_error = ?, posted_at = ? WHERE id = ?",
-      ).bind(out.ok ? "posted" : "failed", out.ok ? null : String(out.error ?? out.status ?? "dispatch failed"),
-        out.ok ? Date.now() : null, row.id).run();
-      out.ok ? posted++ : failed++;
-      if (!out.ok && row.attempts + 1 < SOCIAL_MAX_ATTEMPTS)
-        await env.DB.prepare("UPDATE social_posts SET status = 'queued' WHERE id = ?").bind(row.id).run();
-    } catch (e) {
-      failed++;
-      await env.DB.prepare(
-        "UPDATE social_posts SET status = ?, last_error = ? WHERE id = ?",
-      ).bind(row.attempts + 1 < SOCIAL_MAX_ATTEMPTS ? "queued" : "failed",
-        e instanceof Error ? e.message : String(e), row.id).run();
+    if (env.SOCIAL_QUEUE) {
+      // Queue path — the consumer claims + dispatches. Every due 'queued' row
+      // gets one message per tick until claimed; the atomic claim dedupes.
+      await env.SOCIAL_QUEUE.send({ post_id: row.id }).catch(() => undefined);
+      continue;
     }
+    // No queue bound (pre-migration deploys) — dispatch inline, same cadence
+    // as the pre-Queues implementation.
+    const outcome = await dispatchSocialPost(env, row.id);
+    if (outcome === "posted") posted++;
+    else if (outcome === "failed") failed++;
   }
   return { posted, failed };
 }
