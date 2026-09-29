@@ -1,32 +1,58 @@
-#!/bin/sh
+#!/bin/bash
 set -e
-mkdir -p /data/redis /run/supervisord
+mkdir -p /data/pg /data/redis /run/supervisord /var/lib/postgresql
+chown -R postgres:postgres /data/pg
 
-# Temporal on localhost — Postiz connects over 127.0.0.1:7233 inside the
-# container, so no external TCP plumbing is needed. The auto-setup
-# entrypoint runs schema migrations then execs temporal-server with the
-# docker env template; visibility lives on the same external Postgres
-# server, separate database (TEMPORAL_DBNAME), ENABLE_ES=false.
-cat > /opt/postiz-run.sh <<'P'
-#!/bin/sh
-# Wait for temporal gRPC before Postiz workers connect.
-for i in $(seq 1 60); do
+export PGPASS="${POSTGRES_LOCAL_PASSWORD:-postiz-local-pw}"
+PGBIN=$(ls -d /usr/lib/postgresql/*/bin 2>/dev/null | head -1)
+export PGBIN
+export PATH="$PGBIN:$PATH"
+
+# --- Postgres bootstrap: restore the R2 snapshot if PGDATA is empty ---
+if [ ! -s /data/pg/PG_VERSION ]; then
+  /opt/r2-restore.sh || true
+fi
+if [ ! -s /data/pg/PG_VERSION ]; then
+  su postgres -c "initdb -D /data/pg -U postgres -A trust" >/dev/null
+  su postgres -c "pg_ctl -D /data/pg -o '-c listen_addresses=127.0.0.1' -w start"
+  psql -h 127.0.0.1 -U postgres -c "ALTER USER postgres PASSWORD '$PGPASS'"
+  for db in postiz temporal temporal_visibility; do
+    psql -h 127.0.0.1 -U postgres -c "CREATE DATABASE $db" || true
+  done
+else
+  su postgres -c "pg_ctl -D /data/pg -o '-c listen_addresses=127.0.0.1' -w start"
+fi
+
+# --- Postiz env ---
+export DATABASE_URL="postgresql://postgres:$PGPASS@127.0.0.1:5432/postiz"
+export REDIS_URL="redis://127.0.0.1:6379"
+export TEMPORAL_ADDRESS="127.0.0.1:7233"
+export TEMPORAL_NAMESPACE="${TEMPORAL_NAMESPACE:-default}"
+
+# --- Temporal env (auto-setup entrypoint consumes these) ---
+export DB=postgres12
+export POSTGRES_SEEDS=127.0.0.1
+export DB_PORT=5432
+export DBNAME=temporal
+export VISIBILITY_DBNAME=temporal_visibility
+export SQL_VIS_DBNAME=temporal_visibility
+export SQL_VIS_PLUGIN=postgres12
+export ENABLE_ES=false
+export POSTGRES_USER=postgres
+export POSTGRES_PWD="$PGPASS"
+export BIND_ON_IP=127.0.0.1
+export TEMPORAL_BROADCAST_ADDRESS=127.0.0.1
+
+cat > /opt/postiz-run.sh <<P
+#!/bin/bash
+for i in \$(seq 1 90); do
   (echo > /dev/tcp/127.0.0.1/7233) 2>/dev/null && break || sleep 2
 done
-exec sh -c "${POSTIZ_CMD:-npm run start:prod}"
+exec sh -c "${POSTIZ_CMD:-nginx && pnpm run pm2}"
 P
 chmod +x /opt/postiz-run.sh
 
-export DB="${DB:-postgres12}"
-export POSTGRES_SEEDS="${POSTGRES_SEEDS:-$PGHOST}"
-export DB_PORT="${POSTGRES_PORT:-5432}"
-export DBNAME="${TEMPORAL_DBNAME:-temporal}"
-export VISIBILITY_DBNAME="${TEMPORAL_DBNAME:-temporal}_visibility"
-export ENABLE_ES="${ENABLE_ES:-false}"
-export POSTGRES_USER="${POSTGRES_USER:-$PGUSER}"
-export POSTGRES_PWD="${POSTGRES_PWD:-$PGPASSWORD}"
-export BIND_ON_IP="${BIND_ON_IP:-127.0.0.1}"
-export TEMPORAL_BROADCAST_ADDRESS="${TEMPORAL_BROADCAST_ADDRESS:-127.0.0.1}"
-export SKIP_SCHEMA_SETUP="${SKIP_SCHEMA_SETUP:-false}"
+# Best-effort backup on shutdown so the last state lands in R2.
+trap '/opt/backup.sh || true' TERM
 
 exec /usr/bin/supervisord -c /etc/supervisord.conf

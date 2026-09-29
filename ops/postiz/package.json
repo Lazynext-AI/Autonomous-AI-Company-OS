@@ -1,0 +1,9 @@
+{
+  "name": "postiz-stack",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "dependencies": {
+    "@cloudflare/containers": "^0.3.7"
+  },
+  "private": true
+}

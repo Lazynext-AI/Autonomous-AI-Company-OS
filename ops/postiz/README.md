@@ -1,69 +1,79 @@
-# Postiz on Cloudflare Containers
+# Postiz on Cloudflare Containers — zero external services
 
-Self-hosted Postiz as one fat Cloudflare Container — the maximum-
-Cloudflare-native version of the social aggregator.
-
-## Why one fat container
-
-CF containers only accept HTTP fetch ingress; there is no
-container-to-container TCP. Postiz needs Temporal (gRPC :7233) and Redis
-(:6379), so all three run on `127.0.0.1` inside a single container via
-supervisord. The only external state is Postgres.
+Self-hosted Postiz running entirely on Cloudflare primitives. No Neon, no
+VPS, no external database — everything runs inside one container or in R2.
 
 ## Architecture
 
 ```
-POST https://postiz.lazynext.com/*
-  → postiz-stack worker (this dir)
-    → DO `PostizStack` (singleton)
-      → container: postiz-app :5000 + redis :6379 + temporal :7233
-        → Neon Postgres (external, DATABASE_URL)
-        → R2 lazynext-media (STORAGE_PROVIDER=cloudflare)
+https://postiz.lazynext.com/*
+  → postiz-stack worker → DO PostizStack (singleton)
+    → one container, all on 127.0.0.1:
+        postiz-app :5000   (bundled frontend + backend)
+        postgres   :5432   (real postgres via apk — full compat)
+        redis      :6379   (BullMQ queues)
+        temporal   :7233   (postgres12 driver → localhost postgres,
+                            ENABLE_ES=false SQL visibility — no ES)
+        backup loop        (pg_dumpall → R2 every 15min + on SIGTERM)
 ```
 
-## Known tradeoffs (honest)
+## Why this shape
 
-- **Cold starts**: container sleeps after 30m idle → first request takes
-  ~10-30s while the image warms. Scheduled posts queue in Redis/Temporal
-  and re-run on wake; a platform cron ping can keep it warm.
-- **Container-hours cost**: warm 24/7 ≈ 730 container-hours/mo — beyond
-  free allowance it bills. `sleepAfter` + idle traffic decide real cost.
-- **Redis/Temporal state is in-container** — durable across sleep (paused
-  fs) but lost if the container instance is evicted.
-- **Temporal is required since Postiz v2.12.0** — runs here with
-  `ENABLE_ES=false` SQL visibility against the same Postgres server, a
-  second database (no Elasticsearch).
+- CF containers accept HTTP fetch ingress only — no container-to-container
+  TCP — so Temporal/Redis/Postgres must share localhost in one container.
+- Real `apk postgresql`, not pglite-in-WASM — Temporal's SQL-visibility
+  workload wants full Postgres compat.
+- Container fs survives sleep; **R2 snapshots** (`postiz-backup/` prefix in
+  `lazynext-media`) survive container eviction — restore runs on boot when
+  PGDATA is empty.
 
-## One-time setup
+## Honest tradeoffs
 
-1. **Neon (or Supabase) Postgres** — free tier: one project, databases
-   `postiz`, `temporal`, `temporal_visibility`. Grab the connection string.
-2. **R2 access keys** — dashboard → R2 → API tokens (Object Read & Write
-   on `lazynext-media`).
-3. **Secrets**:
+- **Cold starts**: `sleepAfter=30m` → first hit after idle warms the image
+  (~10–30s). Platform cron can ping to keep it warm.
+- **Container-hours**: warm 24/7 ≈ 730 hrs/mo — beyond free allowance it
+  bills; single-user idle traffic makes real cost much lower.
+- **Backup window**: up to 15min of Postgres state can be lost on a hard
+  eviction between snapshots.
+- **Temporal required since Postiz v2.12.0** — included; its DBs
+  (`temporal`, `temporal_visibility`) are created on first boot.
+
+## Setup
+
+1. **R2 API token** (dashboard → R2 → API tokens → Object Read & Write on
+   `lazynext-media`) — one token serves both Postiz's S3 uploader and the
+   backup sidecar.
+2. **Secrets** (from repo root `.env`-loaded shell):
 
    ```bash
    cd ops/postiz
-   CLOUDFLARE_API_TOKEN=$CLOUDFLARE_DEPLOY_TOKEN npx wrangler secret put DATABASE_URL
-   CLOUDFLARE_API_TOKEN=$CLOUDFLARE_DEPLOY_TOKEN npx wrangler secret put JWT_SECRET
-   CLOUDFLARE_API_TOKEN=$CLOUDFLARE_DEPLOY_TOKEN npx wrangler secret put CLOUDFLARE_ACCESS_KEY
-   CLOUDFLARE_API_TOKEN=$CLOUDFLARE_DEPLOY_TOKEN npx wrangler secret put CLOUDFLARE_SECRET_ACCESS_KEY
+   export CLOUDFLARE_API_TOKEN=$CLOUDFLARE_DEPLOY_TOKEN
+   for k in JWT_SECRET R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_ACCOUNT_ID \
+            CLOUDFLARE_ACCESS_KEY CLOUDFLARE_SECRET_ACCESS_KEY \
+            CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_BUCKETNAME CLOUDFLARE_BUCKET_URL \
+            POSTGRES_LOCAL_PASSWORD; do npx wrangler secret put $k; done
    ```
 
-   Container env vars also needed: `PGHOST`/`POSTGRES_SEEDS` (Neon host),
-   `PGUSER`/`POSTGRES_USER`, `PGPASSWORD`/`POSTGRES_PWD`,
-   `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_BUCKETNAME=lazynext-media`,
-   `CLOUDFLARE_BUCKET_URL`, `CLOUDFLARE_REGION=auto`.
-4. **Deploy**: `CLOUDFLARE_API_TOKEN=$CLOUDFLARE_DEPLOY_TOKEN npx wrangler deploy`
-   — builds + pushes the image to the CF registry (multi-GB; needs ~6GB
-   free local disk for the build context).
-5. **Domain**: re-bind `postiz.lazynext.com` from `launchdeck-redirect` to
-   `postiz-stack` via `PUT /accounts/{acct}/workers/domains` (the stale-522
-   revival path documented in AGENTS.md).
-6. Postiz needs each platform's OAuth app credentials — self-host gets no
-   reviewed-app shortcut; the 45 native connectors remain the $0-instant
-   path while platform apps are reviewed.
+   `CLOUDFLARE_*` vars = Postiz's own storage config (same R2 creds);
+   `R2_*` vars = the backup sidecar.
+3. **Deploy**: `npx wrangler deploy` — wrangler builds the fat image and
+   pushes to the CF registry (needs ~6GB local disk; first build is slow).
+4. **Domain**: rebind `postiz.lazynext.com` (currently on
+   `launchdeck-redirect`) to `postiz-stack`:
+
+   ```bash
+   curl -X PUT "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains" \
+     -H "X-Auth-Key: $CLOUDFLARE_API_KEY" -H "X-Auth-Email: $CLOUDFLARE_EMAIL" \
+     -H "Content-Type: application/json" \
+     -d '{"hostname":"postiz.lazynext.com","service":"postiz-stack","environment":"production","zone_id":"ff0ad1848e936913a9c4b4e85b1f04af"}'
+   ```
+
+5. **Platform creds**: configure each network inside Postiz's UI — self-host
+   still needs your own OAuth apps per platform; the 45 native connectors
+   cover the zero-approval set meanwhile.
 
 ## Health check
 
-`GET /` → Postiz frontend. Logs: `wrangler tail postiz-stack`.
+`GET /` → Postiz frontend (after container warm). Logs:
+`npx wrangler tail postiz-stack`. Backup verify:
+`rclone lsf r2:lazynext-media/postiz-backup/` (or the R2 dashboard).
