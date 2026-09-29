@@ -210,6 +210,8 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
     const backtrace: string[] = [];
     const clickTraps: { trigger: string; focusOutside: boolean; escapeDead: boolean; noExit: boolean }[] = [];
     let focusable = 0;
+    let pointerOnly = 0;
+    let pointerOnlyDesc: string[] = [];
     let undersized: { d: string; w: number; h: number }[] = [];
     let undersizedAAA: { d: string; w: number; h: number }[] = [];
     const obscured = new Set<string>();
@@ -273,11 +275,47 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
             underAAA.push({ d: `${idx}:${tag}${el.id ? "#" + el.id : ""}`, w: Math.round(r.width), h: Math.round(r.height) });
           }
         });
-        return { count: n, under, underAAA };
+        // Pointer-only regions — elements computed cursor:pointer that sit
+        // outside every focusable control. This is the concrete evidence
+        // behind WCAG 2.1.1's "content looks interactive but keyboard can't
+        // reach it": markup statics see onclick=, but framework-bound
+        // handlers (React onClick, addEventListener) leave no attribute —
+        // cursor:pointer is the author styling that survives serialization.
+        // Counted once per region (topmost pointer ancestor wins): nested
+        // pointer children inside one clickable card are one control.
+        // <label> is exempt — its click forwards to the associated control.
+        const curCache = new Map();
+        const curOf = (x: any) => {
+          let c = curCache.get(x);
+          if (c === undefined) { c = win.getComputedStyle(x).cursor; curCache.set(x, c); }
+          return c;
+        };
+        let pointerOnly = 0;
+        const pointerDescs: string[] = [];
+        for (const el of deepQSA(doc, "body *") as any[]) {
+          if (pointerOnly >= 200) break;
+          const tag = String(el.tagName).toLowerCase();
+          if (tag === "label") continue;
+          if (el.matches(sel) || el.closest(sel)) continue;
+          if (curOf(el) !== "pointer") continue;
+          let ancPtr = false;
+          for (let p = el.parentElement; p && p !== doc.documentElement; p = p.parentElement) {
+            if (curOf(p) === "pointer") { ancPtr = true; break; }
+          }
+          if (ancPtr) continue;
+          pointerOnly++;
+          if (pointerDescs.length < 3) {
+            const txt = String(el.innerText ?? el.getAttribute?.("aria-label") ?? "").trim().slice(0, 25);
+            pointerDescs.push(`${tag}${el.id ? "#" + el.id : ""}${txt ? ":" + txt : ""}`);
+          }
+        }
+        return { count: n, under, underAAA, pointerOnly, pointerDescs };
       }, FOCUSABLE_SEL);
       focusable = census.count;
       undersized = census.under;
       undersizedAAA = census.underAAA;
+      pointerOnly = census.pointerOnly;
+      pointerOnlyDesc = census.pointerDescs;
       // Merged read — one websocket round-trip per Tab press instead of two.
       // WCAG 2.4.11 — a focused element fully covered by author content
       // (sticky header, banner, overlay) is hidden from keyboard users.
@@ -607,6 +645,8 @@ export async function handleRender(req: Request, env: Env): Promise<Response> {
       backtrace,
       clickTraps,
       focusable,
+      pointerOnly,
+      pointerOnlyDesc,
       undersized,
       undersizedAAA,
       obscured: Array.from(obscured),
