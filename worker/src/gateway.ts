@@ -24,6 +24,7 @@ export interface Env {
   DODO_API_BASE?: string;
   DODO_WEBHOOK_SECRET?: string;
   SERPER_API_KEY?: string;
+  SEARXNG_URL?: string;
   GITHUB_TOKEN?: string;
   CF_ACCOUNT_ID?: string;
   CF_API_TOKEN?: string;

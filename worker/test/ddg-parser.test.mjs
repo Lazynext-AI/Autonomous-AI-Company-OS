@@ -17,12 +17,16 @@ const src = readFileSync(
 
 const body = src.match(/function parseDdgLite\(html: string, n: number\)[^]*?\n\}/);
 assert.ok(body, "parseDdgLite not found in src/websearch.ts");
+// unescHtml is shared by all parsers — lift it first so lifted code resolves.
+const unescSrc = src.match(/function unescHtml\(s: string\)[^]*?\n\}/);
+assert.ok(unescSrc, "unescHtml not found in src/websearch.ts");
 // Strip the TS annotations so the lifted source is plain JS.
 const fnSrc = body[0]
   .replace("html: string, n: number", "html, n")
-  .replace("(s: string)", "(s)")
   .replace(/: \{ title: string; url: string; snippet: string \}\[\]/, "");
-const parseDdgLite = new Function(`${fnSrc}; return parseDdgLite;`)();
+const parseDdgLite = new Function(
+  `${unescSrc[0].replace("(s: string)", "(s)").replace(": string {", " {")} ${fnSrc}; return parseDdgLite;`,
+)();
 
 const PAGE = `
 <table>

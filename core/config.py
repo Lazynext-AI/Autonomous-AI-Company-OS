@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     brevo_api_key: str = ""
     email_from: str = "Lazynext <support@lazynext.com>"
     serper_api_key: str = ""
+    searxng_url: str = ""  # optional self-hosted metasearch upstream
 
     # App config
     knowledge_base_dir: str = "./knowledge_base"

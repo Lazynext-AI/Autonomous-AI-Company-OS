@@ -1,14 +1,17 @@
-// Web search — Serper.dev (real Google results) with a zero-cred fallback
-// chain so agent research never hard-fails on a 402 from a paid provider:
-// serper → DDG Lite scrape → DDG instant-answer. Normalizes results for
-// agents + dashboard; `provider` in the response names the winner.
+// Web search — zero-cred metasearch cascade so agent research never hard-
+// fails on a provider 402/429: serper (if the key ever refills) → searxng
+// (optional self-hosted upstream via SEARXNG_URL) → Bing HTML scrape →
+// Brave HTML scrape → DDG Lite scrape → DDG instant-answer. The scrape
+// chain IS the self-hosted option — metasearch running inside the Worker,
+// no server to operate. Normalizes results for agents + dashboard;
+// `provider` in the response names the winner.
 import { Env, json } from "./gateway";
 
 interface Hit {
   title: string;
   url: string;
   snippet: string;
-  source: "serper" | "ddg" | "ddg-answer";
+  source: "serper" | "searxng" | "bing" | "brave" | "ddg" | "ddg-answer";
 }
 
 const UA =
@@ -37,11 +40,16 @@ export async function serper(env: Env, q: string, n: number): Promise<Hit[] | nu
 // followed by <td class='result-snippet'>…html…</td>; links+snippets pair by
 // document order. Kept regex-only and side-effect-free so test/ddg-parser
 // can lift the function verbatim (same pattern as focus-budget.test.mjs).
+function unescHtml(s: string): string {
+  return s.replace(/<[^>]*>/g, "")
+    .replace(/&#0*(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
+    .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#x27;|&#39;/g, "'")
+    .replace(/\s+/g, " ").trim();
+}
+
 function parseDdgLite(html: string, n: number): { title: string; url: string; snippet: string }[] {
-  const unesc = (s: string) =>
-    s.replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#x27;|&#39;/g, "'")
-      .replace(/\s+/g, " ").trim();
+  const unesc = unescHtml;
   const links = [...html.matchAll(
     /<a[^>]+href="\/\/duckduckgo\.com\/l\/\?[^"]*uddg=([^&"]+)[^"]*"[^>]*class='result-link'[^>]*>([\s\S]*?)<\/a>/g,
   )];
@@ -59,6 +67,84 @@ async function ddgLite(q: string, n: number): Promise<Hit[]> {
   });
   if (!r.ok) return [];
   return parseDdgLite(await r.text(), n).map((h) => ({ ...h, source: "ddg" as const }));
+}
+
+// Optional self-hosted upstream — any SearXNG instance reachable over HTTPS
+// (public instance, tunnel, or the user's own host) serves JSON results and
+// covers ~70 engines upstream for free. Absent by default; set SEARXNG_URL.
+async function searxng(env: Env, q: string, n: number): Promise<Hit[]> {
+  const base = env.SEARXNG_URL;
+  if (!base) return [];
+  const r = await fetch(
+    `${base.replace(/\/+$/, "")}/search?q=${encodeURIComponent(q)}&format=json`,
+    { headers: { Accept: "application/json", "User-Agent": UA } },
+  );
+  if (!r.ok) return [];
+  const d = (await r.json()) as { results?: { title: string; url: string; content?: string }[] };
+  return (d.results ?? []).slice(0, n).map((i) => ({
+    title: i.title, url: i.url, snippet: i.content ?? "", source: "searxng" as const,
+  }));
+}
+
+// Bing HTML — results are <li class="b_algo"> blocks with <h2><a> + <p>.
+// hrefs are bing.com/ck/a redirects: the real URL is base64url in u=a1….
+// Kept regex-only and side-effect-free so tests can lift it verbatim.
+function decodeBingUrl(href: string): string {
+  const m = href.match(/[?&]u=a1([^&]+)/);
+  if (!m) return href;
+  try {
+    const s = decodeURIComponent(m[1]).replace(/-/g, "+").replace(/_/g, "/");
+    return atob(s + "=".repeat((4 - (s.length % 4)) % 4));
+  } catch {
+    return href;
+  }
+}
+
+function parseBing(html: string, n: number): { title: string; url: string; snippet: string }[] {
+  const unesc = unescHtml;
+  const out: { title: string; url: string; snippet: string }[] = [];
+  for (const m of html.matchAll(/<li class="b_algo"[^>]*>([\s\S]*?)<\/li>/g)) {
+    const a = m[1].match(/<h2[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i);
+    if (!a) continue;
+    const p = m[1].match(/<p[^>]*>([\s\S]*?)<\/p>/i);
+    out.push({ title: unesc(a[2]), url: decodeBingUrl(a[1].replace(/&amp;/g, "&")), snippet: p ? unesc(p[1]) : "" });
+    if (out.length >= n) break;
+  }
+  return out;
+}
+
+async function bing(q: string, n: number): Promise<Hit[]> {
+  const r = await fetch(`https://www.bing.com/search?q=${encodeURIComponent(q)}`, {
+    headers: { "User-Agent": UA, Accept: "text/html" },
+  });
+  if (!r.ok) return [];
+  return parseBing(await r.text(), n).map((h) => ({ ...h, source: "bing" as const }));
+}
+
+// Brave Search HTML — SSR result cards: <div class="snippet svelte-…"> with
+// result-content > a[href] (direct URL), a .title element, and a
+// .content.line-clamp… description. svelte-* class suffixes rotate, so the
+// matches key on the stable class tokens only.
+function parseBrave(html: string, n: number): { title: string; url: string; snippet: string }[] {
+  const unesc = unescHtml;
+  const out: { title: string; url: string; snippet: string }[] = [];
+  for (const b of html.split(/<div class="snippet svelte-[^"]*"/).slice(1)) {
+    const a = b.match(/<a href="(https?:\/\/[^"]+)"[^>]*class="[^"]*\bl1\b/) ?? b.match(/<a href="(https?:\/\/[^"]+)"/);
+    if (!a) continue;
+    const t = b.match(/class="title [^"]*"[^>]*>([\s\S]*?)<\/div>/);
+    const s = b.match(/class="content [^"]*line-clamp[^"]*"[^>]*>([\s\S]*?)<\/div>/);
+    out.push({ title: t ? unesc(t[1]) : "", url: a[1], snippet: s ? unesc(s[1]) : "" });
+    if (out.length >= n) break;
+  }
+  return out;
+}
+
+async function brave(q: string, n: number): Promise<Hit[]> {
+  const r = await fetch(`https://search.brave.com/search?q=${encodeURIComponent(q)}&source=web`, {
+    headers: { "User-Agent": UA, Accept: "text/html" },
+  });
+  if (!r.ok) return [];
+  return parseBrave(await r.text(), n).map((h) => ({ ...h, source: "brave" as const }));
 }
 
 // Last-resort: api.duckduckgo.com instant answers (Abstract + RelatedTopics).
@@ -94,10 +180,17 @@ export async function handleWebSearch(req: Request, env: Env): Promise<Response>
     const hits = await serper(env, query, n);
     if (hits !== null) return json({ results: hits, provider: "serper", count: hits.length });
   } catch { /* fall through to the free chain */ }
-  try {
-    const hits = await ddgLite(query, n);
-    if (hits.length) return json({ results: hits, provider: "duckduckgo", count: hits.length });
-  } catch { /* fall through */ }
+  for (const [name, fn] of [
+    ["searxng", () => searxng(env, query, n)],
+    ["bing", () => bing(query, n)],
+    ["brave", () => brave(query, n)],
+    ["duckduckgo", () => ddgLite(query, n)],
+  ] as const) {
+    try {
+      const hits = await fn();
+      if (hits.length) return json({ results: hits, provider: name, count: hits.length });
+    } catch { /* next provider */ }
+  }
   try {
     const hits = await ddgInstant(query, n);
     if (hits.length) return json({ results: hits, provider: "duckduckgo-answer", count: hits.length });
