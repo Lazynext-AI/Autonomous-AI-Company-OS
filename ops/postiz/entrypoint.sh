@@ -1,7 +1,10 @@
 #!/bin/bash
 set -e
-mkdir -p /data/pg /data/redis /data/es /data/es-logs /run/supervisord /var/lib/postgresql
-chown -R postgres:postgres /data/pg
+# CF's port check kills the container if nothing listens on the declared port
+# fast enough — bind nginx :5000 FIRST, before the minutes-long boot work.
+nginx 2>/dev/null || true
+mkdir -p /data/pg /data/redis /data/es /data/es-logs /data/logs /run/supervisord /var/lib/postgresql /var/run/postgresql
+chown -R postgres:postgres /data/pg /var/run/postgresql
 chown -R elasticsearch:elasticsearch /data/es /data/es-logs
 
 # Boot beacon: proves how far the container got on the CF runtime — drop
@@ -29,10 +32,12 @@ export PATH="$PGBIN:$PATH"
 # runuser (not su) — no PAM session, which micro-VM runtimes can lack.
 # dynamic_shared_memory_type=mmap — /dev/shm may be absent or tiny.
 if [ ! -s /data/pg/PG_VERSION ]; then
+  beacon restore-attempt
   /opt/r2-restore.sh || true
 fi
 PGOPTS='-c listen_addresses=127.0.0.1 -c dynamic_shared_memory_type=mmap'
 if [ ! -s /data/pg/PG_VERSION ]; then
+  beacon initdb-start
   if ! runuser -u postgres -- initdb -D /data/pg -U postgres -A trust > /tmp/initdb.log 2>&1; then
     tail -5 /tmp/initdb.log > /tmp/beacon.txt
     RCLONE_CONFIG_R2_TYPE=s3 RCLONE_CONFIG_R2_PROVIDER=Cloudflare \
@@ -40,12 +45,16 @@ if [ ! -s /data/pg/PG_VERSION ]; then
     RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY" \
     RCLONE_CONFIG_R2_ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com" \
     rclone copyto /tmp/beacon.txt "r2:${R2_BUCKET:-lazynext-media}/postiz-boot/$(hostname)-initdb-fail.txt" 2>/dev/null || true
+  else
+    beacon initdb-done
   fi
 fi
+beacon pgctl-start
 runuser -u postgres -- pg_ctl -D /data/pg -o "$PGOPTS" -l /data/pg/pg.log -w -t 120 start > /tmp/pgctl.log 2>&1 || {
   tail -8 /tmp/pgctl.log /data/pg/pg.log > /tmp/beacon.txt 2>/dev/null
   beacon pg-fail
 }
+beacon pgctl-done
 if psql -h 127.0.0.1 -U postgres -c "SELECT 1" >/dev/null 2>&1; then
   psql -h 127.0.0.1 -U postgres -c "ALTER USER postgres PASSWORD '$PGPASS'" || true
   for db in postiz temporal temporal_visibility; do
@@ -83,9 +92,7 @@ export TEMPORAL_BROADCAST_ADDRESS=127.0.0.1
 
 cat > /opt/postiz-run.sh <<P
 #!/bin/bash
-# Bind :5000 FIRST — the container runtime's readiness probe times out if the
-# port isn't listening, and temporal+pm2 can take minutes on a cold start.
-nginx 2>/dev/null || true
+# nginx :5000 already bound by the entrypoint — just wait for temporal here.
 for i in \$(seq 1 120); do
   (echo > /dev/tcp/127.0.0.1/7233) 2>/dev/null && break || sleep 2
 done
