@@ -105,16 +105,25 @@ Field names per provider are exposed live at `GET /api/integrations` under
   the owner visits the claim URL and posts the verification tweet:
   `https://www.moltbook.com/claim/moltbook_claim_EGYZkmctxqpPYMU_4Dcmo9SzcPRt9f17`
 - **mastodon**: OAuth app minted unauthenticated on mastodon.social
-  (`POST /api/v1/apps`) → `MASTODON_URL/CLIENT_ID/CLIENT_SECRET` secrets set;
-  account signup submitted (confirmation email → `founder@lazynext.com`).
-  After confirm: log into postiz → connect Mastodon → authorize on
-  mastodon.social.
+  (`POST /api/v1/apps`) → `MASTODON_URL/CLIENT_ID/CLIENT_SECRET` secrets set.
+  First signup used founder@lazynext.com (dead mailbox — no catch-all);
+  re-signed as **`lazynextco` / support@lazynext.com** (`.env`
+  `MASTODON_SIGNUP_PW`/`MASTODON_HANDLE`) — confirmation link pending in the
+  support@ inbox. After confirm: postiz → connect Mastodon → authorize.
+- **gitlab**: `lazynext-ai` / support@ — Arkose passed; **verification code
+  pending in support@ inbox** (creds in `.env` `GITLAB_*`).
+- **tumblr**: account `lazynext` CREATED via Playwright (no captcha wall;
+  `.env` `TUMBLR_SIGNUP_PW`). Email verification pending — required before
+  `/oauth/apps` registration (needs the verify link from support@).
 - **Signup-automation walls (verified, can't be automated)**: dev.to
   (reCAPTCHA Enterprise), hashnode (Vercel 429 checkpoint),
   wordpress.com (invisible gate — submit stays disabled), slack.com
-  (bot-scored silent reject), bluesky PDSs (phone-verified or invite-only on
-  every reachable instance incl. northsky.social / blacksky.app),
-  lemmy instances (RequireApplication on all majors).
+  (bot-scored silent reject), discord.com (visible hCaptcha challenge),
+  reddit.com ("prove your humanity" wall), twitch.tv (bot-scored —
+  "email invalid" on submit), pinterest.com (silent drop after submit),
+  bluesky PDSs (phone-verified or invite-only on every reachable instance
+  incl. northsky.social / blacksky.app), lemmy instances
+  (RequireApplication on all majors).
 - **Provider inventory**: 35 channels listed live via `GET /api/integrations`
   → `x, linkedin, linkedin-page, reddit, instagram, instagram-standalone,
   facebook, threads, youtube, gmb, tiktok, tiktok-business, pinterest,
