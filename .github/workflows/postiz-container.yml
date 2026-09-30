@@ -1,0 +1,65 @@
+name: postiz-container
+# Build + push the Postiz fat-container image and deploy the worker.
+# Runs on GHA because the image fs is ~5.5GB — exceeds the local disk.
+on:
+  workflow_dispatch:
+  push:
+    paths: ["ops/postiz/**"]
+
+env:
+  CF_ACCT: 85953070bae00da372951a8833bd3459
+  REPO: postiz-stack-postizstack
+
+jobs:
+  build-push-deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ops/postiz
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk (GHA runners ship ~30GB of unused toolchains)
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android \
+            /usr/local/share/boost /opt/hostedtoolcache /usr/local/julia* \
+            /usr/local/.ghcup "$AGENT_TOOLSDIRECTORY" || true
+          df -h /
+
+      - name: Registry creds (push+pull token)
+        run: |
+          curl -sf -X POST \
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCT/containers/registries/registry.cloudflare.com/credentials" \
+            -H "Authorization: Bearer $CLOUDFLARE_DEPLOY_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"expiration_minutes":60,"permissions":["push","pull"]}' > /tmp/reg.json
+          jq -r '.result.username' /tmp/reg.json > /tmp/reguser
+          jq -r '.result.password' /tmp/reg.json > /tmp/regpass
+          echo "registry user: $(cat /tmp/reguser)"
+        env:
+          CLOUDFLARE_DEPLOY_TOKEN: ${{ secrets.CLOUDFLARE_DEPLOY_TOKEN }}
+
+      - name: docker login → registry.cloudflare.com
+        run: cat /tmp/regpass | docker login registry.cloudflare.com \
+               --username "$(cat /tmp/reguser)" --password-stdin
+
+      - name: Build + push image (amd64)
+        run: |
+          docker build --platform linux/amd64 \
+            -t registry.cloudflare.com/$CF_ACCT/$REPO:latest .
+          docker push registry.cloudflare.com/$CF_ACCT/$REPO:latest
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' \
+                   registry.cloudflare.com/$CF_ACCT/$REPO:latest | grep -oE 'sha256:[a-f0-9]+')
+          echo "DIGEST=$DIGEST" >> "$GITHUB_ENV"
+
+      - name: Deploy worker (pin pushed digest)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEPLOY_TOKEN }}
+        run: |
+          sed -i "s|image = \"./Dockerfile\"|image = \"registry.cloudflare.com/$CF_ACCT/$REPO@$DIGEST\"|" wrangler.toml
+          npm i -g wrangler@latest --silent 2>/dev/null || true
+          wrangler deploy || npx wrangler deploy
+
+      - name: Restore wrangler.toml (digest pins don't belong in git)
+        if: always()
+        run: sed -i 's|image = "registry.cloudflare.com.*"|image = "./Dockerfile"|' wrangler.toml

@@ -60,3 +60,4 @@ backups/
 
 knowledge_base/
 .health_state.json
+.dev.vars

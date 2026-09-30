@@ -5,12 +5,15 @@ compatibility_flags = ["nodejs_compat"]
 
 [[containers]]
 # wrangler builds Dockerfile and pushes to the CF registry on deploy.
+# To skip the local build, pin a pushed digest instead:
+#   image = "registry.cloudflare.com/.../postiz-stack-postizstack@sha256:<digest>"
 image = "./Dockerfile"
 class_name = "PostizStack"
 max_instances = 1
 # fat stack: postgres + redis + temporal + node — dev/lite OOM instantly.
 instance_type = "standard-4"
 constraints = { tiers = [1, 2, 3, 4] }
+observability = { enabled = true }
 
 [[durable_objects.bindings]]
 name = "POSTIZ"
