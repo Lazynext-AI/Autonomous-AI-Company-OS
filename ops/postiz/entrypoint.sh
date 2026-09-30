@@ -26,20 +26,35 @@ export PGBIN
 export PATH="$PGBIN:$PATH"
 
 # --- Postgres bootstrap: restore the R2 snapshot if PGDATA is empty ---
+# runuser (not su) — no PAM session, which micro-VM runtimes can lack.
+# dynamic_shared_memory_type=mmap — /dev/shm may be absent or tiny.
 if [ ! -s /data/pg/PG_VERSION ]; then
   /opt/r2-restore.sh || true
 fi
+PGOPTS='-c listen_addresses=127.0.0.1 -c dynamic_shared_memory_type=mmap'
 if [ ! -s /data/pg/PG_VERSION ]; then
-  su postgres -c "initdb -D /data/pg -U postgres -A trust" >/dev/null
-  su postgres -c "pg_ctl -D /data/pg -o '-c listen_addresses=127.0.0.1' -w start"
-  psql -h 127.0.0.1 -U postgres -c "ALTER USER postgres PASSWORD '$PGPASS'"
+  if ! runuser -u postgres -- initdb -D /data/pg -U postgres -A trust > /tmp/initdb.log 2>&1; then
+    tail -5 /tmp/initdb.log > /tmp/beacon.txt
+    RCLONE_CONFIG_R2_TYPE=s3 RCLONE_CONFIG_R2_PROVIDER=Cloudflare \
+    RCLONE_CONFIG_R2_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" \
+    RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY" \
+    RCLONE_CONFIG_R2_ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com" \
+    rclone copyto /tmp/beacon.txt "r2:${R2_BUCKET:-lazynext-media}/postiz-boot/$(hostname)-initdb-fail.txt" 2>/dev/null || true
+  fi
+fi
+runuser -u postgres -- pg_ctl -D /data/pg -o "$PGOPTS" -l /data/pg/pg.log -w -t 120 start > /tmp/pgctl.log 2>&1 || {
+  tail -8 /tmp/pgctl.log /data/pg/pg.log > /tmp/beacon.txt 2>/dev/null
+  beacon pg-fail
+}
+if psql -h 127.0.0.1 -U postgres -c "SELECT 1" >/dev/null 2>&1; then
+  psql -h 127.0.0.1 -U postgres -c "ALTER USER postgres PASSWORD '$PGPASS'" || true
   for db in postiz temporal temporal_visibility; do
     psql -h 127.0.0.1 -U postgres -c "CREATE DATABASE $db" || true
   done
+  beacon pg-ready
 else
-  su postgres -c "pg_ctl -D /data/pg -o '-c listen_addresses=127.0.0.1' -w start"
+  beacon pg-not-ready
 fi
-beacon pg-ready
 
 # --- Postiz env ---
 export DATABASE_URL="postgresql://postgres:$PGPASS@127.0.0.1:5432/postiz"
