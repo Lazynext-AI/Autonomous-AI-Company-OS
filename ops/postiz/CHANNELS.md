@@ -70,10 +70,20 @@ Field names per provider are exposed live at `GET /api/integrations` under
 
 ## Current state
 
-- `conn:postiz` in platform KV = `<api_key>|cmuo3sunp000109rjxaglkgc9|https://postiz.lazynext.com/api`
-  → **nostr channel CONNECTED** (2026-09-30, hex privkey minted locally).
+- `conn:postiz` in platform KV = `<api_key>|cmuo7hopx000109r8jxuk5l8n|https://postiz.lazynext.com/api`
+  → **nostr channel CONNECTED + first post PUBLISHED to relays**
+  (2026-09-30, verified on `wss://nos.lol` — event
+  `51ab39198fc9097f23b79998aeef0f3288e3a03696421d893aa95e3eed3d981b`).
   More integrations append the same way; channel IDs appear in
   `GET /api/public/v1/integrations` with header `authorization: <api_key>`
+- **nostr publish fix (image `8192316a`)**: the released provider passed the
+  hex-string password to `finalizeEvent` (needs Uint8Array — "expected
+  Uint8Array, got type=string"). Patched via Dockerfile `sed` + registry
+  patch layer; remove when upstream ships the fix.
+- **Instance-swap caveat**: a *new* CF container instance restores the
+  latest `pg_dump` from R2 — channel connects made <15min before an
+  instance replacement can be lost; re-run the connect recipe if
+  `GET /api/integrations/list` is empty after a cold start.
 - Postiz admin: `founder@lazynext.com` (password in `.env` → `POSTIZ_ADMIN_PASSWORD`)
 - After connecting channels, add integration IDs: update `conn:postiz` to
   `<api_key>|<integration_id>|https://postiz.lazynext.com/api`
