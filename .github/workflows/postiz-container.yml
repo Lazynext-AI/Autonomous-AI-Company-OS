@@ -39,16 +39,19 @@ jobs:
         env:
           CLOUDFLARE_DEPLOY_TOKEN: ${{ secrets.CLOUDFLARE_DEPLOY_TOKEN }}
 
+      - uses: docker/setup-buildx-action@v3
+
       - name: docker login → registry.cloudflare.com
         run: cat /tmp/regpass | docker login --username "$(cat /tmp/reguser)" --password-stdin registry.cloudflare.com
 
-      - name: Build + push image (amd64)
+      - name: Build + push image (amd64, streamed)
         run: |
-          docker build --platform linux/amd64 \
+          docker buildx build --platform linux/amd64 \
+            --output=type=registry,compression=gzip,force-compression=true \
             -t registry.cloudflare.com/$CF_ACCT/$REPO:latest .
-          docker push registry.cloudflare.com/$CF_ACCT/$REPO:latest
-          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' \
-                   registry.cloudflare.com/$CF_ACCT/$REPO:latest | grep -oE 'sha256:[a-f0-9]+')
+          DIGEST=$(docker buildx imagetools inspect \
+            registry.cloudflare.com/$CF_ACCT/$REPO:latest \
+            --format '{{.Manifest.Digest}}')
           echo "DIGEST=$DIGEST" >> "$GITHUB_ENV"
 
       - name: Deploy worker (pin pushed digest)
