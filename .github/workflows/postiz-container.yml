@@ -47,6 +47,7 @@ jobs:
       - name: Build + push image (amd64, streamed)
         run: |
           docker buildx build --platform linux/amd64 \
+            --provenance=false --sbom=false \
             --output=type=registry,compression=gzip,force-compression=true \
             -t registry.cloudflare.com/$CF_ACCT/$REPO:latest .
           DIGEST=$(docker buildx imagetools inspect \
