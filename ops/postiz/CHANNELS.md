@@ -47,12 +47,33 @@ then `npx wrangler deploy` (config-only — same image, no rebuild).
 | GitLab | instance URL + personal access token (`api` scope) |
 | Farcaster | sign-in (Neynar gate — optional) |
 
+## Programmatic channel connect (no UI needed)
+
+`customFields` channels (nostr, medium, devto, hashnode, wordpress, lemmy,
+listmonk, bluesky) can be connected with two calls:
+
+```bash
+# 1. mint a state token (auth cookie required — POST /api/auth/login first)
+STATE=$(curl -s -b jar "$BASE/api/integrations/social/nostr" | jq -r .url)
+
+# 2. finalize — code = base64(JSON.stringify(<customFields object>))
+CODE=$(echo -n '{"password":"<nostr-hex-privkey>"}' | base64)
+curl -b jar -X POST "$BASE/api/integrations/social-connect/nostr" \
+  -H 'Content-Type: application/json' \
+  -d "{\"state\":\"$STATE\",\"code\":\"$CODE\",\"codeVerifier\":\"\",\"timezone\":\"UTC\"}"
+# -> 201 {id, internalId, ...} = connected channel
+```
+
+Field names per provider are exposed live at `GET /api/integrations` under
+`customFields` (e.g. bluesky: `service`/`identifier`/`password`; medium:
+`apiKey`; wordpress: `domain`/`username`/`password`).
+
 ## Current state
 
-- `conn:postiz` in platform KV = `<api_key>||https://postiz.lazynext.com/api`
-  (integration slot is empty — filled automatically once a channel connects;
-  channel IDs appear in `GET /api/public/v1/integrations` with header
-  `authorization: <api_key>`)
+- `conn:postiz` in platform KV = `<api_key>|cmuo3sunp000109rjxaglkgc9|https://postiz.lazynext.com/api`
+  → **nostr channel CONNECTED** (2026-09-30, hex privkey minted locally).
+  More integrations append the same way; channel IDs appear in
+  `GET /api/public/v1/integrations` with header `authorization: <api_key>`
 - Postiz admin: `founder@lazynext.com` (password in `.env` → `POSTIZ_ADMIN_PASSWORD`)
 - After connecting channels, add integration IDs: update `conn:postiz` to
   `<api_key>|<integration_id>|https://postiz.lazynext.com/api`
