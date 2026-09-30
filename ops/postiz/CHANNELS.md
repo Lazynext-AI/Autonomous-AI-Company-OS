@@ -30,6 +30,14 @@ then `npx wrangler deploy` (config-only — same image, no rebuild).
 | Mastodon (generic) | your-instance.tld/settings/applications | `MASTODON_URL`, `MASTODON_CLIENT_ID`, `MASTODON_CLIENT_SECRET` | Set `MASTODON_URL` to your instance; per-instance creds |
 | Beehiiv | app.beehiiv.com → API integrations | `BEEHIIVE_API_KEY` | Newsletter publish API (paid tier) |
 | Listmonk | your listmonk instance → admin → API users | `LISTMONK_API_KEY` | Self-hosted newsletter |
+| Instagram (standalone) | developers.facebook.com → Instagram product | `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET` | Old Basic-Display-style flow; still needs a Meta app |
+| Google Business (gmb) | console.cloud.google.com → Business Profile API | `GOOGLE_GMB_CLIENT_ID`, `GOOGLE_GMB_CLIENT_SECRET` | Local-business posts to Google Maps/Search |
+| Twitch | dev.twitch.tv/console/apps | `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET` | Channel-panel / stream-info posts |
+| Kick | kick.com/settings/developer | `KICK_CLIENT_ID`, `KICK_SECRET` | Streaming-community posts |
+| VK | vk.com/apps → create app | `VK_ID` | Russian-network wall posts |
+| Whop | whop.com → developer dashboard | `WHOP_CLIENT_ID` | Community posts |
+| MeWe | developers.mewe.com → app | `MEWE_APP_ID`, `MEWE_API_KEY` (+`MEWE_HOST`) | OAuth app approval |
+| Farcaster | neynar.com → app + signer | `NEYNAR_APP_FID`, `NEYNAR_APP_MNEMONIC`, `NEYNAR_CLIENT_ID`, `NEYNAR_SECRET_KEY`, `NEYNAR_SPONSOR_SIGNERS` | Casts via Neynar signer sponsorship |
 
 ## Direct-connect channels (no dev app — per-account creds in the UI)
 
@@ -45,12 +53,13 @@ then `npx wrangler deploy` (config-only — same image, no rebuild).
 | Lemmy | instance URL + username + password |
 | Nostr | private key (nsec/hex) |
 | GitLab | instance URL + personal access token (`api` scope) |
-| Farcaster | sign-in (Neynar gate — optional) |
+| Moltbook | `api_key` — minted free via `POST /api/v1/agents/register` (no account); needs a human `claim_url` + verification tweet before it can post |
+| Skool | session **cookies** from your logged-in skool.com browser session |
 
 ## Programmatic channel connect (no UI needed)
 
 `customFields` channels (nostr, medium, devto, hashnode, wordpress, lemmy,
-listmonk, bluesky) can be connected with two calls:
+listmonk, bluesky, moltbook) can be connected with two calls:
 
 ```bash
 # 1. mint a state token (auth cookie required — POST /api/auth/login first)
@@ -87,3 +96,28 @@ Field names per provider are exposed live at `GET /api/integrations` under
 - Postiz admin: `founder@lazynext.com` (password in `.env` → `POSTIZ_ADMIN_PASSWORD`)
 - After connecting channels, add integration IDs: update `conn:postiz` to
   `<api_key>|<integration_id>|https://postiz.lazynext.com/api`
+
+## 2026-09-30 session — automation findings
+
+- **nostr**: connected (`cmuo7hopx000109r8jxuk5l8n`), first post verified on
+  `wss://nos.lol`. `conn:postiz` points at it.
+- **moltbook**: agent `lazynext` registered via anonymous
+  `POST /api/v1/agents/register` → api_key minted → channel connected
+  (`cmuodagu2000109q3ip0htgpq`). **Pending human claim** — posts ERROR until
+  the owner visits the claim URL and posts the verification tweet:
+  `https://www.moltbook.com/claim/moltbook_claim_EGYZkmctxqpPYMU_4Dcmo9SzcPRt9f17`
+- **mastodon**: OAuth app minted unauthenticated on mastodon.social
+  (`POST /api/v1/apps`) → `MASTODON_URL/CLIENT_ID/CLIENT_SECRET` secrets set;
+  account signup submitted (confirmation email → `founder@lazynext.com`).
+  After confirm: log into postiz → connect Mastodon → authorize on
+  mastodon.social.
+- **Signup-automation walls (verified, can't be automated)**: dev.to
+  (reCAPTCHA Enterprise), hashnode (Vercel 429 checkpoint),
+  wordpress.com (invisible gate — submit stays disabled), slack.com
+  (bot-scored silent reject), bluesky PDSs (phone-verified or invite-only on
+  every reachable instance incl. northsky.social / blacksky.app),
+  lemmy instances (RequireApplication on all majors).
+- **Provider inventory**: 36 providers in this image — the 25 documented
+  plus farcaster, gmb, instagram.standalone, kick, linkedin.page,
+  tiktok.business, mewe, moltbook, skool, vk, whop. New env passthroughs
+  added to `src/index.ts` for all of them.
