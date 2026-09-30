@@ -1,0 +1,30 @@
+name = "wordpress-blog"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[containers]]
+# wordpress:php8.3-apache mirrored to CF registry + a config layer appended
+# (wp-config.php + sqlite-database-integration dropin — no MySQL required).
+image = "registry.cloudflare.com/85953070bae00da372951a8833bd3459/wordpress-blog-wordpress@sha256:6499e87794199e781784c7f3903b67dc4479f144e8e3dc5943df2961e82e87fd"
+class_name = "WordpressBlog"
+max_instances = 1
+instance_type = "standard-2"
+constraints = { tiers = [1, 2, 3, 4] }
+observability = { enabled = true }
+
+[[durable_objects.bindings]]
+name = "WP"
+class_name = "WordpressBlog"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["WordpressBlog"]
+
+[[kv_namespaces]]
+binding = "EPHEMERAL"
+id = "15bccb97f4aa4f9c8c1a1b97b54a558f"
+
+[[routes]]
+pattern = "blog.lazynext.com"
+custom_domain = true

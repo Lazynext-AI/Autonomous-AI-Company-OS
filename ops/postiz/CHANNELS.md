@@ -49,10 +49,8 @@ then `npx wrangler deploy` (config-only — same image, no rebuild).
 | Hashnode | Personal access token: hashnode.com/settings/developer |
 | Medium | Integration token: medium.com/me/settings/security |
 | WordPress | site URL + user + Application Password (Users → Profile → App Passwords) |
-| Ghost | site URL + Admin API key (Ghost Admin → Integrations → custom) |
 | Lemmy | instance URL + username + password |
 | Nostr | private key (nsec/hex) |
-| GitLab | instance URL + personal access token (`api` scope) |
 | Moltbook | `api_key` — minted free via `POST /api/v1/agents/register` (no account); needs a human `claim_url` + verification tweet before it can post |
 | Skool | session **cookies** from your logged-in skool.com browser session |
 
@@ -117,7 +115,33 @@ Field names per provider are exposed live at `GET /api/integrations` under
   (bot-scored silent reject), bluesky PDSs (phone-verified or invite-only on
   every reachable instance incl. northsky.social / blacksky.app),
   lemmy instances (RequireApplication on all majors).
-- **Provider inventory**: 36 providers in this image — the 25 documented
-  plus farcaster, gmb, instagram.standalone, kick, linkedin.page,
-  tiktok.business, mewe, moltbook, skool, vk, whop. New env passthroughs
-  added to `src/index.ts` for all of them.
+- **Provider inventory**: 35 channels listed live via `GET /api/integrations`
+  → `x, linkedin, linkedin-page, reddit, instagram, instagram-standalone,
+  facebook, threads, youtube, gmb, tiktok, tiktok-business, pinterest,
+  dribbble, discord, slack, kick, twitch, mastodon, bluesky, lemmy,
+  wrapcast (farcaster), telegram, nostr, vk, medium, devto, hashnode,
+  wordpress, listmonk, moltbook, whop, skool, mewe, tumblr`. No ghost or
+  gitlab provider exists in this build (removed from the matrix above;
+  GitLab could still host code via `conn:*` if wanted).
+- **Ghost blog (self-hosted, `ghost.lazynext.com`, LIVE)** — official
+  `ghost:5-alpine` image mirrored to the CF registry + running in its own
+  container (`ops/ghost/`, worker `ghost-blog`, `standard-1`, sqlite). Owner
+  account + `postiz` custom integration created via Playwright (own
+  instance, no gates). Admin API key → `.env` `GHOST_ADMIN_API_KEY`
+  (`id:secret` format). Postiz has NO ghost provider — it's a platform-side
+  surface (marketing agent posts via Ghost Admin REST API directly), not a
+  social channel.
+- **GitLab note**: signup submitted, identity-verification code emailed to
+  `founder@lazynext.com`. Not a Postiz channel in this build — value is
+  code-hosting only; low priority vs. channel work.
+- **WordPress (self-hosted, `blog.lazynext.com`, LIVE)** — wordpress:
+  php8.3-apache + sqlite dropin in its own CF container (`ops/wordpress/`,
+  `standard-2`, `wordpress-blog` worker). wp installed at `/var/www/wp`
+  (NOT `/var/www/html` — that's a docker VOLUME CF mounts empty); apache on
+  :3000, docroot sed'd + `AllowOverride All`. Two CF-runtime quirks needed
+  code fixes in `src/index.ts` — see `ops/wordpress/NOTES.md` (tcpPort.fetch
+  https-init validation + redirect-following; bypassed via manual
+  `container.start()` + `port.fetch(url,{redirect:"manual"})`). Connected to
+  Postiz `wordpress` channel `cmuools6w000109pcwvimwl3d` (domain/username/
+  app-password). Runtime writes don't survive cold boots — posts go through
+  Postiz/API, durable CMS is Ghost's job.

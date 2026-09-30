@@ -1,0 +1,26 @@
+name = "ghost-blog"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[containers]]
+# Official ghost image mirrored into registry.cloudflare.com via HTTP blob
+# relay (docker.io -> CF registry). amd64 required — pin the digest we pushed.
+image = "registry.cloudflare.com/85953070bae00da372951a8833bd3459/ghost-blog-ghost@sha256:619e7e1985e62072d98102f218902a09e0c1bd0fbcdd4ab4657885bfca34901e"
+class_name = "GhostBlog"
+max_instances = 1
+instance_type = "standard-1"
+constraints = { tiers = [1, 2, 3, 4] }
+observability = { enabled = true }
+
+[[durable_objects.bindings]]
+name = "GHOST"
+class_name = "GhostBlog"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["GhostBlog"]
+
+[[routes]]
+pattern = "ghost.lazynext.com"
+custom_domain = true
