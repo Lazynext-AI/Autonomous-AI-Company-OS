@@ -59,8 +59,8 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEPLOY_TOKEN }}
         run: |
           sed -i "s|image = \"./Dockerfile\"|image = \"registry.cloudflare.com/$CF_ACCT/$REPO@$DIGEST\"|" wrangler.toml
-          npm i -g wrangler@latest --silent 2>/dev/null || true
-          wrangler deploy || npx wrangler deploy
+          npm ci
+          npx wrangler deploy
 
       - name: Restore wrangler.toml (digest pins don't belong in git)
         if: always()
