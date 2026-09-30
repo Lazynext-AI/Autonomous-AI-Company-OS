@@ -102,4 +102,12 @@ ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     YARN_VERSION=1.22.22 \
     NEXT_PUBLIC_VERSION=v2.24.0
 WORKDIR /app
+# Upstream bug (fixed on postiz-app main, unfixed in the pinned release):
+# nostr.provider passes the hex-string password to finalizeEvent, which now
+# requires Uint8Array ("expected Uint8Array, got type=string"). Patch the
+# compiled backend+orchestrator bundles the same way upstream's secretKey()
+# wrapper does.
+RUN sed -i 's|}, password);|}, Uint8Array.from(password.match(/.{1,2}/g).map((byte) => parseInt(byte, 16))));|g' \
+    apps/orchestrator/dist/libraries/nestjs-libraries/src/integrations/social/nostr.provider.js \
+    apps/backend/dist/libraries/nestjs-libraries/src/integrations/social/nostr.provider.js
 ENTRYPOINT ["/opt/entrypoint.sh"]
