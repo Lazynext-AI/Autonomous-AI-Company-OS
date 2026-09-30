@@ -56,6 +56,33 @@ export class PostizStack extends Container {
       ...(env.CLOUDFLARE_BUCKETNAME ? { CLOUDFLARE_BUCKETNAME: env.CLOUDFLARE_BUCKETNAME } : {}),
       ...(env.CLOUDFLARE_BUCKET_URL ? { CLOUDFLARE_BUCKET_URL: env.CLOUDFLARE_BUCKET_URL } : {}),
       ...(env.CLOUDFLARE_REGION ? { CLOUDFLARE_REGION: env.CLOUDFLARE_REGION } : {}),
+      // Social-provider OAuth creds — every `wrangler secret put <NAME>` value
+      // is forwarded to the container so channels light up as keys arrive.
+      // Names match postiz-app's .env.example exactly.
+      ...Object.fromEntries(
+        [
+          "X_URL", "X_API_KEY", "X_API_SECRET",
+          "LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET",
+          "REDDIT_CLIENT_ID", "REDDIT_CLIENT_SECRET",
+          "GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET",
+          "BEEHIIVE_API_KEY", "LISTMONK_API_KEY",
+          "THREADS_APP_ID", "THREADS_APP_SECRET",
+          "FACEBOOK_APP_ID", "FACEBOOK_APP_SECRET",
+          "YOUTUBE_CLIENT_ID", "YOUTUBE_CLIENT_SECRET",
+          "TIKTOK_CLIENT_ID", "TIKTOK_CLIENT_SECRET",
+          "TIKTOK_BUSINESS_CLIENT_ID", "TIKTOK_BUSINESS_CLIENT_SECRET",
+          "PINTEREST_CLIENT_ID", "PINTEREST_CLIENT_SECRET",
+          "DRIBBBLE_CLIENT_ID", "DRIBBBLE_CLIENT_SECRET",
+          "TUMBLR_CLIENT_ID", "TUMBLR_CLIENT_SECRET",
+          "DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET", "DISCORD_BOT_TOKEN_ID",
+          "SLACK_ID", "SLACK_SECRET", "SLACK_SIGNING_SECRET",
+          "MASTODON_URL", "MASTODON_CLIENT_ID", "MASTODON_CLIENT_SECRET",
+          "RESEND_API_KEY", "EMAIL_FROM_ADDRESS", "EMAIL_FROM_NAME",
+          "OPENAI_API_KEY", "DEEPGRAM_API_KEY",
+        ]
+          .filter((k) => (env as unknown as Record<string, string | undefined>)[k])
+          .map((k) => [k, (env as unknown as Record<string, string>)[k]]),
+      ),
     };
   }
 }
